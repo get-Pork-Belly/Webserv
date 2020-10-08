@@ -30,7 +30,6 @@ int main(int argc, const char *argv[])
     struct timeval timeout;
 
     //TODO: 인자 예외처리
-
     server_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); // TCP소켓 생성
     server_address.sin_family = AF_INET;
 
