@@ -26,18 +26,22 @@ int main(int argc, const char *argv[])
 
     //TODO: buffer
     char buf[BUFFER_SIZE];
-    int len; // read의 바이트 수를 확인하기 위해. 
+    // int len; // read의 바이트 수를 확인하기 위해. 
     struct timeval timeout;
 
-    //TODO: 인자 예외처리
+    if (argc != 2)
+    {
+        std::cerr<<"Argument Error"<<std::endl;
+        return (1);
+    }
+
     server_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); // TCP소켓 생성
     server_address.sin_family = AF_INET;
 
     //TODO: 엔디안 변환 함수인 htonl, htons을 직접구현.
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     //TODO: 엔디안 변환 함수인 htonl, htons을 직접구현.
-    //TODO: atoi가 사용가능한지 확인
-    server_address.sin_port = htons(atoi(argv[1]));
+    server_address.sin_port = htons(stoi(std::string(argv[1])));
 
     if (bind(server_socket, reinterpret_cast<struct sockaddr *>(&server_address), static_cast<socklen_t>(sizeof(server_address))))
     {
@@ -45,19 +49,20 @@ int main(int argc, const char *argv[])
         std::cerr<<"Bind error"<<std::endl;
     }
 
-    //TODO: listen의 두번째 인자로 적절한 값을 확인
-    if (listen(server_socket, 128) == -1)
+
+    if (listen(server_socket, 15) == -1)
     {
         //error처리
         std::cerr<<"Listen error"<<std::endl;
     }
 
+    //=============================여기까지 initServers, 이후 하단은 runServers
     //TODO: 매크로함수는 직접 구현해야함.
     FD_ZERO(&read_fds);
     FD_ZERO(&write_fds);
     FD_ZERO(&exception_fds);
 
-    //TODO: read fd외에 write, exception에도 서버소켓 추가한 것이 어떻게 작용하는지 확인
+    //TODO: read fd외에 write, exception에도 서버소켓 추가한 것이 어떻게 작용하는지 확인.
     FD_SET(server_socket, &read_fds);
     FD_SET(server_socket, &write_fds);
     FD_SET(server_socket, &exception_fds);
@@ -74,7 +79,6 @@ int main(int argc, const char *argv[])
         //TODO: 왜 tmp 변수를 써야 하는걸까        
         tmp = read_fds;
 
-        //TODO: 적정 타임아웃값을 RFC 등을 통해 확인
         timeout.tv_sec = 5;
         timeout.tv_usec = 5;
 
@@ -89,10 +93,7 @@ int main(int argc, const char *argv[])
                 {
                     client_len = sizeof(client_address);
                     if ((client_socket = accept(server_socket, reinterpret_cast<struct sockaddr *>(&client_address), reinterpret_cast<socklen_t *>(&client_len))) == -1)
-                    {
                         std::cerr<<"accept error"<<std::endl;
-                        //TODO: accept 실패 시 취해야 하는 행동
-                    }
                     FD_SET(client_socket, &read_fds); // readfds에서 클라이언트 소켓의 값을 1로 바꿔줌
                     if (fd_max < client_socket)
                         fd_max = client_socket;
@@ -100,6 +101,7 @@ int main(int argc, const char *argv[])
                 }
                 else
                 {
+                    // non-blocking fd with fnctl
                     if ((len = read(fd, buf, BUFFER_SIZE)) < 0)
                     {
                         std::cerr<<"read error"<<std::endl;
