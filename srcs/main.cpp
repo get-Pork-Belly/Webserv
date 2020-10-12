@@ -1,125 +1,70 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-
+#include "ServerManager.hpp"
 #include <iostream>
 
-//TODO: 임시로 예제구현위해 선언
-#define BUFFER_SIZE 100
+// class ServerManager
+// {
+//     private:
+//         ServerManager(); //NOTE 구현x
+//         std::string _config_file_path;
+//     public:
+//         ServerManager(const char *config_path);
+//         void initServers();
+//         void makeServer(struct s_config);
+//         bool runServers();
+//         void exitServers();
+// };
 
-int main(int argc, const char *argv[])
+// ServerManager::ServerManager(const char *config_path)
+// {
+//     this->initServers();
+// }
+
+// ServerManager::initServers()
+// {
+//     this->makeServer();
+// }
+
+// bool ServerManager::runServers()
+// {
+//     while (true)
+//     {
+//         for (std::vector<Server *>::iterator iter.begin(); iter < iter.end(); ++iter)
+//         {
+//             iter->getRequest();
+//             iter->isValidRequest();
+//             iter->makeResponse();
+//         }
+//     }
+// }
+
+int main(int argc, char *argv[], char *envp[])
 {
-    int server_socket;
-    struct sockaddr_in server_address;
 
-    fd_set read_fds;
-    fd_set write_fds;
-    fd_set exception_fds;
-    fd_set tmp;
-
-    int fd_max; // fd순회할 때 0부터 fd_max까지 순회한다.
-
-    //TODO: buffer
-    char buf[BUFFER_SIZE];
-    // int len; // read의 바이트 수를 확인하기 위해. 
-    struct timeval timeout;
-
-    if (argc != 2)
+    if (argc > 2)
     {
-        std::cerr<<"Argument Error"<<std::endl;
-        return (1);
+        //TODO: error message
+        return (EXIT_FAILURE);
     }
 
-    server_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); // TCP소켓 생성
-    server_address.sin_family = AF_INET;
-
-    //TODO: 엔디안 변환 함수인 htonl, htons을 직접구현.
-    server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-    //TODO: 엔디안 변환 함수인 htonl, htons을 직접구현.
-    server_address.sin_port = htons(stoi(std::string(argv[1])));
-
-    if (bind(server_socket, reinterpret_cast<struct sockaddr *>(&server_address), static_cast<socklen_t>(sizeof(server_address))))
+    const char *default_path = "/default.conf/";
+    const char *config_path = (argc == 1) ? default_path : argv[1];
+    try
     {
-        //error처리
-        std::cerr<<"Bind error"<<std::endl;
+        ServerManager server_manager(config_path);
+        // server_manager 객체가 생성되며, 생성자안에서 serverInit 함수가 실행된다.
+        // server_manager.init();
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
     }
 
-
-    if (listen(server_socket, 15) == -1)
+    if (!server_manager.runServers())
     {
-        //error처리
-        std::cerr<<"Listen error"<<std::endl;
+        //TODO: error처리코드
+        std::cerr<"error"<<std::endl;
+        server_manager.exitServers();
     }
-
-    //=============================여기까지 initServers, 이후 하단은 runServers
-    //TODO: 매크로함수는 직접 구현해야함.
-    FD_ZERO(&read_fds);
-    FD_ZERO(&write_fds);
-    FD_ZERO(&exception_fds);
-
-    //TODO: read fd외에 write, exception에도 서버소켓 추가한 것이 어떻게 작용하는지 확인.
-    FD_SET(server_socket, &read_fds);
-    FD_SET(server_socket, &write_fds);
-    FD_SET(server_socket, &exception_fds);
-    fd_max = server_socket;
-
-    while (true)
-    {
-        int fd;
-        int len;
-        int client_socket;
-        int client_len;
-        struct sockaddr_in client_address;
-
-        //TODO: 왜 tmp 변수를 써야 하는걸까        
-        tmp = read_fds;
-
-        timeout.tv_sec = 5;
-        timeout.tv_usec = 5;
-
-        if (select(fd_max + 1, &tmp, 0, 0, &timeout) == -1)
-            std::cerr<<"select error"<<std::endl;
-
-        for (fd = 0; fd < fd_max + 1; fd++)
-        {
-            if (FD_ISSET(fd, &tmp))
-            {
-                if (fd == server_socket)
-                {
-                    client_len = sizeof(client_address);
-                    if ((client_socket = accept(server_socket, reinterpret_cast<struct sockaddr *>(&client_address), reinterpret_cast<socklen_t *>(&client_len))) == -1)
-                        std::cerr<<"accept error"<<std::endl;
-                    FD_SET(client_socket, &read_fds); // readfds에서 클라이언트 소켓의 값을 1로 바꿔줌
-                    if (fd_max < client_socket)
-                        fd_max = client_socket;
-                    std::cout<<"Client Connect FD = "<<client_socket<<std::endl;
-                }
-                else
-                {
-                    // non-blocking fd with fnctl
-                    if ((len = read(fd, buf, BUFFER_SIZE)) < 0)
-                    {
-                        std::cerr<<"read error"<<std::endl;
-                    }
-                    if (len == 0)
-                    {
-                        FD_CLR(fd, &read_fds); // read_fds에서 fd를 0으로 만든다.
-                        close(fd);
-                        std::cout<<"Client Disconnect: "<<fd<<std::endl;
-                    }
-                    else
-                    {
-                        write(fd, buf, len);
-                    }                    
-                }
-            }
-        }
-    }
-
     return (0);
 }
+
