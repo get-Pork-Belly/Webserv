@@ -1,34 +1,55 @@
 #ifndef SERVERMANAGER_HPP
 # define SERVERMANAGER_HPP
 
-#include <vector>
+# include <sys/types.h>
+# include <sys/stat.h>
+# include <sys/socket.h>
+# include <sys/select.h>
+# include <sys/time.h>
+# include <map>
+# include <exception>
+# include "types.hpp"
 
 class ServerManager
 {
 private:
-        // 한 바퀴 돌면서 server block 밖의 설정파일을 저장한다.
-        // find(server block) and setting -> 만약 globalCOnfig에 있는게 없다면 ADD
-    std::vector<ServerConifg *> configs;
-    std::vector<Server *> servers;
-public:
-    /* Constructor */
-    //TODO: 생성자 인자를 넣는 방식이 최선인지 고민해보기.
-    ServerManager(char* config_path="default config_path");
+    /* Canonical but not implements */
+    ServerManager();
     ServerManager(const ServerManager& other);
-
-    /* Destructor */
-    virtual ~ServerManager();
-
-    /* Overload */
     ServerManager& operator=(const ServerManager& rhs);
 
+private:
+    std::string _config_file_path;
+    std::vector<Server *> _servers;
+    fd_set _readfds;
+    fd_set _writefds;
+    fd_set _exceptfds;
+    fd_set _copy_readfds;
+    fd_set _copy_writefds;
+    fd_set _copy_exceptfds;
+    std::string _port;
+    int _fd;
+    int _fd_max;
+    std::map<int, std::string> _status_code_msg;
+    struct GlobalConfig _global_config;
+
+public:
+    /* Constructor */
+    ServerManager(const char *config_path);
+    /* Destructor */
+    virtual ~ServerManager();
+    /* Overload */
     /* Getter */
-
+    const struct GlobalConfig &getGlobalConfig();
     /* Setter */
-    bool setConfigs(char *path);
-
     /* Exception */
     /* Util */
+
+    /* Manage Server functions */
+    void initServers();
+    void makeServer(struct ServerConfig);
+    bool runServers();
+    void exitServers();
 };
 
 #endif
