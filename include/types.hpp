@@ -4,9 +4,10 @@
 # include <string>
 # include <vector>
 
+//NOTE 임시
 typedef struct GlobalConfig
-{   //NOTE 임시
-    std::string _http_version;
+{
+    std::string _http_version; 
     std::string _os;
     std::string _cgi_version;
 } GlobalConfig;
@@ -21,6 +22,7 @@ typedef struct ServerConfig
     int _limit_client_body_size;
     std::string _default_error_page;
     std::vector<struct Location *> _locations;
+    struct GlobalConfig *global_config; //NOTE: ServerManager 객체의 멤버변수의 주소
 } ServerConfig;
 
 typedef struct Location

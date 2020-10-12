@@ -2,8 +2,12 @@
 # define SERVERMANAGER_HPP
 
 # include <sys/types.h>
+# include <sys/stat.h>
 # include <sys/socket.h>
+# include <sys/select.h>
+# include <sys/time.h>
 # include <map>
+# include <exception>
 # include "types.hpp"
 
 class ServerManager
@@ -16,6 +20,7 @@ private:
 
 private:
     std::string _config_file_path;
+    std::vector<Server *> _servers;
     fd_set _readfds;
     fd_set _writefds;
     fd_set _exceptfds;
@@ -26,6 +31,7 @@ private:
     int _fd;
     int _fd_max;
     std::map<int, std::string> _status_code_msg;
+    struct GlobalConfig _global_config;
 
 public:
     /* Constructor */
@@ -34,13 +40,14 @@ public:
     virtual ~ServerManager();
     /* Overload */
     /* Getter */
+    const struct GlobalConfig &getGlobalConfig();
     /* Setter */
     /* Exception */
     /* Util */
 
     /* Manage Server functions */
     void initServers();
-    void makeServer(struct s_config);
+    void makeServer(struct ServerConfig);
     bool runServers();
     void exitServers();
 };

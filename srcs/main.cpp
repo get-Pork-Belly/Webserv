@@ -1,29 +1,6 @@
 #include "ServerManager.hpp"
 #include <iostream>
 
-// ServerManager::ServerManager(const char *config_path)
-// {
-//     this->initServers();
-// }
-
-// ServerManager::initServers()
-// {
-//     this->makeServer();
-// }
-
-// bool ServerManager::runServers()
-// {
-//     while (true)
-//     {
-//         for (std::vector<Server *>::iterator iter.begin(); iter < iter.end(); ++iter)
-//         {
-//             iter->getRequest();
-//             iter->isValidRequest();
-//             iter->makeResponse();
-//         }
-//     }
-// }
-
 int main(int argc, char *argv[], char *envp[])
 {
 
