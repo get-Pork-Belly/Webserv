@@ -27,6 +27,7 @@ void convertFileToStringVector(const char *config_file_path)
 			throw(strerror(errno));
 		readed_string += std::string(buf);
 	}
+
 	lines = ft::split(readed_string, "\n");
 
 	// for (std::string line : lines)
