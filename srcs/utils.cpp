@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   utils.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sanam <marvin@42.fr>                       +#+  +:+       +#+        */
+/*   By: iwoo <iwoo@student.42seoul.kr>             +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/10/13 09:51:39 by sanam             #+#    #+#             */
-/*   Updated: 2020/10/13 10:15:40 by sanam            ###   ########.fr       */
+/*   Updated: 2020/10/13 21:43:43 by iwoo             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,16 +18,17 @@ namespace ft
 	{
 		std::vector<std::string>	result;
 		int							index;
+		std::string 				tmp;
 
 		while (str.size())
 		{
 			index = str.find(token);
-			if (index != std::string::npos)
+			if (static_cast<size_t>(index) != std::string::npos)
 			{
-				result.push_back(str.substr(0, index));
+				tmp = str.substr(0, index);
+				if (tmp.length())
+					result.push_back(tmp);
 				str = str.substr(index + token.size());
-				if (str.size() == 0)
-					result.push_back(str);
 			}
 			else
 			{
