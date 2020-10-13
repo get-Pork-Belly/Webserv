@@ -6,7 +6,7 @@
 /*   By: sanam <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/10/13 09:51:39 by sanam             #+#    #+#             */
-/*   Updated: 2020/10/13 10:15:40 by sanam            ###   ########.fr       */
+/*   Updated: 2020/10/13 15:46:48 by sanam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,5 +36,17 @@ namespace ft
 			}
 		}
 		return (result);
+	}
+
+	std::string ltrim(const std::string& str, const char *token="\t\n ")
+	{
+		size_t n = str.find_first_not_of(token);
+		return (n == std::string::npos ? str : str.substr(n, str.length()));
+	}
+
+	std::string rtrim(const std::string& str, const char *token="\t\n ")
+	{
+		size_t n = str.find_last_not_of(token);
+		return (n == std::string::npos ? str : str.substr(0, n + 1));
 	}
 }
