@@ -14,7 +14,7 @@ private:
 	ServerGenerator& operator=(const ServerGenerator& rhs);
 
 private:
-	ServerManager				_server_manager;
+	const ServerManager&		_server_manager;
 	struct GlobalConfig			_global_config;
 	std::vector<std::string>	_str_vector_configfile;
 

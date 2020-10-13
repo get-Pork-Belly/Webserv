@@ -45,22 +45,28 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
 	int							fd;
 	int							readed;
 	char						buf[BUF_SIZE];
-	std::vector<std::string>	temp;
+	std::string 				readed_string;
+	std::vector<std::string>	lines;
 
 	fd = open(config_file_path, O_RDONLY, 0644);
 	if (fd < 0)
 		throw (strerror(errno));
 	memset(reinterpret_cast<void *>(buf), 0, BUF_SIZE);
-	readed = read(fd, reinterpret_cast<void *>(buf), BUF_SIZE);
-	if (readed < 0)
-		throw (strerror(errno));
-	temp = ft::split(std::string(buf), "\n");
-	//NOTE 범위 기반 반복문. C++11문법
-	for (std::string s : temp)
+
+	while ((readed = read(fd, reinterpret_cast<void *>(buf), BUF_SIZE)))
 	{
-		// TODO trimmed 데이터가 유지될까? 포인터로 만들어야하지 않을까?
-		// TODO push_back의 인자로 std::string(trimmed) 처럼 새롭게 만들어서 넣을까?
-		std::string trimmed = ft::ltrim(ft::rtrim(s));
+		if (readed < 0)
+			throw(strerror(errno));
+		readed_string += std::string(buf);
+	}
+	lines = ft::split(readed_string, "\n");
+
+	for (std::string line : lines)
+	{
+		//TODO trimmed 데이터가 유지될까? 포인터로 만들어야하지 않을까?
+		//TODO push_back의 인자로 std::string(trimmed) 처럼 새롭게 만들어서 넣을까?
+		//TODO: test
+		std::string trimmed = ft::ltrim(ft::rtrim(line));
 		if (trimmed.size() > 0)
 			_str_vector_configfile.push_back(std::string(trimmed));
 	}
