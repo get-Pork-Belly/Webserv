@@ -9,7 +9,7 @@
 /*============================================================================*/
 
 ServerManager::ServerManager(const char *config_path)
-: _config_file_path(std::string(config_path))
+: _config_file_path(config_path)
 {
     this->initServers();
 
@@ -60,9 +60,11 @@ ServerManager::~ServerManager()
 void
 ServerManager::initServers()
 {
-    ServerGenerator server_generator;
+    ServerGenerator server_generator(*this);
 
-    server_generator.convertFileToString(this->_config_file_path);
+	//NOTE 기존에는 string으로 변환 수정이후는 스트링 벡터
+    server_generator.convertFileToStringVector(this->_config_file_path);
+	//TODO 구현하기
     if (!server_generator.isValidConfigFile())
         throw "config file error"; // throw
     this->_global_config = server_generator.setGlobalConfig(); // GlobalConfig set
