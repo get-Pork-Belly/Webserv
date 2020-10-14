@@ -23,12 +23,12 @@ int main(int argc, char *argv[], char *envp[])
         std::cerr << e.what() << '\n';
     }
 
-    if (!server_manager.runServers())
-    {
-        //TODO: error처리코드
-        std::cerr<"error"<<std::endl;
-        server_manager.exitServers();
-    }
+    // if (!server_manager.runServers())
+    // {
+    //     //TODO: error처리코드
+    //     std::cerr<"error"<<std::endl;
+    //     server_manager.exitServers();
+    // }
     return (0);
 }
 
