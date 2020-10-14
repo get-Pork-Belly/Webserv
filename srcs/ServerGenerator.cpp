@@ -12,8 +12,9 @@ ServerGenerator::ServerGenerator(const ServerManager& server_manager)
 : _server_manager(server_manager)
 {
     this->convertFileToStringVector(this->_server_manager.getConfigFilePath());
-    if (!this->isValidConfigFile())
-        throw "config file error"; // throw
+    // TODO 구현하기
+    // if (!this->isValidConfigFile())
+    //     throw "config file error"; // throw
 }
 
 /*============================================================================*/
@@ -74,14 +75,6 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
         if (trimmed.size() > 0)
             this->_configfile_lines.push_back(trimmed);
     }
-}
-
-// TODO setGlobalConfig가 진짜로 필요한가? 만약 불필요하다면 이 함수를 parseHttpBlock로 바꿔보자
-void
-ServerGenerator::setGlobalConfig()
-{
-    _global_config._http_version = std::string("HTTP/1.1");
-    _global_config._os = std::string("MAC OS");
 }
 
 // NOTE 함수 내부에서 parse 함수들을 호출한다.
