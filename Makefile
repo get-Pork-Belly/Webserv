@@ -1,17 +1,26 @@
 NAME = Webserv
 INCLUDES = -I include
 CC = clang++
-CFLAGS = -Wall -Wextra -Werror
+CFLAGS = -Wall -Wextra -Werror -std=c++11
 RM = rm -rf
 
-MAIN_FILES = main 
+# MAIN_FILES = main 
+MAIN_FILES = split_test utils
 
 SRCS_PATH = $(MAIN_FILES)
-VPATH := .:srcs
+VPATH := .:srcs:tests
+# VPATH := .:srcs:
 SRCS = $(addsuffix .cpp, $(SRCS_PATH))
 
 OBJDIR = ./objs
 OBJS = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(MAIN_FILES)))
+
+# TEST_FILES = split_test
+# TEST_NAME = test
+# TESTDIR = ./tests
+# TESTS_PATH = $(TEST_FILES)
+# TESTS = $(addprefix $(TESTDIR)/, $(addsuffix .cpp, $(TESTS_PATH)))
+# TEST_OBJS = $(addprefix $(TESTDIR)/, $(addsuffix .o, $(TESTS_FILES)))
 
 GREEN = \033[0;32m
 RED = \033[0;31m
@@ -27,6 +36,16 @@ ${NAME}: ${OBJS}
 $(OBJDIR)/%.o : %.cpp
 	@mkdir -p $(OBJDIR)
 	@${CC} ${CFLAGS} ${INCLUDES} -c $< -o $@
+
+# test: $(TEST_NAME)
+
+# ${TEST_NAME}: ${TEST_OBJS}
+# 	@echo "Test your functions"
+# 	@${CC} ${INCLUDES} ${TEST_OBJS} -o ${TEST_NAME}
+# 	@./test
+
+# $(TESTDIR)/%.o : %.cpp
+# 	@${CC} ${INCLUDES} -c $< -o $@
 
 clean:
 	@echo "$(RESET)Cleaning your object files$(RESET)"
