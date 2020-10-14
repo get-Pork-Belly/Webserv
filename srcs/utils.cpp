@@ -42,10 +42,10 @@ std::string rtrim(const std::string& str, const char *token)
 unsigned long hToNL(unsigned long hostlong)
 {
     return (
-             (hostlong & 0x000000ffU) << 24 |
-             (hostlong & 0x0000ff00U) << 8 |
-             (hostlong & 0x00ff0000U) >> 8 |
-             (hostlong & 0xff000000U) >> 24
+            (hostlong & 0x000000ffU) << 24 |
+            (hostlong & 0x0000ff00U) << 8 |
+            (hostlong & 0x00ff0000U) >> 8 |
+            (hostlong & 0xff000000U) >> 24
            );
 }
 
@@ -54,24 +54,24 @@ unsigned short hToNS(unsigned short hostshort)
     return ( 
             (hostshort & 0x00ffU) << 8 |
             (hostshort & 0xff00U) >> 8 
-            );
+           );
 }
 
 unsigned long nToHL(unsigned long hostlong)
 {
     return (
-             (hostlong & 0x000000ffU) << 24 |
-             (hostlong & 0x0000ff00U) << 8 |
-             (hostlong & 0x00ff0000U) >> 8 |
-             (hostlong & 0xff000000U) >> 24
+            (hostlong & 0x000000ffU) << 24 |
+            (hostlong & 0x0000ff00U) << 8 |
+            (hostlong & 0x00ff0000U) >> 8 |
+            (hostlong & 0xff000000U) >> 24
            );
 }
 
 unsigned short nToHS(unsigned short hostshort)
 {
     return (
-             (hostshort & 0x00ffU) << 8 |
-             (hostshort & 0xff00U) >> 8
+            (hostshort & 0x00ffU) << 8 |
+            (hostshort & 0xff00U) >> 8
            );
 }
 
