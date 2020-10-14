@@ -16,6 +16,11 @@ namespace ft
     void fdSet(int fd, fd_set *fds);
     bool fdIsset(int fd, fd_set *fds);
     void fdClr(int fd, fd_set *fds);
+  
+    unsigned long hToNL(unsigned long hostlong);
+    unsigned short hToNS(unsigned short hostshort);
+    unsigned long nToHL(unsigned long hostlong);
+    unsigned short nToHS(unsigned short hostshort);
 }
 
 #endif
