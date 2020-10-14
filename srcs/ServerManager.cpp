@@ -26,7 +26,6 @@ ServerManager::ServerManager(const char *config_path)
         {101, "wowowo"},
         {102, "wowowo"}
     };
-    memset(&this->_global_config, 0, sizeof(GlobalConfig));
 }
 
 /*============================================================================*/
@@ -45,6 +44,12 @@ ServerManager::~ServerManager()
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
+const char *
+ServerManager::getConfigFilePath() const
+{
+    return (this->_config_file_path);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -62,13 +67,6 @@ ServerManager::initServers()
 {
     ServerGenerator server_generator(*this);
 
-	//NOTE 기존에는 string으로 변환 수정이후는 스트링 벡터
-    server_generator.convertFileToStringVector(this->_config_file_path);
-	//TODO 구현하기
-    if (!server_generator.isValidConfigFile())
-        throw "config file error"; // throw
-    this->_global_config = server_generator.setGlobalConfig(); // GlobalConfig set
-
     server_generator.generateServers(this->_servers); // config파일을 순회하며 Server객체 생성 _servers.push_b
     
     // server_generator.parseServerBlock(); - generateServers 내부에서 실행
@@ -85,14 +83,14 @@ ServerManager::initServers()
     }
 }
 
-bool
-ServerManager::runServers()
-{
+// bool
+// ServerManager::runServers()
+// {
     
-}
+// }
 
-void
-ServerManager::exitServers()
-{
+// void
+// ServerManager::exitServers()
+// {
     
-}
+// }

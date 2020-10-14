@@ -37,7 +37,6 @@ private:
     int _fd;
     int _fd_max;
     std::map<int, std::string> _status_code_msg;
-    struct GlobalConfig _global_config;
 
 public:
     /* Constructor */
