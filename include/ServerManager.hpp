@@ -9,6 +9,10 @@
 # include <errno.h>
 # include <map>
 # include <exception>
+# include <fcntl.h>
+# include <unistd.h>
+# include <iostream>
+# include <string>
 # include "types.hpp"
 # include "utils.hpp"
 
