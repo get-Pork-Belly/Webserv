@@ -71,5 +71,41 @@ void fdClr(int fd, fd_set *fds)
     int mask = ~(1 << ((unsigned long)fd % (sizeof(__int32_t) * 8)));
     fds->fds_bits[(unsigned long)fd/(sizeof(__int32_t) * 8)] &= mask;
 }
+  
+unsigned long hToNL(unsigned long hostlong)
+{
+    return (
+            (hostlong & 0x000000ffU) << 24 |
+            (hostlong & 0x0000ff00U) << 8 |
+            (hostlong & 0x00ff0000U) >> 8 |
+            (hostlong & 0xff000000U) >> 24
+           );
+}
+
+unsigned short hToNS(unsigned short hostshort)
+{
+    return ( 
+            (hostshort & 0x00ffU) << 8 |
+            (hostshort & 0xff00U) >> 8 
+           );
+}
+
+unsigned long nToHL(unsigned long hostlong)
+{
+    return (
+            (hostlong & 0x000000ffU) << 24 |
+            (hostlong & 0x0000ff00U) << 8 |
+            (hostlong & 0x00ff0000U) >> 8 |
+            (hostlong & 0xff000000U) >> 24
+           );
+}
+
+unsigned short nToHS(unsigned short hostshort)
+{
+    return (
+            (hostshort & 0x00ffU) << 8 |
+            (hostshort & 0xff00U) >> 8
+           );
+}
 
 }
