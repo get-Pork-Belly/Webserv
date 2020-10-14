@@ -2,9 +2,10 @@ http {
     include       mime.types;
     server {
         listen       80;
+        root html;
         location / {
-            root   html;
             index  index.html index.htm;
+            not aaa;
         }
         location /abc {
             root  /user/sanam;
@@ -12,14 +13,14 @@ http {
         }
     }
     server {
-        listen       80;
-        location / {
+        listen       8080;
+        location /please {
             root   html;
             index  index.html index.htm;
         }
-        location /abc {
-            root  /user/sanam;
-            index  hahahoho.html;
+        location /second-second {
+            root  /user/iwoo;
+            index  html;
         }
     }
 }
