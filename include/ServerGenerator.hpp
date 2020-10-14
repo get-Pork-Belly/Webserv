@@ -6,6 +6,7 @@
 # include <string>
 # include <iostream>
 # include "utils.hpp"
+# include "Server.hpp"
 
 class ServerManager;
 
