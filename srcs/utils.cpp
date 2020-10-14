@@ -39,6 +39,39 @@ std::string rtrim(const std::string& str, const char *token)
     return (n == std::string::npos ? str : str.substr(0, n + 1));
 }
 
+void fdZero(fd_set *fds)
+{
+    for (int i = 0; i < 32; ++i)
+        fds->fds_bits[i] = 0;
+}
+
+void fdSet(int fd, fd_set *fds)
+{
+    if (fd < 0 || fd >= 1024)
+        return ;
+    int mask = 1 <<((unsigned long)fd % (sizeof(__int32_t) * 8));
+    fds->fds_bits[(unsigned long)fd/(sizeof(__int32_t) * 8)] |= mask;
+}
+
+bool fdIsset(int fd, fd_set *fds)
+{
+    if (fd < 0 || fd >= 1024)
+        return false;
+    int mask = 1 << ((unsigned long)fd % (sizeof(__int32_t) * 8));
+    if (fds->fds_bits[(unsigned long)fd / (sizeof(__int32_t) * 8)] & mask)
+        return true;
+    return false;
+}
+
+void fdClr(int fd, fd_set *fds)
+{
+    if (fd < 0 || fd >= 1024)
+        return ;
+
+    int mask = ~(1 << ((unsigned long)fd % (sizeof(__int32_t) * 8)));
+    fds->fds_bits[(unsigned long)fd/(sizeof(__int32_t) * 8)] &= mask;
+}
+  
 unsigned long hToNL(unsigned long hostlong)
 {
     return (
