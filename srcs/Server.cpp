@@ -29,7 +29,7 @@ Server::~Server()
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
-std::map<std::string, std::string> Server::getServerConfig()
+const std::map<std::string, std::string> Server::getServerConfig()
 {
     return (this->_server_config);
 }

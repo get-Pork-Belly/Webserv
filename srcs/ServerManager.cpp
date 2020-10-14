@@ -70,7 +70,7 @@ ServerManager::getConfigFilePath() const
 void
 ServerManager::initServers()
 {
-    // ServerGenerator server_generator(*this);
+    ServerGenerator server_generator(this);
     //
     // server_generator.generateServers(this->_servers); // config파일을 순회하며 Server객체 생성 _servers.push_b
     

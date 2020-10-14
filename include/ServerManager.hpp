@@ -15,6 +15,7 @@
 # include <string>
 # include "types.hpp"
 # include "utils.hpp"
+# include "ServerGenerator.hpp"
 
 class Server;
 
