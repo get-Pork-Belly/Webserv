@@ -77,23 +77,6 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     }
 }
 
-/*
- * http{
- *   root = /user/;
- *
- *   server {
- *		root = /user/sanam/;
- *   } -> server_confing -> servers.push_back(new Server(server_config))
- *
- *   server {
- *   } -> server_confing -> servers.push_back(new Server(server_config))
- * }
- *
- * _server_config[root] = /user;
- * _server_config[root] = /user/sanam/으로 갱신 - 구체화된다.
- */
-// NOTE 함수 내부에서 parse 함수들을 호출한다.
-
 void
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
@@ -112,39 +95,50 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
         {
             std::map<std::string, std::string> _server_config(_http_config);
             it++;
-            // std::map<std::string, std::map> _locations;
-            // parseServerBlock(it, _server_config, _locations);
-            parseServerBlock(it, _server_config);
+            std::map<std::string, std::map<std::string, std::string> > _locations;
+            parseServerBlock(it, _server_config, _locations);
+            
+            std::cout << "===============================" << std::endl;
+            for (auto& s : _server_config)
+            {
+                std::cout << "key: " << s.first << "  value: " << s.second << std::endl;
+            }
+            std::cout << "==========   locations ========" << std::endl;
+            for (auto& s : _locations)
+            {
+                std::cout << "---------------------------" << std::endl;
+                std::cout << "route: " << s.first << std::endl;
+                for (auto& b : s.second)
+                {
+                    std::cout << "key: " << b.first << "  value: " << b.second << std::endl;
+                }
+                std::cout << "-----------다음----------------" << std::endl;
+            }
             //TODO  new로 해야할까?
-            // servers.push_back(new Server(_server_config));
             // servers.push_back(new Server(_server_config, _locations));
+            std::cout << "===============================\n\n" << std::endl;
         }
         it++;
     }
 }
 
-
-// void
-// ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config
-// , std::map<std::string, std::map> locations)
 void
-ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
+ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config, std::map<std::string, std::map<std::string, std::string> >& locations)
 {
     std::vector<std::string>	directives;
 
     while (it != _configfile_lines.end())
     {
-        directives = ft::split(*it, " "); //NOTE directives[0]: key, [1]: value
+        directives = ft::split(*it, " ");
         if (directives[0] == "location")
         {
-            // std::map<std::string, std::string> location_config =  parseLocationBlock(it, server_config);
-            // locations.[location_config['Routing Table']] = location_config;
-            parseLocationBlock(it, server_config); //NOTE server_config에서 location 설정 처리도 같이하는건 어떨까?
+            std::map<std::string, std::string> location_config = parseLocationBlock(it, server_config);
+            std::string temp = location_config["route"];
+            locations[temp] = location_config;
             continue ;
         }
         if (directives[0] == "}")
             return ;
-
         std::string temp = ft::rtrim(directives[1], ";");
         directives[1] = temp;
         server_config[directives[0]] = directives[1];
@@ -153,27 +147,43 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::m
     }
 }
 
-// std::map<std::string, std::string>
-// ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
 void
+ServerGenerator::setLocationConfig(std::map<std::string, std::string>& location_config, std::map<std::string, std::string>& server_config)
+{
+    std::map<std::string, std::string>::iterator ite = server_config.end();
+
+    if (server_config.find("index") != ite)
+        location_config["index"] = server_config["index"];
+    if (server_config.find("root") != ite)
+        location_config["root"] = server_config["root"];
+}
+
+std::map<std::string, std::string>
 ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
 {
     std::vector<std::string> directives;
-    
-    // std::map<std::string, std::string> location_config;
-    // setLocationConfig(location_config, server_config);
+    std::map<std::string, std::string> location_config;
+
+    setLocationConfig(location_config, server_config);
     while (it != _configfile_lines.end())
     {
         directives = ft::split(*it, " ");
+        if (directives[0] == "location")
+        {
+            location_config["route"] = directives[1];
+            it++;
+            continue ;
+        }
         if (directives[0] == "}")
         {
             it++;
-            return ;
+            return (location_config);
         }
         std::string temp = ft::rtrim(directives[1], ";");
         directives[1] = temp;
-        server_config[directives[0]] = directives[1];
+        location_config[directives[0]] = directives[1];
         directives.clear();
         it++;
     }
+    return (location_config);
 }
