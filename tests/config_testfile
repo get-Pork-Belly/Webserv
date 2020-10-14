@@ -1,7 +1,3 @@
-worker_processes  1;
-events {
-    worker_connections  1024;
-}
 http { 
     include       mime.types;
     server {
@@ -9,6 +5,21 @@ http {
         location / {
             root   html;
             index  index.html index.htm;
+        }
+        location /abc {
+            root  /user/sanam;
+            index  hahahoho.html;
+        }
+    }
+    server {
+        listen       80;
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+        location /abc {
+            root  /user/sanam;
+            index  hahahoho.html;
         }
     }
 }

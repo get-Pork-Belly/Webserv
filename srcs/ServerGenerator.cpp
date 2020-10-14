@@ -53,7 +53,7 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     int	readed;
     char buf[BUF_SIZE];
     std::string readed_string;
-    std::vector<std::string> lines;
+    std::vector<std::string> lines(100);
 
     fd = open(config_file_path, O_RDONLY, 0644);
     if (fd < 0)
@@ -73,114 +73,107 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     {
         std::string trimmed = ft::ltrim(ft::rtrim(line));
         if (trimmed.size() > 0)
-            this->_configfile_lines.push_back(trimmed);
+            this->_configfile_lines.push_back(std::string(trimmed));
     }
 }
 
+/*
+ * http{
+ *   root = /user/;
+ *
+ *   server {
+ *		root = /user/sanam/;
+ *   } -> server_confing -> servers.push_back(new Server(server_config))
+ *
+ *   server {
+ *   } -> server_confing -> servers.push_back(new Server(server_config))
+ * }
+ *
+ * _server_config[root] = /user;
+ * _server_config[root] = /user/sanam/으로 갱신 - 구체화된다.
+ */
 // NOTE 함수 내부에서 parse 함수들을 호출한다.
+
 void
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
-    (void)servers;
-    // std::vector<std::string>	directives;
-    // // TODO server_config를 map으로 할지 struct로 할지 확실히 정하기.
-    // // struct ServerConfig			_server_config;
+    std::vector<std::string> directives;
+    std::map<std::string, std::string> _http_config;
     
-    // // TODO
-    // // std::map<std::string, std::string> _http_config;
-
-    // std::vector<std::string>::iterator it = this->_configfile_lines.begin();
-    // std::vector<std::string>::iterator ite = this->_configfile_lines.end();
-    //NOTE 범위 기반 반복문  C++11문법
-    //NOTE map 하면 생기는 이점. _server_config 먼저 server블록 밖의 정보들을 세팅 한 다음에
-    // 그 다음에 server 블록을 돌면 자연스럽게 구체화가 된다.
-    /*
-     * http{
-     *   root = /user/;
-     *
-     *   server {
-     *		root = /user/sanam/;
-     *   } -> server_confing -> servers.push_back(new Server(server_config))
-     *
-     *   server {
-     *   } -> server_confing -> servers.push_back(new Server(server_config))
-     * }
-     *
-     * _server_config[root] = /user;
-     * _server_config[root] = /user/sanam/으로 갱신 - 구체화된다.
-     *
-     */
+    std::vector<std::string>::iterator it = this->_configfile_lines.begin();
+    std::vector<std::string>::iterator ite = this->_configfile_lines.end();
     //TODO http_config 를 먼저 작성하자.
-    // _http_config = parseHttpBlock();
-    // {
-    //    http version, os
-    // }
+    // std::map<std::string, std::string> _http = httpParseBlock();
+    (void)servers;
 
-    // while (it++ != ite)
-    // {
-    //     if ( *it == "server {")
-    //     {
-    //         // NOTE _server_config 는 반복이 될 때 마다 갱신된다.
-    //         // NOTE http 블록 설정 
-    //         std::map<std::string, std::string> _server_config(_http_config);
-    //         //NOTE Server블록에 대한 설정을 읽고 _server_config 맵 자료구조에 키 밸류 값으로 넣어준다.
-    //         //NOTE ++it를 넣어준 이유는 "server {" 이 녀석 자체는 필요 없기 때문이다.
-    //         parseServerBlock(++it, _server_config);
-    //         //NOTE Server를 생성한 다음에 _servers에 push_back 한다.
-    //         //NOTE 여기서 _server_config은 구조체가 아니라 map 자료구조임을 명심하자.
-    //         servers.push_back(new Server(_server_config));
-    //         _server_config.clear();
-    //     }
-    // }
+    while (it != ite)
+    {
+        if ( *it == "server {")
+        {
+            std::map<std::string, std::string> _server_config(_http_config);
+            it++;
+            // std::map<std::string, std::map> _locations;
+            // parseServerBlock(it, _server_config, _locations);
+            parseServerBlock(it, _server_config);
+            //TODO  new로 해야할까?
+            // servers.push_back(new Server(_server_config));
+            // servers.push_back(new Server(_server_config, _locations));
+        }
+        it++;
+    }
 }
 
 
-//NOTE it를 넣어준 이유는 parseServerBlock이 끝낸 후에 it가 serverBlock 이후를 볼 수 있게 만들기 위함.
 // void
-// ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
-// {
-//     (void)server_config;
-//     // std::vector<std::string>	directives;
+// ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config
+// , std::map<std::string, std::map> locations)
+void
+ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
+{
+    std::vector<std::string>	directives;
 
-//     // while (true)
-//     // {
-//     //     // directives[0] = root, directives[1] = /user
-//     //     directives = ft::split(*it, " "); //NOTE directives[0]: key, [1]: value
-//     //     if (directives[0] == "location")
-//     //         parseLocationBlock(it, server_config); //NOTE server_config에서 location 설정 처리도 같이하는건 어떨까?
-//     //     if (directives[0] == "}")
-//     //         return ;
+    while (it != _configfile_lines.end())
+    {
+        directives = ft::split(*it, " "); //NOTE directives[0]: key, [1]: value
+        if (directives[0] == "location")
+        {
+            // std::map<std::string, std::string> location_config =  parseLocationBlock(it, server_config);
+            // locations.[location_config['Routing Table']] = location_config;
+            parseLocationBlock(it, server_config); //NOTE server_config에서 location 설정 처리도 같이하는건 어떨까?
+            continue ;
+        }
+        if (directives[0] == "}")
+            return ;
 
-//     //     //NOTE ServerConfig를 map으로 하면 편한(?) 이유.
-//     //     // 한줄 씩 파싱하면서 나온 값을 키 값을 기준으로 넣어주면 편한데
-//     //     // 구조체를 사용해서 값을 할당하면 찾을 방법이 없다.
-//     //     // NOTE simple지시어는 자신의 끝을 알려주기 위해 ';'를 사용한다. 쓸모 없으므로 지워주자.
-//     //     std::string temp = ft::rtrim(directives[directives의 마지막 인덱스], ";");
-//     //     directives[1] = temp;
-//     //     server_config[directives[0]] = directives[1]; //NOTE key = value
-//     //     // NOTE 지시어를 초기화 해준다.
-//     //     directives.clear();
-//     //     it++;
-//     // }
-    
-// }
+        std::string temp = ft::rtrim(directives[1], ";");
+        directives[1] = temp;
+        server_config[directives[0]] = directives[1];
+        directives.clear();
+        it++;
+    }
+}
 
-//NOTE it를 넣어준 이유는 parseServerBlock이 끝낸 후에 it가 serverBlock 이후를 볼 수 있게 만들기 위함.
-// void
+// std::map<std::string, std::string>
 // ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
-// {
-//     std::vector<std::string> directives;
-
-//     while(true)
-//     {
-//         directives = ft::split(it, " "); //NOTE directives[0]: key, [1]: value
-//         if (directives[0] == "}")
-//             return ;
-//         std::string temp = ft::rtrim(directives[1], ";");
-//         directives[1] = temp;
-//         server_config[directives[0]] = directives[1]; //NOTE key = value
-//         // NOTE 지시어를 초기화 해준다.
-//         directives.clear();
-//         it++;
-//     }
-// }
+void
+ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
+{
+    std::vector<std::string> directives;
+    
+    // std::map<std::string, std::string> location_config;
+    // setLocationConfig(location_config, server_config);
+    while (it != _configfile_lines.end())
+    {
+        directives = ft::split(*it, " ");
+        if (directives[0] == "}")
+        {
+            it++;
+            return ;
+        }
+        std::string temp = ft::rtrim(directives[1], ";");
+        directives[1] = temp;
+        server_config[directives[0]] = directives[1];
+        directives.clear();
+        it++;
+    }
+}
