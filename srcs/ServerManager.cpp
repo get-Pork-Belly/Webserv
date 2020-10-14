@@ -9,7 +9,7 @@
 /*============================================================================*/
 
 ServerManager::ServerManager(const char *config_path)
-: _config_file_path(std::string(config_path))
+: _config_file_path(config_path)
 {
     this->initServers();
 
@@ -26,7 +26,6 @@ ServerManager::ServerManager(const char *config_path)
         {101, "wowowo"},
         {102, "wowowo"}
     };
-    memset(&this->_global_config, 0, sizeof(GlobalConfig));
 }
 
 /*============================================================================*/
@@ -45,6 +44,12 @@ ServerManager::~ServerManager()
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
+const char *
+ServerManager::getConfigFilePath() const
+{
+    return (this->_config_file_path);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -60,12 +65,7 @@ ServerManager::~ServerManager()
 void
 ServerManager::initServers()
 {
-    ServerGenerator server_generator;
-
-    server_generator.convertFileToString(this->_config_file_path);
-    if (!server_generator.isValidConfigFile())
-        throw "config file error"; // throw
-    this->_global_config = server_generator.setGlobalConfig(); // GlobalConfig set
+    ServerGenerator server_generator(*this);
 
     server_generator.generateServers(this->_servers); // config파일을 순회하며 Server객체 생성 _servers.push_b
     
@@ -83,14 +83,14 @@ ServerManager::initServers()
     }
 }
 
-bool
-ServerManager::runServers()
-{
+// bool
+// ServerManager::runServers()
+// {
     
-}
+// }
 
-void
-ServerManager::exitServers()
-{
+// void
+// ServerManager::exitServers()
+// {
     
-}
+// }
