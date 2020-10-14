@@ -46,7 +46,7 @@ public:
     virtual ~ServerManager();
     /* Overload */
     /* Getter */
-    const struct GlobalConfig &getGlobalConfig();
+    const char *getConfigFilePath() const;
     /* Setter */
     /* Exception */
     /* Util */

@@ -8,7 +8,7 @@
 
 const int BUF_SIZE = 4096;
 
-std::vector<std::string> _str_vector_configfile;
+std::vector<std::string> _configfile_lines;
 
 void convertFileToStringVector(const char *config_file_path)
 {
@@ -37,8 +37,8 @@ void convertFileToStringVector(const char *config_file_path)
         std::string trimmed = ft::ltrim(ft::rtrim(line));
         std::cout<<trimmed<<std::endl;
         if (trimmed.size() > 0)
-            _str_vector_configfile.push_back(trimmed);
-        // 	this->_str_vector_configfile.push_back(trimmed);
+            _configfile_lines.push_back(trimmed);
+        // 	this->_configfile_lines.push_back(trimmed);
     }
 }
 
@@ -53,7 +53,7 @@ int main(void)
         std::cout<<e<<std::endl;
     }
     
-    for (std::string s : _str_vector_configfile)
+    for (std::string s : _configfile_lines)
     {
         std::cout<<"string: " << s <<std::endl;
     }

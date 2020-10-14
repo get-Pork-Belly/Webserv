@@ -9,7 +9,12 @@
 /*============================================================================*/
 
 ServerGenerator::ServerGenerator(const ServerManager& server_manager)
-: _server_manager(server_manager) {}
+: _server_manager(server_manager)
+{
+    this->convertFileToStringVector(this->_server_manager.getConfigFilePath());
+    if (!this->isValidConfigFile())
+        throw "config file error"; // throw
+}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -67,7 +72,7 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
         std::string trimmed = ft::ltrim(ft::rtrim(line));
         std::cout<<trimmed<<std::endl;
         if (trimmed.size() > 0)
-            this->_str_vector_configfile.push_back(trimmed);
+            this->_configfile_lines.push_back(trimmed);
     }
 }
 
@@ -90,8 +95,8 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
     // TODO
     // std::map<std::string, std::string> _http_config;
 
-    std::vector<std::string>::iterator it = this->_str_vector_configfile.begin();
-    std::vector<std::string>::iterator ite = this->_str_vector_configfile.end();
+    std::vector<std::string>::iterator it = this->_configfile_lines.begin();
+    std::vector<std::string>::iterator ite = this->_configfile_lines.end();
     //NOTE 범위 기반 반복문  C++11문법
     //NOTE map 하면 생기는 이점. _server_config 먼저 server블록 밖의 정보들을 세팅 한 다음에
     // 그 다음에 server 블록을 돌면 자연스럽게 구체화가 된다.

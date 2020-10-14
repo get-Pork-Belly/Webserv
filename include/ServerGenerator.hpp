@@ -16,7 +16,7 @@ private:
 private:
     const ServerManager&		_server_manager;
     struct GlobalConfig			_global_config;
-    std::vector<std::string>	_str_vector_configfile;
+    std::vector<std::string>	_configfile_lines;
 
 public:
     /* Constructor */
@@ -32,6 +32,7 @@ public:
     /* Exception */
     /* Util */
     void convertFileToStringVector(const char *config_file_path);
+    bool isValidConfigFile();
     // TODO isValidConfigFile 구현하기
     // bool isValidConfigFile() const; //throw
     void setGlobalConfig();
