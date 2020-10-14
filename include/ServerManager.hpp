@@ -7,14 +7,16 @@
 # include <sys/select.h>
 # include <sys/time.h>
 # include <errno.h>
-# include <map>
-# include <exception>
 # include <fcntl.h>
 # include <unistd.h>
+# include <map>
+# include <exception>
 # include <iostream>
 # include <string>
 # include "types.hpp"
 # include "utils.hpp"
+
+class Server;
 
 class ServerManager
 {
@@ -52,9 +54,9 @@ public:
 
     /* Manage Server functions */
     void initServers();
-    void makeServer(struct ServerConfig);
-    bool runServers();
-    void exitServers();
+    //TODO 구현 필요
+    // bool runServers();
+    // void exitServers();
 };
 
 #endif
