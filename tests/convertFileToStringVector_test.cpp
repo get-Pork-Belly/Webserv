@@ -8,13 +8,15 @@
 
 const int BUF_SIZE = 4096;
 
+std::vector<std::string> _str_vector_configfile;
+
 void convertFileToStringVector(const char *config_file_path)
 {
-	int							fd;
-	int							readed;
-	char						buf[BUF_SIZE];
-	std::string 				readed_string;
-	std::vector<std::string>	lines;
+	int	fd;
+	int	readed;
+	char buf[BUF_SIZE];
+	std::string readed_string;
+	std::vector<std::string> lines;
 
 	fd = open(config_file_path, O_RDONLY, 0644);
 	if (fd < 0)
@@ -30,17 +32,13 @@ void convertFileToStringVector(const char *config_file_path)
 
 	lines = ft::split(readed_string, "\n");
 
-	// for (std::string line : lines)
-	// 	std::cout << line << std::endl;
-
 	for (std::string line : lines)
 	{
-		// TODO trimmed 데이터가 유지될까? 포인터로 만들어야하지 않을까?
-		// TODO push_back의 인자로 std::string(trimmed) 처럼 새롭게 만들어서 넣을까?
 		std::string trimmed = ft::ltrim(ft::rtrim(line));
 		std::cout<<trimmed<<std::endl;
-		// if (trimmed.size() > 0)
-		// 	_str_vector_configfile.push_back(std::string(trimmed));
+		if (trimmed.size() > 0)
+			_str_vector_configfile.push_back(trimmed);
+		// 	this->_str_vector_configfile.push_back(trimmed);
 	}
 }
 
@@ -48,13 +46,18 @@ int main(void)
 {
 	try
 	{
-		convertFileToStringVector("./tests/test.test");
+		convertFileToStringVector("./tests/config_testfile");
 	}
 	catch(const char *e)
 	{
 		std::cout<<e<<std::endl;
 	}
 	
+	for (std::string s : _str_vector_configfile)
+	{
+		std::cout<<"string: " << s <<std::endl;
+	}
+
 
 	return (0);
 }
