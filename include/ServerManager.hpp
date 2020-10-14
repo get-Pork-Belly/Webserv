@@ -6,9 +6,15 @@
 # include <sys/socket.h>
 # include <sys/select.h>
 # include <sys/time.h>
+# include <errno.h>
 # include <map>
 # include <exception>
+# include <fcntl.h>
+# include <unistd.h>
+# include <iostream>
+# include <string>
 # include "types.hpp"
+# include "utils.hpp"
 
 class ServerManager
 {
@@ -19,7 +25,7 @@ private:
     ServerManager& operator=(const ServerManager& rhs);
 
 private:
-    std::string _config_file_path;
+    const char*	_config_file_path;
     std::vector<Server *> _servers;
     fd_set _readfds;
     fd_set _writefds;

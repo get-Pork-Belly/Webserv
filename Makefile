@@ -1,15 +1,14 @@
 NAME = Webserv
 INCLUDES = -I include
 CC = clang++
-CFLAGS = -Wall -Wextra -Werror -std=c++11
+CFLAGS = -Wall -Wextra -Werror -std=c++11 -fsanitize=address -g
 RM = rm -rf
 
 # MAIN_FILES = main 
-MAIN_FILES = split_test utils
+MAIN_FILES = convertFileToStringVector_test utils
 
 SRCS_PATH = $(MAIN_FILES)
 VPATH := .:srcs:tests
-# VPATH := .:srcs:
 SRCS = $(addsuffix .cpp, $(SRCS_PATH))
 
 OBJDIR = ./objs
