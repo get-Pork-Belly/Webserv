@@ -13,25 +13,39 @@ int main (int argc, char * argv[])
 (void)argc;
 (void)argv;
  unsigned short host_port = 0x1234;      //2byte 데이터 저장
+ unsigned short reconvert_host_port;
  unsigned short net_port;
  unsigned long host_addr = 0x12345678; // 4byte 데이터 저장
+ unsigned long reconvert_host_addr;
  unsigned long net_addr;
 
  net_port = htons(host_port);                //리틀엔디안에서 빅 엔디안 방식으로 net_port 에 저장
  net_addr = htonl(host_addr);               //리틀엔디안에서 빅 엔디안 방식으로 net_addr 에 저장
+ reconvert_host_port = ntohs(net_port);     //빅엔디안에서 리틀 엔디안 방식으로 다시 변경
+ reconvert_host_addr = ntohl(net_addr);     //빅엔디안에서 리틀 엔디안 방식으로 다시 변경
 
+std::cout<<"--------std---------"<<std::endl;
  printf("Host ordered port : %#x \n" , host_port);
  printf("Network ordered port : %#x \n" , net_port);
+ printf("Host ordered port(reconverted) : %#x \n" , reconvert_host_port);
  printf("Host ordered address : %#lx \n ", host_addr);
  printf("Network ordered address : %#lx \n" , net_addr);
+ printf("Host ordered addr(reconverted) : %#lx \n" , reconvert_host_addr);
 
+std::cout<<"--------ft---------"<<std::endl;
  net_port = ft::hToNS(host_port);
  net_addr = ft::hToNL(host_addr);
+ reconvert_host_port = ft::nToHS(net_port);     //빅엔디안에서 리틀 엔디안 방식으로 다시 변경
+ reconvert_host_addr = ft::nToHL(net_addr);     //빅엔디안에서 리틀 엔디안 방식으로 다시 변경
 
  printf("Host ordered port : %#x \n" , host_port);
  printf("Network ordered port : %#x \n" , net_port);
+ printf("Host ordered port(reconverted) : %#x \n" , reconvert_host_port);
  printf("Host ordered address : %#lx \n ", host_addr);
  printf("Network ordered address : %#lx \n" , net_addr);
+ printf("Host ordered addr(reconverted) : %#lx \n" , reconvert_host_addr);
+
+
 
  return 0;
 
