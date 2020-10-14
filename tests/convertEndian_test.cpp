@@ -5,10 +5,13 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <iostream>
+#include "utils.hpp"
 
 int main (int argc, char * argv[])
 {
 
+(void)argc;
+(void)argv;
  unsigned short host_port = 0x1234;      //2byte 데이터 저장
  unsigned short net_port;
  unsigned long host_addr = 0x12345678; // 4byte 데이터 저장
@@ -22,15 +25,56 @@ int main (int argc, char * argv[])
  printf("Host ordered address : %#lx \n ", host_addr);
  printf("Network ordered address : %#lx \n" , net_addr);
 
-//  net_port = ft::htons(host_port);
-//  net_addr = ft::htonl(host_addr);
+ net_port = ft::hToNS(host_port);
+ net_addr = ft::hToNL(host_addr);
 
- std::cout<<"Host ordered port : "<<host_port<<std::endl;
- std::cout<<"Network ordered port : "<<net_port<<std::endl;
- std::cout<<"Host ordered address : "<<host_addr<<std::endl;
- std::cout<<"Network ordered address : "<<net_addr<<std::endl;
-
+ printf("Host ordered port : %#x \n" , host_port);
+ printf("Network ordered port : %#x \n" , net_port);
+ printf("Host ordered address : %#lx \n ", host_addr);
+ printf("Network ordered address : %#lx \n" , net_addr);
 
  return 0;
 
 }
+
+// #include <sys/time.h>
+// #include <sys/socket.h>
+// #include <fcntl.h>
+// #include <unistd.h>
+// #include <sys/types.h>
+// #include <sys/stat.h>
+// #include <unistd.h>
+// #include <stdlib.h>
+// #include <stdio.h>
+// #include <netinet/in.h>
+// #include <arpa/inet.h>
+
+// int main(int argc, char **argv)
+// {
+//     int client_sockfd;
+//     struct sockaddr_in clientaddr;
+//     int data = 123456789;
+//     int client_len;
+
+//     client_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+//     clientaddr.sin_family = AF_INET;
+//     clientaddr.sin_addr.s_addr = inet_addr("192.168.100.190");
+//     clientaddr.sin_port = htons(atoi(argv[1]));
+
+//     client_len = sizeof(clientaddr);
+
+//     if (connect(client_sockfd, (struct sockaddr *)&clientaddr, client_len) < 0)
+//     {
+//         perror("Connect error : ");
+//         exit(0);
+//     }
+    
+//     // 보낼 데이터 네트워크 byte order를 따르도록 변경한다. 
+//     data = htonl(data);
+//     write(client_sockfd, (void *)&data, sizeof(int));
+
+//     // 읽어들인 데이터는 호스트 byte order을 따르도록 변경한다.
+//     read(client_sockfd, (void *)&data, sizeof(int));
+//     data = ntohl(data);
+//     close(client_sockfd);
+// }
