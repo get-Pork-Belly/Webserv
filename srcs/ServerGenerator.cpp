@@ -1,4 +1,5 @@
 #include "ServerGenerator.hpp"
+#include "ServerManager.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -8,10 +9,10 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-ServerGenerator::ServerGenerator(const ServerManager& server_manager)
+ServerGenerator::ServerGenerator(const ServerManager* server_manager)
 : _server_manager(server_manager)
 {
-    this->convertFileToStringVector(this->_server_manager.getConfigFilePath());
+    this->convertFileToStringVector(this->_server_manager->getConfigFilePath());
     // TODO 구현하기
     // if (!this->isValidConfigFile())
     //     throw "config file error"; // throw
