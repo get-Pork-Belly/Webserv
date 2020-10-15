@@ -5,6 +5,7 @@
 # include <map>
 # include <string>
 # include <iostream>
+# include "types.hpp"
 # include "utils.hpp"
 # include "Server.hpp"
 
@@ -41,11 +42,13 @@ public:
     // bool isValidConfigFile() const; //throw
     void setGlobalConfig();
     void generateServers(std::vector<Server *>& servers);
-    // NOTE it를 레퍼런스로 넣어주는 이유는 it의 값을 다른 함수에서도 일괄적으로 움직일 수 있게 하기 위함.
-    // server_config의 값을 레퍼런스로 주는 이유는 generateServers에 server_config 변수가 선언되어 있기 때문.
-    void parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config, std::map<std::string, std::map<std::string, std::string> >& _locations);
-    std::map<std::string, std::string> parseLocationBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config);
-    void setLocationConfig(std::map<std::string, std::string>& location_config, std::map<std::string, std::string>& server_config);
+
+    void parseServerBlock(std::vector<std::string>::iterator& it, type_server& server_config, std::map<std::string, type_location>& locations);
+
+    type_location parseLocationBlock(std::vector<std::string>::iterator& it, type_location& server_config);
+
+    void setLocationConfig(type_location& location_config, type_server& server_config);
+
 };
 
 #endif
