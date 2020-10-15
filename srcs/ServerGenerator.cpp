@@ -177,9 +177,22 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, std:
             it++;
             return (location_config);
         }
-        std::string temp = ft::rtrim(directives[1], ";");
-        directives[1] = temp;
-        location_config[directives[0]] = directives[1];
+        std::string joined;
+        if (directives.size() > 2)
+        {
+            for (size_t i = 1; i < directives.size(); ++i)
+            {
+                joined += directives[i];
+                joined += " ";
+            }
+            joined = ft::rtrim(joined, "; ");
+            location_config[directives[0]] = joined;
+        }
+        else
+        {
+            std::string temp = ft::rtrim(directives[1], ";");
+            location_config[directives[0]] = temp;
+        }
         directives.clear();
         it++;
     }
