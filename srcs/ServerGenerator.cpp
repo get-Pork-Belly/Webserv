@@ -53,7 +53,7 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     int	readed;
     char buf[BUF_SIZE];
     std::string readed_string;
-    std::vector<std::string> lines(100);
+    std::vector<std::string> lines;
 
     fd = open(config_file_path, O_RDONLY, 0644);
     if (fd < 0)
@@ -73,7 +73,7 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     {
         std::string trimmed = ft::ltrim(ft::rtrim(line));
         if (trimmed.size() > 0)
-            this->_configfile_lines.push_back(std::string(trimmed));
+            this->_configfile_lines.push_back(trimmed);
     }
 }
 
@@ -81,11 +81,10 @@ void
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
     std::vector<std::string> directives;
-    std::map<std::string, std::string> _http_config;
+    std::map<std::string, std::string> http_config;
     
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
-    //TODO http_config 를 먼저 작성하자.
     // std::map<std::string, std::string> _http = httpParseBlock();
     (void)servers;
 
@@ -93,18 +92,18 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
     {
         if ( *it == "server {")
         {
-            std::map<std::string, std::string> _server_config(_http_config);
+            std::map<std::string, std::string> server_config(http_config);
             it++;
-            std::map<std::string, std::map<std::string, std::string> > _locations;
-            parseServerBlock(it, _server_config, _locations);
+            std::map<std::string, std::map<std::string, std::string> > locations;
+            parseServerBlock(it, server_config, locations);
             
             std::cout << "===============================" << std::endl;
-            for (auto& s : _server_config)
+            for (auto& s : server_config)
             {
                 std::cout << "key: " << s.first << "  value: " << s.second << std::endl;
             }
             std::cout << "==========   locations ========" << std::endl;
-            for (auto& s : _locations)
+            for (auto& s : locations)
             {
                 std::cout << "---------------------------" << std::endl;
                 std::cout << "route: " << s.first << std::endl;
@@ -114,8 +113,7 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
                 }
                 std::cout << "-----------다음----------------" << std::endl;
             }
-            //TODO  new로 해야할까?
-            // servers.push_back(new Server(_server_config, _locations));
+            // servers.push_back(new Server(server_config, locations));
             std::cout << "===============================\n\n" << std::endl;
         }
         it++;
