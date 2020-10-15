@@ -41,17 +41,17 @@ public:
     void convertFileToStringVector(const char *config_file_path);
     // TODO isValidConfigFile 구현하기
     // bool isValidConfigFile() const; //throw
-    void setGlobalConfig();
     void generateServers(std::vector<Server *>& servers);
 
-    void parseServerBlock(std::vector<std::string>::iterator& it, type_server& server_config, std::map<std::string, type_location>& locations);
-
-    type_location parseLocationBlock(std::vector<std::string>::iterator& it, type_location& server_config);
-
+    void setHttpConfig(type_server& http_config);
+    void setServerConfig(type_server& server_config, type_server& http_config);
     void setLocationConfig(type_location& location_config, type_server& server_config);
 
     type_server parseHttpBlock();
+    void parseServerBlock(std::vector<std::string>::iterator& it, type_server& server_config, std::map<std::string, type_location>& locations);
+    type_location parseLocationBlock(std::vector<std::string>::iterator& it, type_location& server_config);
 };
+
 void testLocation(std::map<std::string, type_location>& test);
 void testServer(type_server& test);
 

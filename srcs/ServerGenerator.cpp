@@ -89,13 +89,13 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
     {
         if ( *it == "server {")
         {
-            type_server server_config(http_config);
+            type_server server_config;
+            setServerConfig(server_config, http_config);
             it++;
             std::map<std::string, type_location> locations;
             parseServerBlock(it, server_config, locations);
-            // testLocation(locations);
             testServer(server_config);
-
+            testLocation(locations);
             // servers.push_back(new Server(server_config, locations));
         }
         it++;
@@ -109,6 +109,7 @@ ServerGenerator::parseHttpBlock()
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
 
+    setHttpConfig(http_config);
     while (it != ite)
     {
         if (*it == "http {")
@@ -204,33 +205,74 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, type
 }
 
 void
+ServerGenerator::setHttpConfig(type_server& http_config)
+{
+    http_config["root"] = "html";
+    http_config["index"] = "index.html";
+    http_config["autoindex"] = "off";
+    http_config["auth_basic"] = "off";
+}
+
+void
+ServerGenerator::setServerConfig(type_server& server_config, type_server& http_config)
+{
+    std::map<std::string, std::string>::iterator ite = http_config.end();
+
+    server_config["listen"] = std::to_string(8080);
+    server_config["client_max_body_size"] = std::string("1m");
+    if (http_config.find("root") != ite)
+        server_config["root"] = http_config["root"];
+    if (http_config.find("index") != ite)
+        server_config["index"] = http_config["index"];
+    if (http_config.find("autoindex") != ite)
+        server_config["autoindex"] = http_config["autoindex"];
+    if (http_config.find("auth_basic") != ite)
+        server_config["auth_basic"] = http_config["auth_basic"];
+    if (http_config.find("auth_basic_file") != ite)
+        server_config["auth_baasic_file"] = http_config["auth_basic_file"];
+    if (http_config.find("error_page") != ite)
+        server_config["error_page"] = http_config["error_page"];
+}
+
+void
 ServerGenerator::setLocationConfig(type_location& location_config, type_server& server_config)
 {
     std::map<std::string, std::string>::iterator ite = server_config.end();
 
-    if (server_config.find("index") != ite)
-        location_config["index"] = server_config["index"];
     if (server_config.find("root") != ite)
         location_config["root"] = server_config["root"];
+    if (server_config.find("index") != ite)
+        location_config["index"] = server_config["index"];
+    if (server_config.find("autoindex") != ite)
+        location_config["autoindex"] = server_config["autoindex"];
+    if (server_config.find("auth_basic") != ite)
+        location_config["auth_basic"] = server_config["auth_basic"];
+    if (server_config.find("auth_basic_file") != ite)
+        location_config["auth_baasic_file"] = server_config["auth_basic_file"];
+    if (server_config.find("error_page") != ite)
+        location_config["error_page"] = server_config["error_page"];
+
 }
 
 /* 디버깅용 함수 */
 void testServer(type_server& test)
 {
+    std::cout << "\033[1;31;40mserver config check\033[0m" << std::endl;
     for (auto& s : test)
-        std::cout << "key:" << std::setw(15) << s.first  << "||  value:" << s.second << std::endl;
+        std::cout << "key:" << "\033[1;31;40m" << std::setw(25) << s.first << "\033[0m" << "||  value:" << "\033[1;34;40m" << s.second << "\033[0m" << std::endl;
     std::cout << "=====================================" << std::endl;
 }
 
 void testLocation(std::map<std::string, type_location>& test)
 {
+    std::cout << "\033[1;31;40mlocation config check\033[0m" << std::endl;
     for (auto& a : test)
     {
         std::cout << "route: " << a.first << std::endl;
         type_location temp = a.second;
         for (auto& b : temp)
         {
-            std::cout << "key: " << std::setw(15) << b.first <<  "||  value: " << b.second << std::endl;
+            std::cout << "key: "<< "\033[1;31;40m" << std::setw(25) << b.first << "\033[0m" <<  "||  value: " << "\033[1;34;40m" << b.second << "\033[0m" << std::endl;
         }
         std::cout << "=====================================" << std::endl;
     }
