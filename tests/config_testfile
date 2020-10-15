@@ -1,11 +1,12 @@
 http { 
-    include       mime.types;
+    include mime.types;
+    root /test/folder;
     server {
         listen       80;
         root html;
         location / {
             index  index.html index.htm;
-            not aaa;
+            limit_except GET POST
         }
         location /abc {
             root  /user/sanam;
@@ -15,12 +16,12 @@ http {
     server {
         listen       8080;
         location /please {
-            root   html;
             index  index.html index.htm;
         }
-        location /second-second {
+        location /only-put {
             root  /user/iwoo;
             index  html;
+            limit_except PUT
         }
     }
 }

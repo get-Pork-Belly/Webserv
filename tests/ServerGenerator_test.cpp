@@ -6,7 +6,6 @@ int main()
     try
     {
         ServerManager sm("./tests/config_testfile");
-        // ServerGenerator sg(&sm);
     }
     catch(const char* e)
     {
