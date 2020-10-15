@@ -8,6 +8,7 @@
 # include "types.hpp"
 # include "utils.hpp"
 # include "Server.hpp"
+# include <iomanip>
 
 class ServerManager;
 
@@ -49,6 +50,9 @@ public:
 
     void setLocationConfig(type_location& location_config, type_server& server_config);
 
+    type_server parseHttpBlock();
 };
+void testLocation(std::map<std::string, type_location>& test);
+void testServer(type_server& test);
 
 #endif

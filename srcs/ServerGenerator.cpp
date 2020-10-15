@@ -77,12 +77,12 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
 void
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
+    type_server http_config;
     std::vector<std::string> directives;
-    std::map<std::string, std::string> http_config;
     
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
-    // std::map<std::string, std::string> _http = httpParseBlock();
+    http_config = parseHttpBlock();
     (void)servers;
 
     while (it != ite)
@@ -91,34 +91,52 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
         {
             type_server server_config(http_config);
             it++;
-            std::map<std::string, type_location > locations;
+            std::map<std::string, type_location> locations;
             parseServerBlock(it, server_config, locations);
-            
-            std::cout << "===============================" << std::endl;
-            for (auto& s : server_config)
-            {
-                std::cout << "key: " << s.first << "  value: " << s.second << std::endl;
-            }
-            std::cout << "==========   locations ========" << std::endl;
-            for (auto& s : locations)
-            {
-                std::cout << "---------------------------" << std::endl;
-                std::cout << "route: " << s.first << std::endl;
-                for (auto& b : s.second)
-                {
-                    std::cout << "key: " << b.first << "  value: " << b.second << std::endl;
-                }
-                std::cout << "-----------다음----------------" << std::endl;
-            }
+            // testLocation(locations);
+            testServer(server_config);
+
             // servers.push_back(new Server(server_config, locations));
-            std::cout << "===============================\n\n" << std::endl;
         }
         it++;
     }
 }
 
+type_server
+ServerGenerator::parseHttpBlock()
+{
+    type_server http_config;
+    std::vector<std::string>::iterator it = this->_configfile_lines.begin();
+    std::vector<std::string>::iterator ite = this->_configfile_lines.end();
+
+    while (it != ite)
+    {
+        if (*it == "http {")
+            break ;
+        it++;
+    }
+    while (it != ite)
+    {
+        if ((*it).back() == ';')
+        {
+            size_t pos = (*it).find(" ");
+            std::string key = (*it).substr(0, pos);
+            std::string value = ft::ltrim(ft::rtrim((*it).substr(pos), "; "), " ");
+            http_config[key] = value;
+        }
+        else if (*it == "server {")
+        {
+            type_server server_temp;
+            std::map<std::string, type_location> locations_temp;
+            parseServerBlock(it, server_temp, locations_temp);
+        }
+        it++;
+    }
+    return (http_config);
+}
+
 void
-ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config, std::map<std::string, std::map<std::string, std::string> >& locations)
+ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, type_server& server_config, std::map<std::string, type_location>& locations)
 {
     std::vector<std::string>	directives;
 
@@ -142,23 +160,10 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::m
     }
 }
 
-void
-ServerGenerator::setLocationConfig(type_location& location_config, type_server& server_config)
-{
-    std::map<std::string, std::string>::iterator ite = server_config.end();
-
-    if (server_config.find("index") != ite)
-        location_config["index"] = server_config["index"];
-    if (server_config.find("root") != ite)
-        location_config["root"] = server_config["root"];
-}
-
 type_location
 ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, type_server& server_config)
 {
     std::vector<std::string> directives;
-    // using test = std::map<std::string, std::string>;
-    // std::map<std::string, std::string> location_config;
     type_location location_config;
 
     setLocationConfig(location_config, server_config);
@@ -196,4 +201,37 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, type
         it++;
     }
     return (location_config);
+}
+
+void
+ServerGenerator::setLocationConfig(type_location& location_config, type_server& server_config)
+{
+    std::map<std::string, std::string>::iterator ite = server_config.end();
+
+    if (server_config.find("index") != ite)
+        location_config["index"] = server_config["index"];
+    if (server_config.find("root") != ite)
+        location_config["root"] = server_config["root"];
+}
+
+/* 디버깅용 함수 */
+void testServer(type_server& test)
+{
+    for (auto& s : test)
+        std::cout << "key:" << std::setw(15) << s.first  << "||  value:" << s.second << std::endl;
+    std::cout << "=====================================" << std::endl;
+}
+
+void testLocation(std::map<std::string, type_location>& test)
+{
+    for (auto& a : test)
+    {
+        std::cout << "route: " << a.first << std::endl;
+        type_location temp = a.second;
+        for (auto& b : temp)
+        {
+            std::cout << "key: " << std::setw(15) << b.first <<  "||  value: " << b.second << std::endl;
+        }
+        std::cout << "=====================================" << std::endl;
+    }
 }
