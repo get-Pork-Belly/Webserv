@@ -90,7 +90,7 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
         if ( *it == "server {")
         {
             server_info server_config;
-            setServerConfig(server_config, http_config);
+            initServerConfig(server_config, http_config);
             it++;
             std::map<std::string, location_info> locations;
             parseServerBlock(it, server_config, locations);
@@ -111,7 +111,7 @@ ServerGenerator::parseHttpBlock()
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
 
-    setHttpConfig(http_config);
+    initHttpConfig(http_config);
     while (it != ite)
     {
         if (*it == "http {")
@@ -165,7 +165,7 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
     std::vector<std::string> directives;
     location_info location_config;
 
-    setLocationConfig(location_config, server_config);
+    initLocationConfig(location_config, server_config);
     while (it != _configfile_lines.end())
     {
         directives = ft::split(*it, " ");
@@ -203,7 +203,7 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
 }
 
 void
-ServerGenerator::setHttpConfig(server_info& http_config)
+ServerGenerator::initHttpConfig(server_info& http_config)
 {
     http_config["root"] = "html";
     http_config["index"] = "index.html";
@@ -212,7 +212,7 @@ ServerGenerator::setHttpConfig(server_info& http_config)
 }
 
 void
-ServerGenerator::setServerConfig(server_info& server_config, server_info& http_config)
+ServerGenerator::initServerConfig(server_info& server_config, server_info& http_config)
 {
     std::map<std::string, std::string>::iterator ite = http_config.end();
 
@@ -233,7 +233,7 @@ ServerGenerator::setServerConfig(server_info& server_config, server_info& http_c
 }
 
 void
-ServerGenerator::setLocationConfig(location_info& location_config, server_info& server_config)
+ServerGenerator::initLocationConfig(location_info& location_config, server_info& server_config)
 {
     std::map<std::string, std::string>::iterator ite = server_config.end();
 

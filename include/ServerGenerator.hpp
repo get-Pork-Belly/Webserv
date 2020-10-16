@@ -43,9 +43,14 @@ public:
     // bool isValidConfigFile() const; //throw
     void generateServers(std::vector<Server *>& servers);
 
-    void setHttpConfig(server_info& http_config);
-    void setServerConfig(server_info& server_config, server_info& http_config);
-    void setLocationConfig(location_info& location_config, server_info& server_config);
+    void initHttpConfig(server_info& http_config);
+    void initServerConfig(
+            server_info& server_config,
+            server_info& http_config);
+
+    void initLocationConfig(
+            location_info& location_config,
+            server_info& server_config);
 
     server_info parseHttpBlock();
     void parseServerBlock(
@@ -58,7 +63,7 @@ public:
             std::vector<std::string>::iterator& it,
             location_info& server_config);
 
-    void (ServerGenerator::*skipServerBlock) (
+    void (ServerGenerator::*skipServerBlock)(
          std::vector<std::string>::iterator&,
          server_info&,
          std::map<std::string, location_info>&) = &ServerGenerator::parseServerBlock;
