@@ -43,16 +43,16 @@ public:
     // bool isValidConfigFile() const; //throw
     void generateServers(std::vector<Server *>& servers);
 
-    void setHttpConfig(type_server& http_config);
-    void setServerConfig(type_server& server_config, type_server& http_config);
-    void setLocationConfig(type_location& location_config, type_server& server_config);
+    void setHttpConfig(server_info& http_config);
+    void setServerConfig(server_info& server_config, server_info& http_config);
+    void setLocationConfig(location_info& location_config, server_info& server_config);
 
-    type_server parseHttpBlock();
-    void parseServerBlock(std::vector<std::string>::iterator& it, type_server& server_config, std::map<std::string, type_location>& locations);
-    type_location parseLocationBlock(std::vector<std::string>::iterator& it, type_location& server_config);
+    server_info parseHttpBlock();
+    void parseServerBlock(std::vector<std::string>::iterator& it, server_info& server_config, std::map<std::string, location_info>& locations);
+    location_info parseLocationBlock(std::vector<std::string>::iterator& it, location_info& server_config);
 };
 
-void testLocation(std::map<std::string, type_location>& test);
-void testServer(type_server& test);
+void testLocation(std::map<std::string, location_info>& test);
+void testServer(server_info& test);
 
 #endif

@@ -5,8 +5,8 @@
 # include <vector>
 # include <map>
 
-using type_location = std::map<std::string, std::string>;
-using type_server = std::map<std::string, std::string>;
+using location_info = std::map<std::string, std::string>;
+using server_info = std::map<std::string, std::string>;
 
 //NOTE 임시
 typedef struct GlobalConfig
