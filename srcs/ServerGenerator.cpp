@@ -106,6 +106,8 @@ server_info
 ServerGenerator::parseHttpBlock()
 {
     server_info http_config;
+    server_info skip_server;
+    std::map<std::string, location_info> skip_locations;
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
 
@@ -126,11 +128,7 @@ ServerGenerator::parseHttpBlock()
             http_config[key] = value;
         }
         else if (*it == "server {")
-        {
-            server_info server_temp;
-            std::map<std::string, location_info> locations_temp;
-            parseServerBlock(it, server_temp, locations_temp);
-        }
+            (*this.*skipServerBlock)(it, skip_server, skip_locations);
         it++;
     }
     return (http_config);

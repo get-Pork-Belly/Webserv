@@ -48,8 +48,20 @@ public:
     void setLocationConfig(location_info& location_config, server_info& server_config);
 
     server_info parseHttpBlock();
-    void parseServerBlock(std::vector<std::string>::iterator& it, server_info& server_config, std::map<std::string, location_info>& locations);
-    location_info parseLocationBlock(std::vector<std::string>::iterator& it, location_info& server_config);
+    void parseServerBlock(
+            std::vector<std::string>::iterator& it,
+            server_info& server_config,
+            std::map<std::string,
+            location_info>& locations);
+
+    location_info parseLocationBlock(
+            std::vector<std::string>::iterator& it,
+            location_info& server_config);
+
+    void (ServerGenerator::*skipServerBlock) (
+         std::vector<std::string>::iterator&,
+         server_info&,
+         std::map<std::string, location_info>&) = &ServerGenerator::parseServerBlock;
 };
 
 void testLocation(std::map<std::string, location_info>& test);
