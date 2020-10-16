@@ -40,8 +40,8 @@ ServerGenerator::~ServerGenerator()
 
 /*============================================================================*/
 /******************************  Exception  ***********************************/
-/*============================================================================*/
 
+/*============================================================================*/
 /*============================================================================*/
 /*********************************  Util  *************************************/
 /*============================================================================*/
@@ -59,16 +59,13 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     if (fd < 0)
         throw (strerror(errno));
     memset(reinterpret_cast<void *>(buf), 0, BUF_SIZE);
-
     while ((readed = read(fd, reinterpret_cast<void *>(buf), BUF_SIZE)))
     {
         if (readed < 0)
             throw(strerror(errno));
         readed_string += std::string(buf);
     }
-
     lines = ft::split(readed_string, "\n");
-
     for (std::string line : lines)
     {
         std::string trimmed = ft::ltrim(ft::rtrim(line));
@@ -77,110 +74,204 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     }
 }
 
-// NOTE 함수 내부에서 parse 함수들을 호출한다.
 void
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
-    (void)servers;
-    // std::vector<std::string>	directives;
-    // // TODO server_config를 map으로 할지 struct로 할지 확실히 정하기.
-    // // struct ServerConfig			_server_config;
+    server_info http_config;
+    std::vector<std::string> directives;
     
-    // // TODO
-    // // std::map<std::string, std::string> _http_config;
+    std::vector<std::string>::iterator it = this->_configfile_lines.begin();
+    std::vector<std::string>::iterator ite = this->_configfile_lines.end();
+    http_config = parseHttpBlock();
+    (void)servers;
 
-    // std::vector<std::string>::iterator it = this->_configfile_lines.begin();
-    // std::vector<std::string>::iterator ite = this->_configfile_lines.end();
-    //NOTE 범위 기반 반복문  C++11문법
-    //NOTE map 하면 생기는 이점. _server_config 먼저 server블록 밖의 정보들을 세팅 한 다음에
-    // 그 다음에 server 블록을 돌면 자연스럽게 구체화가 된다.
-    /*
-     * http{
-     *   root = /user/;
-     *
-     *   server {
-     *		root = /user/sanam/;
-     *   } -> server_confing -> servers.push_back(new Server(server_config))
-     *
-     *   server {
-     *   } -> server_confing -> servers.push_back(new Server(server_config))
-     * }
-     *
-     * _server_config[root] = /user;
-     * _server_config[root] = /user/sanam/으로 갱신 - 구체화된다.
-     *
-     */
-    //TODO http_config 를 먼저 작성하자.
-    // _http_config = parseHttpBlock();
-    // {
-    //    http version, os
-    // }
-
-    // while (it++ != ite)
-    // {
-    //     if ( *it == "server {")
-    //     {
-    //         // NOTE _server_config 는 반복이 될 때 마다 갱신된다.
-    //         // NOTE http 블록 설정 
-    //         std::map<std::string, std::string> _server_config(_http_config);
-    //         //NOTE Server블록에 대한 설정을 읽고 _server_config 맵 자료구조에 키 밸류 값으로 넣어준다.
-    //         //NOTE ++it를 넣어준 이유는 "server {" 이 녀석 자체는 필요 없기 때문이다.
-    //         parseServerBlock(++it, _server_config);
-    //         //NOTE Server를 생성한 다음에 _servers에 push_back 한다.
-    //         //NOTE 여기서 _server_config은 구조체가 아니라 map 자료구조임을 명심하자.
-    //         servers.push_back(new Server(_server_config));
-    //         _server_config.clear();
-    //     }
-    // }
+    while (it != ite)
+    {
+        if ( *it == "server {")
+        {
+            server_info server_config;
+            initServerConfig(server_config, http_config);
+            it++;
+            std::map<std::string, location_info> locations;
+            parseServerBlock(it, server_config, locations);
+            testServerConfig(server_config);
+            testLocationConfig(locations);
+            // servers.push_back(new Server(server_config, locations));
+        }
+        it++;
+    }
 }
 
+server_info
+ServerGenerator::parseHttpBlock()
+{
+    server_info http_config;
+    server_info skip_server;
+    std::map<std::string, location_info> skip_locations;
+    std::vector<std::string>::iterator it = this->_configfile_lines.begin();
+    std::vector<std::string>::iterator ite = this->_configfile_lines.end();
 
-//NOTE it를 넣어준 이유는 parseServerBlock이 끝낸 후에 it가 serverBlock 이후를 볼 수 있게 만들기 위함.
-// void
-// ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
-// {
-//     (void)server_config;
-//     // std::vector<std::string>	directives;
+    initHttpConfig(http_config);
+    while (it != ite)
+    {
+        if (*it == "http {")
+            break ;
+        it++;
+    }
+    while (it != ite)
+    {
+        if ((*it).back() == ';')
+        {
+            size_t pos = (*it).find(" ");
+            std::string key = (*it).substr(0, pos);
+            std::string value = ft::ltrim(ft::rtrim((*it).substr(pos), "; "), " ");
+            http_config[key] = value;
+        }
+        else if (*it == "server {")
+            (*this.*skipServerBlock)(it, skip_server, skip_locations);
+        it++;
+    }
+    return (http_config);
+}
 
-//     // while (true)
-//     // {
-//     //     // directives[0] = root, directives[1] = /user
-//     //     directives = ft::split(*it, " "); //NOTE directives[0]: key, [1]: value
-//     //     if (directives[0] == "location")
-//     //         parseLocationBlock(it, server_config); //NOTE server_config에서 location 설정 처리도 같이하는건 어떨까?
-//     //     if (directives[0] == "}")
-//     //         return ;
+void
+ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server_info& server_config, std::map<std::string, location_info>& locations)
+{
+    std::vector<std::string>	directives;
 
-//     //     //NOTE ServerConfig를 map으로 하면 편한(?) 이유.
-//     //     // 한줄 씩 파싱하면서 나온 값을 키 값을 기준으로 넣어주면 편한데
-//     //     // 구조체를 사용해서 값을 할당하면 찾을 방법이 없다.
-//     //     // NOTE simple지시어는 자신의 끝을 알려주기 위해 ';'를 사용한다. 쓸모 없으므로 지워주자.
-//     //     std::string temp = ft::rtrim(directives[directives의 마지막 인덱스], ";");
-//     //     directives[1] = temp;
-//     //     server_config[directives[0]] = directives[1]; //NOTE key = value
-//     //     // NOTE 지시어를 초기화 해준다.
-//     //     directives.clear();
-//     //     it++;
-//     // }
-    
-// }
+    while (it != _configfile_lines.end())
+    {
+        directives = ft::split(*it, " ");
+        if (directives[0] == "location")
+        {
+            location_info location_config = parseLocationBlock(it, server_config);
+            std::string temp = location_config["route"];
+            locations[temp] = location_config;
+            continue ;
+        }
+        if (directives[0] == "}")
+            return ;
+        std::string temp = ft::rtrim(directives[1], ";");
+        directives[1] = temp;
+        server_config[directives[0]] = directives[1];
+        directives.clear();
+        it++;
+    }
+}
 
-//NOTE it를 넣어준 이유는 parseServerBlock이 끝낸 후에 it가 serverBlock 이후를 볼 수 있게 만들기 위함.
-// void
-// ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config)
-// {
-//     std::vector<std::string> directives;
+location_info
+ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, server_info& server_config)
+{
+    std::vector<std::string> directives;
+    location_info location_config;
 
-//     while(true)
-//     {
-//         directives = ft::split(it, " "); //NOTE directives[0]: key, [1]: value
-//         if (directives[0] == "}")
-//             return ;
-//         std::string temp = ft::rtrim(directives[1], ";");
-//         directives[1] = temp;
-//         server_config[directives[0]] = directives[1]; //NOTE key = value
-//         // NOTE 지시어를 초기화 해준다.
-//         directives.clear();
-//         it++;
-//     }
-// }
+    initLocationConfig(location_config, server_config);
+    while (it != _configfile_lines.end())
+    {
+        directives = ft::split(*it, " ");
+        if (directives[0] == "location")
+        {
+            location_config["route"] = directives[1];
+            it++;
+            continue ;
+        }
+        if (directives[0] == "}")
+        {
+            it++;
+            return (location_config);
+        }
+        std::string joined;
+        if (directives.size() > 2)
+        {
+            for (size_t i = 1; i < directives.size(); ++i)
+            {
+                joined += directives[i];
+                joined += " ";
+            }
+            joined = ft::rtrim(joined, "; ");
+            location_config[directives[0]] = joined;
+        }
+        else
+        {
+            std::string temp = ft::rtrim(directives[1], ";");
+            location_config[directives[0]] = temp;
+        }
+        directives.clear();
+        it++;
+    }
+    return (location_config);
+}
+
+void
+ServerGenerator::initHttpConfig(server_info& http_config)
+{
+    http_config["root"] = "html";
+    http_config["index"] = "index.html";
+    http_config["autoindex"] = "off";
+    http_config["auth_basic"] = "off";
+}
+
+void
+ServerGenerator::initServerConfig(server_info& server_config, server_info& http_config)
+{
+    std::map<std::string, std::string>::iterator ite = http_config.end();
+
+    server_config["listen"] = std::to_string(8080);
+    server_config["client_max_body_size"] = std::string("1m");
+    if (http_config.find("root") != ite)
+        server_config["root"] = http_config["root"];
+    if (http_config.find("index") != ite)
+        server_config["index"] = http_config["index"];
+    if (http_config.find("autoindex") != ite)
+        server_config["autoindex"] = http_config["autoindex"];
+    if (http_config.find("auth_basic") != ite)
+        server_config["auth_basic"] = http_config["auth_basic"];
+    if (http_config.find("auth_basic_file") != ite)
+        server_config["auth_baasic_file"] = http_config["auth_basic_file"];
+    if (http_config.find("error_page") != ite)
+        server_config["error_page"] = http_config["error_page"];
+}
+
+void
+ServerGenerator::initLocationConfig(location_info& location_config, server_info& server_config)
+{
+    std::map<std::string, std::string>::iterator ite = server_config.end();
+
+    if (server_config.find("root") != ite)
+        location_config["root"] = server_config["root"];
+    if (server_config.find("index") != ite)
+        location_config["index"] = server_config["index"];
+    if (server_config.find("autoindex") != ite)
+        location_config["autoindex"] = server_config["autoindex"];
+    if (server_config.find("auth_basic") != ite)
+        location_config["auth_basic"] = server_config["auth_basic"];
+    if (server_config.find("auth_basic_file") != ite)
+        location_config["auth_baasic_file"] = server_config["auth_basic_file"];
+    if (server_config.find("error_page") != ite)
+        location_config["error_page"] = server_config["error_page"];
+
+}
+
+/* 디버깅용 함수 */
+void testServerConfig(server_info& test)
+{
+    std::cout << "\033[1;31;40mserver config check\033[0m" << std::endl;
+    for (auto& s : test)
+        std::cout << "key:" << "\033[1;31;40m" << std::setw(25) << s.first << "\033[0m" << "||  value:" << "\033[1;34;40m" << s.second << "\033[0m" << std::endl;
+    std::cout << "=====================================" << std::endl;
+}
+
+void testLocationConfig(std::map<std::string, location_info>& test)
+{
+    std::cout << "\033[1;31;40mlocation config check\033[0m" << std::endl;
+    for (auto& a : test)
+    {
+        std::cout << "route: " << a.first << std::endl;
+        location_info temp = a.second;
+        for (auto& b : temp)
+        {
+            std::cout << "key: "<< "\033[1;31;40m" << std::setw(25) << b.first << "\033[0m" <<  "||  value: " << "\033[1;34;40m" << b.second << "\033[0m" << std::endl;
+        }
+        std::cout << "=====================================" << std::endl;
+    }
+}

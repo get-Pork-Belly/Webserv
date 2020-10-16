@@ -5,12 +5,13 @@
 # include <map>
 # include <string>
 # include <iostream>
+# include "types.hpp"
 # include "utils.hpp"
 # include "Server.hpp"
+# include <iomanip>
 
 class ServerManager;
 
-// TODO 아마 이 부분은 컴파일 에러가 뜰 수 있음. -> 다중 선언?
 const int BUF_SIZE = 4096;
 
 class ServerGenerator
@@ -40,13 +41,35 @@ public:
     void convertFileToStringVector(const char *config_file_path);
     // TODO isValidConfigFile 구현하기
     // bool isValidConfigFile() const; //throw
-    void setGlobalConfig();
     void generateServers(std::vector<Server *>& servers);
-    // NOTE it를 레퍼런스로 넣어주는 이유는 it의 값을 다른 함수에서도 일괄적으로 움직일 수 있게 하기 위함.
-    // server_config의 값을 레퍼런스로 주는 이유는 generateServers에 server_config 변수가 선언되어 있기 때문.
-    // void parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config); // 이후에 private로 바꿔주자.
-    void parseServerBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config); 
-    void parseLocationBlock(std::vector<std::string>::iterator& it, std::map<std::string, std::string>& server_config);
+
+    void initHttpConfig(server_info& http_config);
+    void initServerConfig(
+            server_info& server_config,
+            server_info& http_config);
+
+    void initLocationConfig(
+            location_info& location_config,
+            server_info& server_config);
+
+    server_info parseHttpBlock();
+    void parseServerBlock(
+            std::vector<std::string>::iterator& it,
+            server_info& server_config,
+            std::map<std::string,
+            location_info>& locations);
+
+    location_info parseLocationBlock(
+            std::vector<std::string>::iterator& it,
+            location_info& server_config);
+
+    void (ServerGenerator::*skipServerBlock)(
+         std::vector<std::string>::iterator&,
+         server_info&,
+         std::map<std::string, location_info>&) = &ServerGenerator::parseServerBlock;
 };
+
+void testLocationConfig(std::map<std::string, location_info>& test);
+void testServerConfig(server_info& test);
 
 #endif

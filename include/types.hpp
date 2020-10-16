@@ -3,6 +3,10 @@
 
 # include <string>
 # include <vector>
+# include <map>
+
+using location_info = std::map<std::string, std::string>;
+using server_info = std::map<std::string, std::string>;
 
 //NOTE 임시
 typedef struct GlobalConfig
