@@ -94,8 +94,8 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             it++;
             std::map<std::string, location_info> locations;
             parseServerBlock(it, server_config, locations);
-            testServer(server_config);
-            testLocation(locations);
+            testServerConfig(server_config);
+            testLocationConfig(locations);
             // servers.push_back(new Server(server_config, locations));
         }
         it++;
@@ -253,7 +253,7 @@ ServerGenerator::initLocationConfig(location_info& location_config, server_info&
 }
 
 /* 디버깅용 함수 */
-void testServer(server_info& test)
+void testServerConfig(server_info& test)
 {
     std::cout << "\033[1;31;40mserver config check\033[0m" << std::endl;
     for (auto& s : test)
@@ -261,7 +261,7 @@ void testServer(server_info& test)
     std::cout << "=====================================" << std::endl;
 }
 
-void testLocation(std::map<std::string, location_info>& test)
+void testLocationConfig(std::map<std::string, location_info>& test)
 {
     std::cout << "\033[1;31;40mlocation config check\033[0m" << std::endl;
     for (auto& a : test)

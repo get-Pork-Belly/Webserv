@@ -69,7 +69,7 @@ public:
          std::map<std::string, location_info>&) = &ServerGenerator::parseServerBlock;
 };
 
-void testLocation(std::map<std::string, location_info>& test);
-void testServer(server_info& test);
+void testLocationConfig(std::map<std::string, location_info>& test);
+void testServerConfig(server_info& test);
 
 #endif
