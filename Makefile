@@ -5,7 +5,7 @@ CFLAGS = -Wall -Wextra -Werror -std=c++11 -fsanitize=address -g
 RM = rm -rf
 
 # MAIN_FILES = main 
-MAIN_FILES = ServerGenerator_test ServerManager ServerGenerator Server utils
+MAIN_FILES = Request_parsing_test utils Request
 
 SRCS_PATH = $(MAIN_FILES)
 VPATH := .:srcs:tests
