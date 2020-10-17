@@ -21,6 +21,7 @@ namespace ft
     unsigned short hToNS(unsigned short hostshort);
     unsigned long nToHL(unsigned long hostlong);
     unsigned short nToHS(unsigned short hostshort);
+    std::string getLine(std::string &lines, std::string delim);
 }
 
 #endif
