@@ -58,10 +58,10 @@ public:
 
     // void initMembers(std::string req_message);
 
-    void parseRequest(std::string req_message);
-    void parseRequestLine(std::string req_message);
-    void parseRequestHeaders(std::string req_message);
-    void parseRequestBodies(std::string req_message);
+    void parseRequest(std::string &req_message);
+    void parseRequestLine(std::string &req_message);
+    void parseRequestHeaders(std::string &req_message);
+    void parseRequestBodies(std::string &req_message);
 
 };
 

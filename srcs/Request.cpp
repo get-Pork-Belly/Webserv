@@ -124,16 +124,14 @@ void Request::setRequestBodies(std::string req_message)
 //NOTE: message body가 있다면 octets의 양이 message_body_length와 같을 때까지 읽거나 커넥션을 닫는다.
 //NOTE: HTTP 메세지를 octet sequence로 인코딩해야 하며 그것은 US-ASCII로 이루어진다.
 
-void Request::parseRequest(std::string req_message)
+void Request::parseRequest(std::string &req_message)
 {
     std::string line;
 
     line = ft::getLine(req_message, "\r\n");
     //NOTE: req_message가 empty면 delimeter find에 실패했다는 것
     if (req_message.empty())
-    {
-        throw "Unvalid Request Line";
-    }
+        return ;
     else
         parseRequestLine(line);
 
@@ -148,7 +146,7 @@ void Request::parseRequest(std::string req_message)
             return ;
         }
         else
-            throw "Unvalid Request Headers";
+            return ;
     }
     else
         parseRequestHeaders(line);
@@ -159,24 +157,24 @@ void Request::parseRequest(std::string req_message)
         if (line.find("\r\n"))
             parseRequestBodies(line);
         else
-            throw "Unvalid Request Bodies";
+            return ;
     }
     else
         parseRequestBodies(line);
 }
 
-void Request::parseRequestLine(std::string req_message)
+void Request::parseRequestLine(std::string &req_message)
 {
     std::vector<std::string> request_line = ft::split(req_message, " ");
     if (request_line.size() != 3)
-        throw "Request Line is Invalid";
+        return ;
 
     setRequestMethod(request_line[0]);
     setRequestUri(request_line[1]);
     setRequestVersion(request_line[2]);
 }
 
-void Request::parseRequestHeaders(std::string req_message)
+void Request::parseRequestHeaders(std::string &req_message)
 {
     std::string key;
     std::string value;
@@ -192,20 +190,20 @@ void Request::parseRequestHeaders(std::string req_message)
         //TODO: value 예외처리 변경해야함, 예외처리 모듈화 시켜야함.
         // if (key.find(" ") != std::string::npos || value.find(":") != std::string::npos)
         //     return ;
-            // throw "Unvalid Request Header Fields";
+            // return ;
 
         headers[key] = value;
-        Request::setRequestHeaders(headers);
+        this->setRequestHeaders(headers);
     }
     key = ft::getLine(line, ":");
     value = ft::ltrim(line, " ");
     headers[key] = value;
-    Request::setRequestHeaders(headers);
+    this->setRequestHeaders(headers);
 }
 
-void Request::parseRequestBodies(std::string req_message)
+void Request::parseRequestBodies(std::string &req_message)
 {
-    Request::setRequestBodies(req_message);
+    this->setRequestBodies(req_message);
 }
 
 
