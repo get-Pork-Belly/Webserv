@@ -9,29 +9,14 @@
 /*============================================================================*/
 
 Request::Request()
-{
-}
-
-// Request::Request(const Request& object)
-// {
-// }
+: _request_method(""), _request_uri(""), _request_version(""), _request_protocol(""), _request_bodies(""), _request_transfer_type(""), _status_code("") {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
 /*============================================================================*/
 
-Request::~Request()
-{
-}
+Request::~Request() {}
 
-/*============================================================================*/
-/*******************************  Overload  ***********************************/
-/*============================================================================*/
-
-// Request& Request::operator=(const Request& object)
-// {
-//     return (*this);
-// }
 /*============================================================================*/
 /********************************  Getter  ************************************/
 /*============================================================================*/
@@ -56,31 +41,47 @@ std::map<std::string, std::string> Request::getRequestHeaders()
     return (this->_request_headers);
 }
 
+std::string Request::getRequestProtocol()
+{
+    return (this->_request_protocol);
+}
+
 std::string Request::getRequestBodies()
 {
     return (this->_request_bodies);
+}
+
+std::string Request::getRequestTransferType()
+{
+    return (this->_request_transfer_type);
+}
+
+std::string Request::getStatusCode()
+{
+    return (this->_status_code);
 }
 
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
 
-void Request::setRequestMethod(std::string method)
+void Request::setRequestMethod(const std::string &method)
 {
     this->_request_method = method;
 }
 
-void Request::setRequestUri(std::string uri)
+void Request::setRequestUri(const std::string &uri)
 {
     this->_request_uri = uri;
 }
 
-void Request::setRequestVersion(std::string version)
+void Request::setRequestVersion(const std::string &version)
 {
     this->_request_version = version;
 }
 
-void Request::setRequestHeaders(std::map<std::string, std::string> headers)
+//TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
+void Request::setRequestHeaders(std::map<std::string, std::string> &headers)
 {
     for (auto& h : headers)
     {
@@ -88,9 +89,24 @@ void Request::setRequestHeaders(std::map<std::string, std::string> headers)
     }
 }
 
-void Request::setRequestBodies(std::string req_message)
+void Request::setRequestProtocol(const std::string &protocol)
+{
+    this->_request_protocol = protocol;
+}
+
+void Request::setRequestBodies(const std::string &req_message)
 {
     this->_request_bodies = req_message;
+}
+
+void Request::setRequestTransferType(const std::string &transfer_type)
+{
+    this->_request_transfer_type = transfer_type;
+}
+
+void Request::setStatusCode(const std::string &status_code)
+{
+    this->_status_code = status_code;
 }
 
 /*============================================================================*/
@@ -124,7 +140,7 @@ void Request::setRequestBodies(std::string req_message)
 //NOTE: message body가 있다면 octets의 양이 message_body_length와 같을 때까지 읽거나 커넥션을 닫는다.
 //NOTE: HTTP 메세지를 octet sequence로 인코딩해야 하며 그것은 US-ASCII로 이루어진다.
 
-void Request::parseRequest(std::string req_message)
+bool Request::parseRequest(std::string req_message)
 {
     std::string line;
 
@@ -132,26 +148,36 @@ void Request::parseRequest(std::string req_message)
     //NOTE: req_message가 empty면 delimeter find에 실패했다는 것
     if (req_message.empty())
     {
-        throw "Unvalid Request Line";
+        Request::setStatusCode("400");
+        return (false);
     }
     else
-        parseRequestLine(line);
+    {
+        if (parseRequestLine(line) == false)
+            return (false);
+    }
 
     line = ft::getLine(req_message, "\r\n\r\n");
     if (req_message.empty())
     {
         if (line.find("\r\n") && line.find(":") != std::string::npos)
-            parseRequestHeaders(line);
+        {
+            if (parseRequestHeaders(line) == false)
+                return (false);
+        }
         else if (line.find("\r\n"))
         {
             parseRequestBodies(line);
-            return ;
+            return (false);
         }
         else
-            throw "Unvalid Request Headers";
+            return (false);
     }
     else
-        parseRequestHeaders(line);
+    {
+        if (parseRequestHeaders(line) == false)
+            return (false);
+    }
 
     line = ft::getLine(req_message, "\r\n\r\n");
     if (req_message.empty())
@@ -159,24 +185,28 @@ void Request::parseRequest(std::string req_message)
         if (line.find("\r\n"))
             parseRequestBodies(line);
         else
-            throw "Unvalid Request Bodies";
+            return (false);
     }
     else
         parseRequestBodies(line);
+
+    return (true);
 }
 
-void Request::parseRequestLine(std::string req_message)
+bool Request::parseRequestLine(std::string &req_message)
 {
     std::vector<std::string> request_line = ft::split(req_message, " ");
-    if (request_line.size() != 3)
-        throw "Request Line is Invalid";
+    
+    if (isValidRequestLine(request_line) == false)
+        return (false);
 
     setRequestMethod(request_line[0]);
     setRequestUri(request_line[1]);
     setRequestVersion(request_line[2]);
+    return (true);
 }
 
-void Request::parseRequestHeaders(std::string req_message)
+bool Request::parseRequestHeaders(std::string &req_message)
 {
     std::string key;
     std::string value;
@@ -189,27 +219,37 @@ void Request::parseRequestHeaders(std::string req_message)
         key = ft::getLine(line, ":");
         value = ft::ltrim(line, " ");
 
-        //TODO: value 예외처리 변경해야함, 예외처리 모듈화 시켜야함.
-        // if (key.find(" ") != std::string::npos || value.find(":") != std::string::npos)
-        //     return ;
-            // throw "Unvalid Request Header Fields";
+        if (this->isValidRequestHeaders(key, value) == false)
+            return (false);
 
         headers[key] = value;
-        Request::setRequestHeaders(headers);
+        this->setRequestHeaders(headers);
     }
     key = ft::getLine(line, ":");
     value = ft::ltrim(line, " ");
+
+    if (this->isValidRequestHeaders(key, value) == false)
+        return (false);
+
     headers[key] = value;
-    Request::setRequestHeaders(headers);
+    this->setRequestHeaders(headers);
+
+    // if (this->isDuplicated(this->_request_headers) == false)
+    //     return (false);
+
+    return (true);
 }
 
-void Request::parseRequestBodies(std::string req_message)
+void Request::parseRequestBodies(std::string &req_message)
 {
     Request::setRequestBodies(req_message);
 }
 
 
-// ***************** Valid check 부분
+/*============================================================================*/
+/*****************************  Valid Check  **********************************/
+/*============================================================================*/
+
 //TODO: 스타트라인과 첫번째 헤더 필드 사이에 공백이 있으면 안됨.
 
 //NOTE: HTTP-Message Format
@@ -219,3 +259,111 @@ void Request::parseRequestBodies(std::string req_message)
 **                 CRLF
 **                 [ message-body ]
 */
+
+bool Request::isValidRequestLine(std::vector<std::string> &request_line)
+{
+    if (request_line.size() != 3 ||
+        Request::isValidRequestMethod(request_line[0]) == false ||
+        Request::isValidRequestUri(request_line[1]) == false ||
+        Request::isValidRequestVersion(request_line[2]) == false)
+        return (false);
+    return (true);
+}
+
+bool Request::isValidRequestMethod(const std::string &method)
+{
+    if (method.compare("GET") == 0 ||
+        method.compare("POST") == 0 ||
+        method.compare("PUT") == 0 ||
+        method.compare("HEAD") == 0 ||
+        method.compare("DELETE") == 0 ||
+        method.compare("OPTION") == 0 ||
+        method.compare("TRACE") == 0 ||
+        method.compare("CONNECT") == 0)
+        return (true);
+    return (false);
+}
+
+//TODO: uri 유효성 검사 부분 더 알아보기.
+bool Request::isValidRequestUri(const std::string &uri)
+{
+    if (uri.at(0) == '/' || uri.at(0) == 'w')
+        return (true);
+    return (false);
+}
+
+bool Request::isValidRequestVersion(const std::string &version)
+{
+    if (version.compare("HTTP/1.1") == 0)
+        return (true);
+    return (false);
+}
+
+//TODO: Request Headers 유효성 검사 부분 더 알아보기.
+bool Request::isValidRequestHeaders(std::string &key, std::string &value)
+{
+    if (key.empty() || value.empty())
+        return (false);
+
+    //TODO: 헤더들이 \r\n으로 구분되어 있지 않을 때 예외처리 해야 함. 가장 좋은 방법은 value안에 key값이 존재하는지 파악하는 것일 듯 하다..
+    // if ()
+
+    if (this->isDuplicated(this->_request_headers, key) == false)
+        return (false);
+
+    if (this->isValidSP(key) == false)
+        return (false);
+    
+    if (this->isValidRequestHeaderFields(key) == false)
+        return (false);
+
+    return (true);
+}
+
+bool Request::isValidRequestHeaderFields(std::string &key)
+{
+    if (key.compare("Accept-Charsets") != 0 &&
+        key.compare("Accept-Language") != 0 &&
+        key.compare("Allow") != 0 &&
+        key.compare("Authorization") != 0 &&
+        key.compare("Content-Language") != 0 &&
+        key.compare("Content-Length") != 0 &&
+        key.compare("Content-Location") != 0 &&
+        key.compare("Content-Type") != 0 &&
+        key.compare("Date") != 0 &&
+        key.compare("Host") != 0 &&
+        key.compare("Last-Modified") != 0 &&
+        key.compare("Location") != 0 &&
+        key.compare("Referer") != 0 &&
+        key.compare("Retry-After") != 0 &&
+        key.compare("Server") != 0 &&
+        key.compare("Transfer-Encoding") != 0 &&
+        key.compare("User-Agent") != 0 &&
+        key.compare("WWW-Authenticate") != 0)
+        return (false);
+    return (true);
+}
+
+//NOTE: 헤더의 key에 공백 없으면 true
+bool Request::isValidSP(std::string &str)
+{
+    if (str.find(" ") == std::string::npos)
+        return (true);
+    return (false);
+}
+
+//TODO: 중복검사 더 좋은 거 찾기. 일단 아래코드는 동작 안함..
+bool Request::isDuplicated(std::map<std::string, std::string> &headers, std::string &key)
+{
+    static_cast<void>(headers);
+    static_cast<void>(key);
+    // for (auto& kv : headers)
+    // {
+    //     if (headers.find(key) == kv.first.end())
+    //     {
+    //         std::cout << "중복키..>!!" << kv.first << std::endl;
+    //         return (false);
+    //     }
+    // }
+    return (true);
+}
