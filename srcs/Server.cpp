@@ -92,7 +92,6 @@ void Server::init()
     //TODO: memset 구현하기
     memset(&this->_server_address, 0, sizeof(this->_server_address));
     this->_server_address.sin_family = AF_INET;;
-    //NOTE: stoi 사용가능한지 확인하기
     this->_server_address.sin_addr.s_addr = ft::hToNL(INADDR_ANY);
     this->_server_address.sin_port = ft::hToNS(stoi(this->_port));
 
