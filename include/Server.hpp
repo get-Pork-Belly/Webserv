@@ -49,10 +49,8 @@ public:
     //TODO: 구현
     // bool isValidRequest(Request);
     // Response makeResponse(Request);
-    bool init();
-
-    //NOTE: runServer 구현해야 할 듯...?
-    void runServer();
+    void init();
+    void run();
 };
 
 #endif
