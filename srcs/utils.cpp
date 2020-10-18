@@ -108,7 +108,7 @@ unsigned short nToHS(unsigned short hostshort)
            );
 }
 
-std::string getLine(std::string &lines, std::string delim)
+std::string getLine(std::string &lines, const std::string &delim)
 {
     size_t index;
     std::string line;
@@ -119,10 +119,7 @@ std::string getLine(std::string &lines, std::string delim)
         lines = lines.substr(index + delim.size());
     }
     else
-    {
-        line = lines;
-        lines = lines.substr(lines.size());
-    }
+        return (lines);
     return (line);
 }
 
