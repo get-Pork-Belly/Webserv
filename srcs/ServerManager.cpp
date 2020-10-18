@@ -55,6 +55,12 @@ ServerManager::getConfigFilePath() const
     return (this->_config_file_path);
 }
 
+const int
+ServerManager::getFdMax() const
+{
+    return (this->_fd_max);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -85,11 +91,33 @@ ServerManager::initServers()
     // }
 }
 
-// bool
-// ServerManager::runServers()
-// {
-    
-// }
+bool
+ServerManager::runServers()
+{
+    int selected_fds;
+    struct timeval timeout;
+
+    this->_copy_readfds = this->_readfds;
+    this->_copy_writefds = this->_writefds;
+    this->_copy_exceptfds = this->_exceptfds;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 5;
+
+    //TODO: siganl 입력시 반복종료 구현
+    while (true)
+    {
+        if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
+        {
+            std::cerr<<"Error : select"<<std::endl;
+            return (false);
+        }
+        else if (selected_fds == 0)
+            continue ;
+        for (Server *server : this->_servers)
+            server->run();
+    }
+    return (true);
+}
 
 // void
 // ServerManager::exitServers()
