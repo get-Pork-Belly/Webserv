@@ -49,7 +49,7 @@ public:
     /* Overload */
     /* Getter */
     const char *getConfigFilePath() const;
-    const int getFdMax() const;
+    int getFdMax() const;
     /* Setter */
     /* Exception */
     /* Util */

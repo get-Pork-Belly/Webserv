@@ -9,14 +9,16 @@
 # include <sys/time.h>
 # include <netinet/in.h>
 
+class ServerManager;
+
 class Server
 {
 private:
+    Server();
     Server(const Server& other);
     Server& operator=(const Server& rhs);
 
 private:
-    Server() {}; //쓰지않을 예정
     std::map<std::string, std::string> _server_config;
     int _server_socket;
     std::vector<int> _client_sockets;
@@ -50,7 +52,9 @@ public:
     // bool isValidRequest(Request);
     // Response makeResponse(Request);
     void init();
-    void run();
+    void run(ServerManager *server_manager);
+
+    void test(ServerManager *temp);
 };
 
 #endif

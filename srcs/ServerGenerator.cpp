@@ -74,7 +74,7 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     }
 }
 
-void
+void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
     server_info http_config;
@@ -94,8 +94,8 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             it++;
             std::map<std::string, location_info> locations;
             parseServerBlock(it, server_config, locations);
-            testServerConfig(server_config);
-            testLocationConfig(locations);
+            // testServerConfig(server_config);
+            // testLocationConfig(locations);
             // servers.push_back(new Server(server_config, locations));
         }
         it++;

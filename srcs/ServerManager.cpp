@@ -1,4 +1,5 @@
 #include "ServerManager.hpp"
+#include "Server.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -14,12 +15,12 @@ ServerManager::ServerManager(const char *config_path)
     this->initServers();
 
     //TODO: FD_ZERO 구현
-    FD_ZERO(&this->_readfds);
-    FD_ZERO(&this->_writefds);
-    FD_ZERO(&this->_exceptfds);
-    FD_ZERO(&this->_copy_readfds);
-    FD_ZERO(&this->_copy_writefds);
-    FD_ZERO(&this->_copy_exceptfds);
+    ft::fdZero(&this->_readfds);
+    ft::fdZero(&this->_writefds);
+    ft::fdZero(&this->_exceptfds);
+    ft::fdZero(&this->_copy_readfds);
+    ft::fdZero(&this->_copy_writefds);
+    ft::fdZero(&this->_copy_exceptfds);
 
     //TODO: 임시로 초기화. 수정 필요
     // this->_servers = 0;
@@ -55,7 +56,7 @@ ServerManager::getConfigFilePath() const
     return (this->_config_file_path);
 }
 
-const int
+int
 ServerManager::getFdMax() const
 {
     return (this->_fd_max);
@@ -94,29 +95,33 @@ ServerManager::initServers()
 bool
 ServerManager::runServers()
 {
-    // int selected_fds;
-    // struct timeval timeout;
+    int selected_fds;
+    struct timeval timeout;
 
-    // this->_copy_readfds = this->_readfds;
-    // this->_copy_writefds = this->_writefds;
-    // this->_copy_exceptfds = this->_exceptfds;
-    // timeout.tv_sec = 5;
-    // timeout.tv_usec = 5;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 5;
 
-    // //TODO: siganl 입력시 반복종료 구현
-    // while (true)
-    // {
-    //     if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
-    //     {
-    //         std::cerr<<"Error : select"<<std::endl;
-    //         return (false);
-    //     }
-    //     else if (selected_fds == 0)
-    //         continue ;
-    //     for (Server *server : this->_servers)
-    //         server->run();
-    // }
-    // return (true);
+    (void)selected_fds;
+    //TODO: siganl 입력시 반복종료 구현
+    while (true)
+    {
+        // this->_copy_readfds = this->_readfds;
+        // this->_copy_writefds = this->_writefds;
+        // this->_copy_exceptfds = this->_exceptfds;
+        // if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
+        // {
+        //     std::cerr<<"Error : select"<<std::endl;
+        //     return (false);
+        // }
+        // else if (selected_fds == 0)
+        //     continue ;
+        for (Server *server : this->_servers)
+        {
+            // server->run(this);
+            server->test(this);
+        }
+    }
+    return (true);
 }
 
 // void
