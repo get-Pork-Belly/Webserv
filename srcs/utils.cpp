@@ -108,10 +108,9 @@ unsigned short nToHS(unsigned short hostshort)
            );
 }
 
-std::string getLine(std::string &lines, std::string delim)
+bool substr(std::string &line, std::string &lines, const std::string &delim)
 {
     size_t index;
-    std::string line;
 
     if ((index = lines.find(delim)) != std::string::npos)
     {
@@ -121,9 +120,10 @@ std::string getLine(std::string &lines, std::string delim)
     else
     {
         line = lines;
-        lines = lines.substr(lines.size());
+        lines = "";
+        return (false);
     }
-    return (line);
+    return (true);
 }
 
 }

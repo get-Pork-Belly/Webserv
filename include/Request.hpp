@@ -42,17 +42,17 @@ public:
     std::string getStatusCode();
 
     /* Setter */
-    void setRequestMethod(const std::string &method);
-    void setRequestUri(const std::string &uri);
-    void setRequestVersion(const std::string &version);
-    void setRequestHeaders(std::map<std::string, std::string> &request_headers);
+    void setRequestMethod(const std::string& method);
+    void setRequestUri(const std::string& uri);
+    void setRequestVersion(const std::string& version);
+    void setRequestHeaders(std::map<std::string, std::string>& request_headers);
     
-    void setRequestHeaders(const std::string &key, const std::string &value);
+    void setRequestHeaders(const std::string& key, const std::string& value);
     
-    void setRequestProtocol(const std::string &protocol);
-    void setRequestBodies(const std::string &body);
-    void setRequestTransferType(const std::string &transfer_type);
-    void setStatusCode(const std::string &code);
+    void setRequestProtocol(const std::string& protocol);
+    void setRequestBodies(const std::string& body);
+    void setRequestTransferType(const std::string& transfer_type);
+    void setStatusCode(const std::string& code);
 
     /* Exception */
 
@@ -60,20 +60,20 @@ public:
 
     // void initMembers(std::string req_message);
 
-    bool parseRequest(std::string req_message);
-    bool parseRequestLine(std::string &req_message);
-    bool parseRequestHeaders(std::string &req_message);
-    void parseRequestBodies(std::string &req_message);
+    bool parseRequest(std::string& req_message);
+    bool parseRequestLine(std::string& req_message);
+    bool parseRequestHeaders(std::string& req_message);
+    void parseRequestBodies(std::string& req_message);
 
-    bool isValidRequestLine(std::vector<std::string> &request_line);
-    bool isValidRequestMethod(const std::string &method);
-    bool isValidRequestUri(const std::string &uri);
-    bool isValidRequestVersion(const std::string &version);
+    bool isValidRequestLine(std::vector<std::string>& request_line);
+    bool isValidRequestMethod(const std::string& method);
+    bool isValidRequestUri(const std::string& uri);
+    bool isValidRequestVersion(const std::string& version);
 
-    bool isValidRequestHeaders(std::string &key, std::string &value);
-    bool isValidRequestHeaderFields(std::string &key);
-    bool isValidSP(std::string &str);
-    bool isDuplicated(std::string &key);
+    bool isValidRequestHeaders(std::string& key, std::string& value);
+    bool isValidRequestHeaderFields(std::string& key);
+    bool isValidSP(std::string& str);
+    bool isDuplicated(std::string& key);
 
 
     bool isValidRequestBodies();

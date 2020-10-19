@@ -65,52 +65,50 @@ std::string Request::getStatusCode()
 /********************************  Setter  ************************************/
 /*============================================================================*/
 
-void Request::setRequestMethod(const std::string &method)
+void Request::setRequestMethod(const std::string& method)
 {
     this->_request_method = method;
 }
 
-void Request::setRequestUri(const std::string &uri)
+void Request::setRequestUri(const std::string& uri)
 {
     this->_request_uri = uri;
 }
 
-void Request::setRequestVersion(const std::string &version)
+void Request::setRequestVersion(const std::string& version)
 {
     this->_request_version = version;
 }
 
 //TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
-void Request::setRequestHeaders(std::map<std::string, std::string> &headers)
+void Request::setRequestHeaders(std::map<std::string, std::string>& headers)
 {
 
     for (auto& h : headers)
-    {
         this->_request_headers.insert(make_pair(h.first, h.second));
-    }
 }
 
-void Request::setRequestHeaders(const std::string &key, const std::string &value)
+void Request::setRequestHeaders(const std::string& key, const std::string& value)
 {
     this->_request_headers[key] = value;
 }
 
-void Request::setRequestProtocol(const std::string &protocol)
+void Request::setRequestProtocol(const std::string& protocol)
 {
     this->_request_protocol = protocol;
 }
 
-void Request::setRequestBodies(const std::string &req_message)
+void Request::setRequestBodies(const std::string& req_message)
 {
     this->_request_bodies = req_message;
 }
 
-void Request::setRequestTransferType(const std::string &transfer_type)
+void Request::setRequestTransferType(const std::string& transfer_type)
 {
     this->_request_transfer_type = transfer_type;
 }
 
-void Request::setStatusCode(const std::string &status_code)
+void Request::setStatusCode(const std::string& status_code)
 {
     this->_status_code = status_code;
 }
@@ -124,40 +122,38 @@ void Request::setStatusCode(const std::string &status_code)
 /*============================================================================*/
 
 
-//TODO: Server에서 getRequest() 함수를 실행시킬 때 먼저 req_message에 read버퍼를 모두 담아주어야 한다.
-Request Server::receiveRequest(Request &request)
-{
-    int bytes;
-    std::string req_message;
+// //TODO: Server에서 getRequest() 함수를 실행시킬 때 먼저 req_message에 read버퍼를 모두 담아주어야 한다.
+// Request Server::receiveRequest(Request& request)
+// {
+//     int bytes;
+//     std::string req_message;
 
-    bytes = 0;
-    while ((bytes = read(this->getFd(), buf, BUFFER_SIZE)) > 0)
-    {
-        req_message += buf;
-    }
-    if (bytes == 0)
-    {
-        if (parseRequest(req_message) == false)
-            return (false);
-        else
-            return (true);
-    }
-}
+//     bytes = 0;
+//     while ((bytes = read(this->getFd(), buf, BUFFER_SIZE)) > 0)
+//     {
+//         req_message += buf;
+//     }
+//     if (bytes == 0)
+//     {
+//         if (parseRequest(req_message) == false)
+//             return (false);
+//         else
+//             return (true);
+//     }
+// }
 
 
 //NOTE: Request = Server::getRequest() 의 호출을 받고 루프 안에서 read 함수를 실행시킨다.
 //NOTE: message body가 있다면 octets의 양이 message_body_length와 같을 때까지 읽거나 커넥션을 닫는다.
 //NOTE: HTTP 메세지를 octet sequence로 인코딩해야 하며 그것은 US-ASCII로 이루어진다.
 
-bool Request::parseRequest(std::string req_message)
+bool Request::parseRequest(std::string& req_message)
 {
     std::string line;
 
-    line = ft::getLine(req_message, "\r\n");
-    //NOTE: req_message가 empty면 delimeter find에 실패했다는 것
-    if (req_message.empty())
+    if (ft::substr(line, req_message, "\r\n") == false)
     {
-        Request::setStatusCode("400");
+        this->setStatusCode("400");
         return (false);
     }
     else
@@ -166,8 +162,7 @@ bool Request::parseRequest(std::string req_message)
             return (false);
     }
 
-    line = ft::getLine(req_message, "\r\n\r\n");
-    if (req_message.empty())
+    if (ft::substr(line, req_message, "\r\n\r\n") == false)
     {
         if (line.find("\r\n") && line.find(":") != std::string::npos)
         {
@@ -188,8 +183,7 @@ bool Request::parseRequest(std::string req_message)
             return (false);
     }
 
-    line = ft::getLine(req_message, "\r\n\r\n");
-    if (req_message.empty())
+    if (ft::substr(line, req_message, "\r\n\r\n") == false)
     {
         if (line.find("\r\n"))
             parseRequestBodies(line);
@@ -202,7 +196,7 @@ bool Request::parseRequest(std::string req_message)
     return (true);
 }
 
-bool Request::parseRequestLine(std::string &req_message)
+bool Request::parseRequestLine(std::string& req_message)
 {
     std::vector<std::string> request_line = ft::split(req_message, " ");
     
@@ -215,50 +209,44 @@ bool Request::parseRequestLine(std::string &req_message)
     return (true);
 }
 
-bool Request::parseRequestHeaders(std::string &req_message)
+bool Request::parseRequestHeaders(std::string& req_message)
 {
     std::string key;
     std::string value;
     std::map<std::string, std::string> headers;
     std::string line;
 
-    while (!(line = ft::getLine(req_message, "\r\n")).empty() && !req_message.empty())
+    while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
     {
-        //TODO: key에 공백이 있는지 체크해야함. value 역시 유효성 검사 해야함.
-        key = ft::getLine(line, ":");
+        if (ft::substr(key, line, ":") == false)
+            return (false);
         value = ft::ltrim(line, " ");
 
         if (this->isValidRequestHeaders(key, value) == false)
             return (false);
 
         if (this->isDuplicated(key) == false)
-        {
             return (false);
-        }
 
         headers[key] = value;
-        // this->setRequestHeaders(headers);
         this->setRequestHeaders(key, value);
     }
-    key = ft::getLine(line, ":");
+    if (ft::substr(key, line, ":") == false)
+        return (false);
     value = ft::ltrim(line, " ");
 
     if (this->isDuplicated(key) == false)
-    {
         return (false);
-    }
 
     headers[key] = value;
-    // this->setRequestHeaders(headers);
     this->setRequestHeaders(key, value);
-
 
     return (true);
 }
 
-void Request::parseRequestBodies(std::string &req_message)
+void Request::parseRequestBodies(std::string& req_message)
 {
-    Request::setRequestBodies(req_message);
+    this->setRequestBodies(req_message);
 }
 
 
@@ -276,17 +264,17 @@ void Request::parseRequestBodies(std::string &req_message)
 **                 [ message-body ]
 */
 
-bool Request::isValidRequestLine(std::vector<std::string> &request_line)
+bool Request::isValidRequestLine(std::vector<std::string>& request_line)
 {
     if (request_line.size() != 3 ||
-        Request::isValidRequestMethod(request_line[0]) == false ||
-        Request::isValidRequestUri(request_line[1]) == false ||
-        Request::isValidRequestVersion(request_line[2]) == false)
+        this->isValidRequestMethod(request_line[0]) == false ||
+        this->isValidRequestUri(request_line[1]) == false ||
+        this->isValidRequestVersion(request_line[2]) == false)
         return (false);
     return (true);
 }
 
-bool Request::isValidRequestMethod(const std::string &method)
+bool Request::isValidRequestMethod(const std::string& method)
 {
     if (method.compare("GET") == 0 ||
         method.compare("POST") == 0 ||
@@ -301,14 +289,14 @@ bool Request::isValidRequestMethod(const std::string &method)
 }
 
 //TODO: uri 유효성 검사 부분 더 알아보기.
-bool Request::isValidRequestUri(const std::string &uri)
+bool Request::isValidRequestUri(const std::string& uri)
 {
-    if (uri.at(0) == '/' || uri.at(0) == 'w')
+    if (uri[0] == '/' || uri[0] == 'w')
         return (true);
     return (false);
 }
 
-bool Request::isValidRequestVersion(const std::string &version)
+bool Request::isValidRequestVersion(const std::string& version)
 {
     if (version.compare("HTTP/1.1") == 0)
         return (true);
@@ -316,27 +304,24 @@ bool Request::isValidRequestVersion(const std::string &version)
 }
 
 //TODO: Request Headers 유효성 검사 부분 더 알아보기.
-bool Request::isValidRequestHeaders(std::string &key, std::string &value)
+bool Request::isValidRequestHeaders(std::string& key, std::string& value)
 {
     if (key.empty() || value.empty())
         return (false);
 
     //TODO: 헤더들이 \r\n으로 구분되어 있지 않을 때 예외처리 해야 함. 가장 좋은 방법은 value안에 key값이 존재하는지 파악하는 것일 듯 하다..
-    // if ()
+    // if
 
-    // if (this->isDuplicated(this->_request_headers, key) == false)
-    //     return (false);
-
-    // if (this->isValidSP(key) == false)
-    //     return (false);
+    if (this->isValidSP(key) == false)
+        return (false);
     
-    // if (this->isValidRequestHeaderFields(key) == false)
-    //     return (false);
+    if (this->isValidRequestHeaderFields(key) == false)
+        return (false);
 
     return (true);
 }
 
-bool Request::isValidRequestHeaderFields(std::string &key)
+bool Request::isValidRequestHeaderFields(std::string& key)
 {
     if (key.compare("Accept-Charsets") != 0 &&
         key.compare("Accept-Language") != 0 &&
@@ -361,7 +346,7 @@ bool Request::isValidRequestHeaderFields(std::string &key)
 }
 
 //NOTE: 헤더의 key에 공백 없으면 true
-bool Request::isValidSP(std::string &str)
+bool Request::isValidSP(std::string& str)
 {
     if (str.find(" ") == std::string::npos)
         return (true);
@@ -369,7 +354,7 @@ bool Request::isValidSP(std::string &str)
 }
 
 //TODO: 중복검사 더 좋은 거 찾기. 일단 아래코드는 동작 안함..
-bool Request::isDuplicated(std::string &key)
+bool Request::isDuplicated(std::string& key)
 {
     if (this->_request_headers.find(key) == this->_request_headers.end())
         return (true);
