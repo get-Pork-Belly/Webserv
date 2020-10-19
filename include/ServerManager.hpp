@@ -14,7 +14,6 @@
 # include <iostream>
 # include <string>
 # include "types.hpp"
-# include "utils.hpp"
 # include "ServerGenerator.hpp"
 
 class Server;
@@ -51,10 +50,12 @@ public:
     const char *getConfigFilePath() const;
     int getFdMax() const;
     /* Setter */
+    void setFdMax(int fd);
     /* Exception */
     /* Util */
     bool fdIsSet(int fd, int type);
     void fdClr(int fd, int type);
+    void fdSet(int fd, int type);
 
     /* Manage Server functions */
     void initServers();

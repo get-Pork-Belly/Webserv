@@ -10,6 +10,7 @@
 
 Response::Response(const Response& object)
 {
+    static_cast<void>(object);
 }
 
 /*============================================================================*/
@@ -24,8 +25,9 @@ Response::~Response()
 /*******************************  Overload  ***********************************/
 /*============================================================================*/
 
-Response& Response::operator=(const Response& object)
+Response& Response::operator=(const Response& other)
 {
+    (void)other;
     return (*this);
 }
 /*============================================================================*/

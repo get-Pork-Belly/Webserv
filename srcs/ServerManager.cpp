@@ -1,5 +1,6 @@
 #include "ServerManager.hpp"
 #include "Server.hpp"
+#include "utils.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -66,6 +67,12 @@ ServerManager::getFdMax() const
 /********************************  Setter  ************************************/
 /*============================================================================*/
 
+void
+ServerManager::setFdMax(int fd)
+{
+    this->_fd_max = fd;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -73,6 +80,17 @@ ServerManager::getFdMax() const
 /*============================================================================*/
 /*********************************  Util  *************************************/
 /*============================================================================*/
+
+void
+ServerManager::fdSet(int fd, int type)
+{
+    if (type == READ_FDSET)
+        ft::fdSet(fd, &this->_readfds);
+    else if (type == WRITE_FDSET)
+        ft::fdSet(fd, &this->_writefds);
+    else if (type == EXCEPT_FDSET)
+        ft::fdSet(fd, &this->_exceptfds);
+}
 
 bool
 ServerManager::fdIsSet(int fd, int type)
@@ -135,13 +153,19 @@ ServerManager::runServers()
             return (false);
         }
         else if (selected_fds == 0)
+        {
+            std::cout << " time out " << std::endl;
             continue ;
-        std::cout << "in while" << std::endl;
+        }
         for (Server *server : this->_servers)
             server->run(this);
     }
     return (true);
 }
+
+
+
+
 
 
 
