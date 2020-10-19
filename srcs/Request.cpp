@@ -83,11 +83,8 @@ void Request::setRequestVersion(const std::string &version)
 //TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
 void Request::setRequestHeaders(std::map<std::string, std::string> &headers)
 {
-
     for (auto& h : headers)
-    {
         this->_request_headers.insert(make_pair(h.first, h.second));
-    }
 }
 
 void Request::setRequestHeaders(const std::string &key, const std::string &value)
