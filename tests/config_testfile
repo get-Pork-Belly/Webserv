@@ -2,8 +2,9 @@ http {
     include mime.types;
     root /test/folder;
     server {
-        listen       80;
+        server_name first_server;
         root html;
+        listen 8081;
         location / {
             index  index.html index.htm;
             limit_except GET POST
@@ -14,6 +15,7 @@ http {
         }
     }
     server {
+        server_name second_server;
         listen       8080;
         location /please {
             index  index.html index.htm;

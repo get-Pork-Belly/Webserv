@@ -8,6 +8,7 @@
 # include <sys/types.h>
 # include <sys/time.h>
 # include <netinet/in.h>
+# include "types.hpp"
 
 class ServerManager;
 
@@ -34,7 +35,7 @@ private:
 
 public:
     /* Constructor */
-    Server(std::map<std::string, std::string>& server_config);
+    Server(server_info& server_config, std::map<std::string, location_info> location_config);
         /* Destructor */
     virtual ~Server();
 

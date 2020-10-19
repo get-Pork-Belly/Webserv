@@ -14,9 +14,14 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-Server::Server(std::map<std::string, std::string>& server_config)
-: _server_config(server_config), _server_socket(-1), _client_sockets(0), _server_name(""), _host(""), _port(""), _status_code(0), _request_uri_limit_size(0), _request_header_limit_size(0), _limit_client_body_size(0), _default_error_page("")
+Server::Server(server_info& server_config, std::map<std::string, location_info> location_config)
+: _server_config(server_config), _server_socket(-1),
+_client_sockets(0), _server_name(""), _host(""),
+_port(""), _status_code(0), _request_uri_limit_size(0),
+_request_header_limit_size(0), _limit_client_body_size(0), _default_error_page("")
 {
+    //TODO: location_config 를 서버에 반영
+    (void)location_config;
     try
     {
         this->init();
@@ -80,7 +85,7 @@ void Server::init()
             this->_server_name = conf.second;
         else if (conf.first == "host")
             this->_host = conf.second;
-        else if (conf.first == "port")
+        else if (conf.first == "listen")
             this->_port = conf.second;
     }
 
@@ -148,5 +153,7 @@ void Server::run(ServerManager *server_manager)
 void Server::test(ServerManager *temp)
 {
     (void)temp;
-    std::cout<<"success"<<std::endl;
+    std::cout<<"server range for traverse success"<<std::endl;
+    std::cout<<"serever_name: " << this->_server_name <<std::endl;
+    std::cout<<"server_port: " << this->_port <<std::endl;
 }
