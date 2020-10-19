@@ -9,29 +9,14 @@
 /*============================================================================*/
 
 Request::Request()
-{
-}
-
-// Request::Request(const Request& object)
-// {
-// }
+: _request_method(""), _request_uri(""), _request_version(""), _request_protocol(""), _request_bodies(""), _request_transfer_type(""), _status_code("") {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
 /*============================================================================*/
 
-Request::~Request()
-{
-}
+Request::~Request() {}
 
-/*============================================================================*/
-/*******************************  Overload  ***********************************/
-/*============================================================================*/
-
-// Request& Request::operator=(const Request& object)
-// {
-//     return (*this);
-// }
 /*============================================================================*/
 /********************************  Getter  ************************************/
 /*============================================================================*/
@@ -56,41 +41,78 @@ std::map<std::string, std::string> Request::getRequestHeaders()
     return (this->_request_headers);
 }
 
+std::string Request::getRequestProtocol()
+{
+    return (this->_request_protocol);
+}
+
 std::string Request::getRequestBodies()
 {
     return (this->_request_bodies);
+}
+
+std::string Request::getRequestTransferType()
+{
+    return (this->_request_transfer_type);
+}
+
+std::string Request::getStatusCode()
+{
+    return (this->_status_code);
 }
 
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
 
-void Request::setRequestMethod(std::string method)
+void Request::setRequestMethod(const std::string &method)
 {
     this->_request_method = method;
 }
 
-void Request::setRequestUri(std::string uri)
+void Request::setRequestUri(const std::string &uri)
 {
     this->_request_uri = uri;
 }
 
-void Request::setRequestVersion(std::string version)
+void Request::setRequestVersion(const std::string &version)
 {
     this->_request_version = version;
 }
 
-void Request::setRequestHeaders(std::map<std::string, std::string> headers)
+//TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
+void Request::setRequestHeaders(std::map<std::string, std::string> &headers)
 {
+
     for (auto& h : headers)
     {
         this->_request_headers.insert(make_pair(h.first, h.second));
     }
 }
 
-void Request::setRequestBodies(std::string req_message)
+void Request::setRequestHeaders(const std::string &key, const std::string &value)
+{
+    this->_request_headers[key] = value;
+}
+
+void Request::setRequestProtocol(const std::string &protocol)
+{
+    this->_request_protocol = protocol;
+}
+
+void Request::setRequestBodies(const std::string &req_message)
 {
     this->_request_bodies = req_message;
+}
+
+void Request::setRequestTransferType(const std::string &transfer_type)
+{
+    this->_request_transfer_type = transfer_type;
+}
+
+void Request::setStatusCode(const std::string &status_code)
+{
+    this->_status_code = status_code;
 }
 
 /*============================================================================*/
@@ -102,8 +124,8 @@ void Request::setRequestBodies(std::string req_message)
 /*============================================================================*/
 
 
-//TODO: Server에서 getRequest() 함수를 실행시킬 때 먼저 req_message에 read버퍼를 모두 담아주어야 한다.
-// Request Server::getRequest()
+// //TODO: Server에서 getRequest() 함수를 실행시킬 때 먼저 req_message에 read버퍼를 모두 담아주어야 한다.
+// Request Server::receiveRequest(Request &request)
 // {
 //     int bytes;
 //     std::string req_message;
@@ -115,7 +137,10 @@ void Request::setRequestBodies(std::string req_message)
 //     }
 //     if (bytes == 0)
 //     {
-//         parseRequest(req_message);
+//         if (parseRequest(req_message) == false)
+//             return (false);
+//         else
+//             return (true);
 //     }
 // }
 
@@ -124,96 +149,93 @@ void Request::setRequestBodies(std::string req_message)
 //NOTE: message body가 있다면 octets의 양이 message_body_length와 같을 때까지 읽거나 커넥션을 닫는다.
 //NOTE: HTTP 메세지를 octet sequence로 인코딩해야 하며 그것은 US-ASCII로 이루어진다.
 
-void Request::parseRequest(std::string &req_message)
+bool Request::parseRequest(std::string req_message)
 {
     std::string line;
 
-    line = ft::getLine(req_message, "\r\n");
-    //NOTE: req_message가 empty면 delimeter find에 실패했다는 것
-    if (req_message.empty())
-        return ;
+    if (ft::substr(line, req_message, "\r\n") == false)
+    {
+        Request::setStatusCode("400");
+        return (false);
+    }
     else
-        parseRequestLine(line);
+    {
+        if (parseRequestLine(line) == false)
+            return (false);
+    }
 
-    line = ft::getLine(req_message, "\r\n\r\n");
-    if (req_message.empty())
+    if (ft::substr(line, req_message, "\r\n\r\n") == false)
     {
         if (line.find("\r\n") && line.find(":") != std::string::npos)
-            parseRequestHeaders(line);
+        {
+            if (parseRequestHeaders(line) == false)
+                return (false);
+        }
         else if (line.find("\r\n"))
         {
             parseRequestBodies(line);
-            return ;
+            return (false);
         }
         else
-            return ;
+            return (false);
     }
     else
-        parseRequestHeaders(line);
+    {
+        if (parseRequestHeaders(line) == false)
+            return (false);
+    }
 
-    line = ft::getLine(req_message, "\r\n\r\n");
-    if (req_message.empty())
+    if (ft::substr(line, req_message, "\r\n\r\n") == false)
     {
         if (line.find("\r\n"))
             parseRequestBodies(line);
         else
-            return ;
+            return (false);
     }
     else
         parseRequestBodies(line);
+
+    return (true);
 }
 
-void Request::parseRequestLine(std::string &req_message)
+bool Request::parseRequestLine(std::string &req_message)
 {
     std::vector<std::string> request_line = ft::split(req_message, " ");
-    if (request_line.size() != 3)
-        return ;
 
     setRequestMethod(request_line[0]);
     setRequestUri(request_line[1]);
     setRequestVersion(request_line[2]);
+    return (true);
 }
 
-void Request::parseRequestHeaders(std::string &req_message)
+bool Request::parseRequestHeaders(std::string &req_message)
 {
     std::string key;
     std::string value;
     std::map<std::string, std::string> headers;
     std::string line;
 
-    while (!(line = ft::getLine(req_message, "\r\n")).empty() && !req_message.empty())
+    while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
     {
         //TODO: key에 공백이 있는지 체크해야함. value 역시 유효성 검사 해야함.
-        key = ft::getLine(line, ":");
+        if (ft::substr(key, line, ":") == false)
+            return (false);
         value = ft::ltrim(line, " ");
 
-        //TODO: value 예외처리 변경해야함, 예외처리 모듈화 시켜야함.
-        // if (key.find(" ") != std::string::npos || value.find(":") != std::string::npos)
-        //     return ;
-            // return ;
-
         headers[key] = value;
-        this->setRequestHeaders(headers);
+        this->setRequestHeaders(key, value);
     }
-    key = ft::getLine(line, ":");
+    if (ft::substr(key, line, ":") == false)
+        return (false);
     value = ft::ltrim(line, " ");
+
     headers[key] = value;
-    this->setRequestHeaders(headers);
+    this->setRequestHeaders(key, value);
+
+    return (true);
 }
 
 void Request::parseRequestBodies(std::string &req_message)
 {
-    this->setRequestBodies(req_message);
+    Request::setRequestBodies(req_message);
 }
-
-
-// ***************** Valid check 부분
-//TODO: 스타트라인과 첫번째 헤더 필드 사이에 공백이 있으면 안됨.
-
-//NOTE: HTTP-Message Format
-/*
-** HTTP-message   = start-line
-**                 *( header-field CRLF )
-**                 CRLF
-**                 [ message-body ]
-*/
