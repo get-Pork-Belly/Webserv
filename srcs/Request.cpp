@@ -237,5 +237,5 @@ bool Request::parseRequestHeaders(std::string &req_message)
 
 void Request::parseRequestBodies(std::string &req_message)
 {
-    Request::setRequestBodies(req_message);
+    this->setRequestBodies(req_message);
 }
