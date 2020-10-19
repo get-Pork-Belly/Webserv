@@ -8,15 +8,19 @@
 # include <sys/types.h>
 # include <sys/time.h>
 # include <netinet/in.h>
+# include "types.hpp"
+# include "Request.hpp"
+
+class ServerManager;
 
 class Server
 {
 private:
+    Server();
     Server(const Server& other);
     Server& operator=(const Server& rhs);
 
 private:
-    Server() {}; //쓰지않을 예정
     std::map<std::string, std::string> _server_config;
     int _server_socket;
     std::vector<int> _client_sockets;
@@ -32,7 +36,7 @@ private:
 
 public:
     /* Constructor */
-    Server(std::map<std::string, std::string>& server_config);
+    Server(server_info& server_config, std::map<std::string, location_info> location_config);
         /* Destructor */
     virtual ~Server();
 
@@ -46,13 +50,13 @@ public:
     void setServerSocket();
     /* Exception */
     /* Util */
-    //TODO: 구현
-    // bool isValidRequest(Request);
-    // Response makeResponse(Request);
-    bool init();
 
-    //NOTE: runServer 구현해야 할 듯...?
-    void runServer();
+    /* Server function */
+    void init();
+    void run(ServerManager *server_manager);
+    Request receiveRequest();
+    void makeResponse(Request& request, int fd);
+    bool sendResponse(int fd);
 };
 
 #endif

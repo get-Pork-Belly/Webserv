@@ -49,14 +49,17 @@ public:
     /* Overload */
     /* Getter */
     const char *getConfigFilePath() const;
+    int getFdMax() const;
     /* Setter */
     /* Exception */
     /* Util */
+    bool fdIsSet(int fd, int type);
+    void fdClr(int fd, int type);
 
     /* Manage Server functions */
     void initServers();
+    bool runServers();
     //TODO 구현 필요
-    // bool runServers();
     // void exitServers();
 };
 

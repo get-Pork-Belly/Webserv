@@ -1,5 +1,6 @@
 #include "ServerGenerator.hpp"
 #include "ServerManager.hpp"
+#include "Server.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -74,7 +75,7 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     }
 }
 
-void
+void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
     server_info http_config;
@@ -83,7 +84,6 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
     http_config = parseHttpBlock();
-    (void)servers;
 
     while (it != ite)
     {
@@ -94,9 +94,9 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             it++;
             std::map<std::string, location_info> locations;
             parseServerBlock(it, server_config, locations);
-            testServerConfig(server_config);
-            testLocationConfig(locations);
-            // servers.push_back(new Server(server_config, locations));
+            // testServerConfig(server_config);
+            // testLocationConfig(locations);
+            servers.push_back(new Server(server_config, locations));
         }
         it++;
     }
