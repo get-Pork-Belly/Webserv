@@ -5,7 +5,7 @@ CFLAGS = -Wall -Wextra -Werror -std=c++11 -fsanitize=address -g
 RM = rm -rf
 
 # MAIN_FILES = main 
-MAIN_FILES = getLine_test utils
+MAIN_FILES = substr_test utils
 
 SRCS_PATH = $(MAIN_FILES)
 VPATH := .:srcs:tests
