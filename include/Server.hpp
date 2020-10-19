@@ -54,8 +54,6 @@ public:
     // Response makeResponse(Request);
     void init();
     void run(ServerManager *server_manager);
-
-    void test(ServerManager *temp);
 };
 
 #endif

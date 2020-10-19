@@ -14,7 +14,7 @@ namespace ft
 
     void fdZero(fd_set *fds);
     void fdSet(int fd, fd_set *fds);
-    bool fdIsset(int fd, fd_set *fds);
+    bool fdIsSet(int fd, fd_set *fds);
     void fdClr(int fd, fd_set *fds);
   
     unsigned long hToNL(unsigned long hostlong);

@@ -73,9 +73,9 @@ int Server::getServerSocket()
 /*============================================================================*/
 
 /*============================================================================*/
-/*********************************  Util  *************************************/
+/*********************************  Util  *************************************/ 
 /*============================================================================*/
-
+ 
 void Server::init()
 {
 
@@ -110,50 +110,41 @@ void Server::init()
 
 void Server::run(ServerManager *server_manager)
 {
-    (void)server_manager;
-    // int client_len;
-    // struct sockaddr_in client_address;
-    // int client_socket;
+    int client_len;
+    struct sockaddr_in client_address;
+    int client_socket;
 
-    // for (int fd = 0; fd < server_manager->getFdMax(); fd++)
-    // {
-    //     if (server_manager->fdIsSet(fd, TYPE_ALL)) //만약 fd가 변경된 fd라면,
-    //     {
-    //         if (fd == this->getServerSocket()) // 그리고 fd가 서버소켓이라면,
-    //         {
-    //             client_len = sizeof(client_address);
-    //             //TODO: client_address 지역변수로 써도되는지 체크
-    //             if ((client_socket = accept(this->getServerSocket(), reinterpret_cast<struct socketaddr *>(&client_address), reinterpret_cast<socklen_t *>(&client_len))) == -1)
-    //                 std::cerr<<"accept error"<<std::endl;
-    //             if (server_manager->getFdMax() < client_socket)
-    //                 server_manager->setFdMax(client_socket);
-    //         }
-    //         else //fd가 클라이언트라면,
-    //         {
-    //             if (server_manager->fdIsSet(fd, TYPE_WRITEFDS)) // 보낼 것이 있다면,
-    //             {
-    //                 if (!(sendResponse(fd))
-    //                 {
-    //                     std::cerr<<"Error: sendResponse"<<std::endl;
-    //                 }
-    //                 server_manager->fdClr(fd, TYPE_WRITEFDS);
-    //                 continue;
-    //             }
-    //             if (server_manager->fdIsSet(fd, TYPE_READFDS)) // 보낼 것이 없고, 읽을 것이 있다면,
-    //             {
-    //                 this->makeResponse(this->receiveRequest(), fd);
-    //                 server_manager->fdSet(fd, TYPE_WRITEFDS);
-    //                 server_manager->fdClr(fd, TYPE_READFDS);
-    //             }
-    //         }
-    //     }
-    // }
-}
-
-void Server::test(ServerManager *temp)
-{
-    (void)temp;
-    std::cout<<"server range for traverse success"<<std::endl;
-    std::cout<<"serever_name: " << this->_server_name <<std::endl;
-    std::cout<<"server_port: " << this->_port <<std::endl;
+    for (int fd = 0; fd < server_manager->getFdMax(); fd++)
+    {
+        if (server_manager->fdIsSet(fd, ALL_FDSET))
+        {
+            if (fd == this->getServerSocket())
+            {
+                client_len = sizeof(client_address);
+                //TODO: client_address 지역변수로 써도되는지 체크
+                if ((client_socket = accept(this->getServerSocket(), reinterpret_cast<struct socketaddr *>(&client_address), reinterpret_cast<socklen_t *>(&client_len))) == -1)
+                    std::cerr<<"accept error"<<std::endl;
+                if (server_manager->getFdMax() < client_socket)
+                    server_manager->setFdMax(client_socket);
+            }
+            else
+            {
+                if (server_manager->fdIsSet(fd, WRITE_FDSET))
+                {
+                    if (!(sendResponse(fd))
+                    {
+                        std::cerr<<"Error: sendResponse"<<std::endl;
+                    }
+                    server_manager->fdClr(fd, WRITE_FDSET);
+                    continue;
+                }
+                if (server_manager->fdIsSet(fd, READ_FDSET))
+                {
+                    this->makeResponse(this->receiveRequest(), fd);
+                    server_manager->fdSet(fd, WRITE_FDSET);
+                    server_manager->fdClr(fd, READ_FDSET);
+                }
+            }
+        }
+    }
 }

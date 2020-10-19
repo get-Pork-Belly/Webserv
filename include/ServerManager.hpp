@@ -53,6 +53,8 @@ public:
     /* Setter */
     /* Exception */
     /* Util */
+    bool fdIsSet(int fd, int type);
+    bool fdIsClr(int fd, int type);
 
     /* Manage Server functions */
     void initServers();

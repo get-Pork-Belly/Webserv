@@ -74,6 +74,28 @@ ServerManager::getFdMax() const
 /*********************************  Util  *************************************/
 /*============================================================================*/
 
+bool
+ServerManager::fdIsSet(int fd, int type)
+{
+    if (type == READ_FDSET)
+        return (ft::fdIsSet(fd, &this->_copy_readfds));
+    else if (type == WRITE_FDSET)
+        return (ft::fdIsSet(fd, &this->_copy_writefds));
+    else if (type == EXCEPT_FDSET)
+        return (ft::fdIsSet(fd, &this->_copy_exceptfds));
+    else
+    {
+        return (ft::fdIsSet(fd, &this->_copy_readfds) ||
+        ft::fdIsSet(fd, &this->_copy_writefds) ||
+        ft::fdIsSet(fd, &this->_copy_exceptfds));
+    }
+}
+
+/*============================================================================*/
+/************************  Manage Server functions  ***************************/
+/*============================================================================*/
+
+
 void
 ServerManager::initServers()
 {
@@ -90,30 +112,53 @@ ServerManager::runServers()
     timeout.tv_sec = 5;
     timeout.tv_usec = 5;
 
-    (void)selected_fds;
     //TODO: siganl 입력시 반복종료 구현
     while (true)
     {
-        // this->_copy_readfds = this->_readfds;
-        // this->_copy_writefds = this->_writefds;
-        // this->_copy_exceptfds = this->_exceptfds;
-        // if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
-        // {
-        //     std::cerr<<"Error : select"<<std::endl;
-        //     return (false);
-        // }
-        // else if (selected_fds == 0)
-        //     continue ;
+        this->_copy_readfds = this->_readfds;
+        this->_copy_writefds = this->_writefds;
+        this->_copy_exceptfds = this->_exceptfds;
+        if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
+        {
+            std::cerr<<"Error : select"<<std::endl;
+            return (false);
+        }
+        else if (selected_fds == 0)
+            continue ;
         std::cout << "in while" << std::endl;
         for (Server *server : this->_servers)
-        {
-            // server->run(this);
-            server->test(this);
-        }
-        break;
+            server->run(this);
     }
     return (true);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
