@@ -46,6 +46,9 @@ public:
     void setRequestUri(const std::string &uri);
     void setRequestVersion(const std::string &version);
     void setRequestHeaders(std::map<std::string, std::string> &request_headers);
+    
+    void setRequestHeaders(const std::string &key, const std::string &value);
+    
     void setRequestProtocol(const std::string &protocol);
     void setRequestBodies(const std::string &body);
     void setRequestTransferType(const std::string &transfer_type);
@@ -70,7 +73,7 @@ public:
     bool isValidRequestHeaders(std::string &key, std::string &value);
     bool isValidRequestHeaderFields(std::string &key);
     bool isValidSP(std::string &str);
-    bool isDuplicated(std::map<std::string, std::string> &headers, std::string &key);
+    bool isDuplicated(std::string &key);
 
 
     bool isValidRequestBodies();

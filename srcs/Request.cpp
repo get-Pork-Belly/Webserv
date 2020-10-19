@@ -83,10 +83,16 @@ void Request::setRequestVersion(const std::string &version)
 //TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
 void Request::setRequestHeaders(std::map<std::string, std::string> &headers)
 {
+
     for (auto& h : headers)
     {
         this->_request_headers.insert(make_pair(h.first, h.second));
     }
+}
+
+void Request::setRequestHeaders(const std::string &key, const std::string &value)
+{
+    this->_request_headers[key] = value;
 }
 
 void Request::setRequestProtocol(const std::string &protocol)
@@ -119,21 +125,24 @@ void Request::setStatusCode(const std::string &status_code)
 
 
 //TODO: Server에서 getRequest() 함수를 실행시킬 때 먼저 req_message에 read버퍼를 모두 담아주어야 한다.
-// Request Server::getRequest()
-// {
-//     int bytes;
-//     std::string req_message;
+Request Server::getRequest()
+{
+    int bytes;
+    std::string req_message;
 
-//     bytes = 0;
-//     while ((bytes = read(this->getFd(), buf, BUFFER_SIZE)) > 0)
-//     {
-//         req_message += buf;
-//     }
-//     if (bytes == 0)
-//     {
-//         parseRequest(req_message);
-//     }
-// }
+    bytes = 0;
+    while ((bytes = read(this->getFd(), buf, BUFFER_SIZE)) > 0)
+    {
+        req_message += buf;
+    }
+    if (bytes == 0)
+    {
+        if (parseRequest(req_message) == false)
+            return (false);
+        else
+            return (true);
+    }
+}
 
 
 //NOTE: Request = Server::getRequest() 의 호출을 받고 루프 안에서 read 함수를 실행시킨다.
@@ -222,20 +231,27 @@ bool Request::parseRequestHeaders(std::string &req_message)
         if (this->isValidRequestHeaders(key, value) == false)
             return (false);
 
+        if (this->isDuplicated(key) == false)
+        {
+            return (false);
+        }
+
         headers[key] = value;
-        this->setRequestHeaders(headers);
+        // this->setRequestHeaders(headers);
+        this->setRequestHeaders(key, value);
     }
     key = ft::getLine(line, ":");
     value = ft::ltrim(line, " ");
 
-    if (this->isValidRequestHeaders(key, value) == false)
+    if (this->isDuplicated(key) == false)
+    {
         return (false);
+    }
 
     headers[key] = value;
-    this->setRequestHeaders(headers);
+    // this->setRequestHeaders(headers);
+    this->setRequestHeaders(key, value);
 
-    // if (this->isDuplicated(this->_request_headers) == false)
-    //     return (false);
 
     return (true);
 }
@@ -308,14 +324,14 @@ bool Request::isValidRequestHeaders(std::string &key, std::string &value)
     //TODO: 헤더들이 \r\n으로 구분되어 있지 않을 때 예외처리 해야 함. 가장 좋은 방법은 value안에 key값이 존재하는지 파악하는 것일 듯 하다..
     // if ()
 
-    if (this->isDuplicated(this->_request_headers, key) == false)
-        return (false);
+    // if (this->isDuplicated(this->_request_headers, key) == false)
+    //     return (false);
 
-    if (this->isValidSP(key) == false)
-        return (false);
+    // if (this->isValidSP(key) == false)
+    //     return (false);
     
-    if (this->isValidRequestHeaderFields(key) == false)
-        return (false);
+    // if (this->isValidRequestHeaderFields(key) == false)
+    //     return (false);
 
     return (true);
 }
@@ -353,17 +369,9 @@ bool Request::isValidSP(std::string &str)
 }
 
 //TODO: 중복검사 더 좋은 거 찾기. 일단 아래코드는 동작 안함..
-bool Request::isDuplicated(std::map<std::string, std::string> &headers, std::string &key)
+bool Request::isDuplicated(std::string &key)
 {
-    static_cast<void>(headers);
-    static_cast<void>(key);
-    // for (auto& kv : headers)
-    // {
-    //     if (headers.find(key) == kv.first.end())
-    //     {
-    //         std::cout << "중복키..>!!" << kv.first << std::endl;
-    //         return (false);
-    //     }
-    // }
-    return (true);
+    if (this->_request_headers.find(key) == this->_request_headers.end())
+        return (true);
+    return (false);
 }
