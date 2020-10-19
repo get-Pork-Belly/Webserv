@@ -42,17 +42,17 @@ public:
     std::string getStatusCode();
 
     /* Setter */
-    void setRequestMethod(const std::string &method);
-    void setRequestUri(const std::string &uri);
-    void setRequestVersion(const std::string &version);
-    void setRequestHeaders(std::map<std::string, std::string> &request_headers);
+    void setRequestMethod(const std::string& method);
+    void setRequestUri(const std::string& uri);
+    void setRequestVersion(const std::string& version);
+    void setRequestHeaders(std::map<std::string, std::string>& request_headers);
     
-    void setRequestHeaders(const std::string &key, const std::string &value);
+    void setRequestHeaders(const std::string& key, const std::string& value);
     
-    void setRequestProtocol(const std::string &protocol);
-    void setRequestBodies(const std::string &body);
-    void setRequestTransferType(const std::string &transfer_type);
-    void setStatusCode(const std::string &code);
+    void setRequestProtocol(const std::string& protocol);
+    void setRequestBodies(const std::string& body);
+    void setRequestTransferType(const std::string& transfer_type);
+    void setStatusCode(const std::string& code);
 
     /* Exception */
 
@@ -60,10 +60,10 @@ public:
 
     // void initMembers(std::string req_message);
 
-    bool parseRequest(std::string &req_message);
-    bool parseRequestLine(std::string &req_message);
-    bool parseRequestHeaders(std::string &req_message);
-    void parseRequestBodies(std::string &req_message);
+    bool parseRequest(std::string& req_message);
+    bool parseRequestLine(std::string& req_message);
+    bool parseRequestHeaders(std::string& req_message);
+    void parseRequestBodies(std::string& req_message);
 
 };
 

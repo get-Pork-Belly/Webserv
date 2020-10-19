@@ -65,49 +65,49 @@ std::string Request::getStatusCode()
 /********************************  Setter  ************************************/
 /*============================================================================*/
 
-void Request::setRequestMethod(const std::string &method)
+void Request::setRequestMethod(const std::string& method)
 {
     this->_request_method = method;
 }
 
-void Request::setRequestUri(const std::string &uri)
+void Request::setRequestUri(const std::string& uri)
 {
     this->_request_uri = uri;
 }
 
-void Request::setRequestVersion(const std::string &version)
+void Request::setRequestVersion(const std::string& version)
 {
     this->_request_version = version;
 }
 
 //TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
-void Request::setRequestHeaders(std::map<std::string, std::string> &headers)
+void Request::setRequestHeaders(std::map<std::string, std::string>& headers)
 {
     for (auto& h : headers)
         this->_request_headers.insert(make_pair(h.first, h.second));
 }
 
-void Request::setRequestHeaders(const std::string &key, const std::string &value)
+void Request::setRequestHeaders(const std::string& key, const std::string& value)
 {
     this->_request_headers[key] = value;
 }
 
-void Request::setRequestProtocol(const std::string &protocol)
+void Request::setRequestProtocol(const std::string& protocol)
 {
     this->_request_protocol = protocol;
 }
 
-void Request::setRequestBodies(const std::string &req_message)
+void Request::setRequestBodies(const std::string& req_message)
 {
     this->_request_bodies = req_message;
 }
 
-void Request::setRequestTransferType(const std::string &transfer_type)
+void Request::setRequestTransferType(const std::string& transfer_type)
 {
     this->_request_transfer_type = transfer_type;
 }
 
-void Request::setStatusCode(const std::string &status_code)
+void Request::setStatusCode(const std::string& status_code)
 {
     this->_status_code = status_code;
 }
@@ -122,7 +122,7 @@ void Request::setStatusCode(const std::string &status_code)
 
 
 // //TODO: Server에서 getRequest() 함수를 실행시킬 때 먼저 req_message에 read버퍼를 모두 담아주어야 한다.
-// Request Server::receiveRequest(Request &request)
+// Request Server::receiveRequest(Request& request)
 // {
 //     int bytes;
 //     std::string req_message;
@@ -146,7 +146,7 @@ void Request::setStatusCode(const std::string &status_code)
 //NOTE: message body가 있다면 octets의 양이 message_body_length와 같을 때까지 읽거나 커넥션을 닫는다.
 //NOTE: HTTP 메세지를 octet sequence로 인코딩해야 하며 그것은 US-ASCII로 이루어진다.
 
-bool Request::parseRequest(std::string &req_message)
+bool Request::parseRequest(std::string& req_message)
 {
     std::string line;
 
@@ -195,7 +195,7 @@ bool Request::parseRequest(std::string &req_message)
     return (true);
 }
 
-bool Request::parseRequestLine(std::string &req_message)
+bool Request::parseRequestLine(std::string& req_message)
 {
     std::vector<std::string> request_line = ft::split(req_message, " ");
 
@@ -205,7 +205,7 @@ bool Request::parseRequestLine(std::string &req_message)
     return (true);
 }
 
-bool Request::parseRequestHeaders(std::string &req_message)
+bool Request::parseRequestHeaders(std::string& req_message)
 {
     std::string key;
     std::string value;
@@ -232,7 +232,7 @@ bool Request::parseRequestHeaders(std::string &req_message)
     return (true);
 }
 
-void Request::parseRequestBodies(std::string &req_message)
+void Request::parseRequestBodies(std::string& req_message)
 {
     this->setRequestBodies(req_message);
 }
