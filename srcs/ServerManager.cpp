@@ -91,6 +91,17 @@ ServerManager::fdIsSet(int fd, int type)
     }
 }
 
+void
+ServerManager::fdClr(int fd, int type)
+{
+    if (type == READ_FDSET)
+        ft::fdClr(fd, &this->_copy_readfds);
+    else if (type == WRITE_FDSET)
+        ft::fdClr(fd, &this->_copy_writefds);
+    else if (type == EXCEPT_FDSET)
+        ft::fdClr(fd, &this->_copy_exceptfds);
+}
+
 /*============================================================================*/
 /************************  Manage Server functions  ***************************/
 /*============================================================================*/
@@ -131,6 +142,13 @@ ServerManager::runServers()
     }
     return (true);
 }
+
+
+
+
+
+
+
 
 
 

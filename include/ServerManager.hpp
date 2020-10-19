@@ -54,7 +54,7 @@ public:
     /* Exception */
     /* Util */
     bool fdIsSet(int fd, int type);
-    bool fdIsClr(int fd, int type);
+    void fdClr(int fd, int type);
 
     /* Manage Server functions */
     void initServers();

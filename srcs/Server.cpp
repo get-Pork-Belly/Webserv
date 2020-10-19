@@ -136,7 +136,7 @@ void Server::run(ServerManager *server_manager)
                         std::cerr<<"Error: sendResponse"<<std::endl;
                     }
                     server_manager->fdClr(fd, WRITE_FDSET);
-                    continue;
+                    continue ;
                 }
                 if (server_manager->fdIsSet(fd, READ_FDSET))
                 {
