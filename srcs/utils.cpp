@@ -108,4 +108,22 @@ unsigned short nToHS(unsigned short hostshort)
            );
 }
 
+bool substr(std::string &line, std::string &lines, const std::string &delim)
+{
+    size_t index;
+
+    if ((index = lines.find(delim)) != std::string::npos)
+    {
+        line = lines.substr(0, index);
+        lines = lines.substr(index + delim.size());
+    }
+    else
+    {
+        line = lines;
+        lines = "";
+        return (false);
+    }
+    return (true);
+}
+
 }

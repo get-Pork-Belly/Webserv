@@ -21,6 +21,7 @@ namespace ft
     unsigned short hToNS(unsigned short hostshort);
     unsigned long nToHL(unsigned long hostlong);
     unsigned short nToHS(unsigned short hostshort);
+    bool substr(std::string &line, std::string &lines, const std::string &delim);
 }
 
 #endif
