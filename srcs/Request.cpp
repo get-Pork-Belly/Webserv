@@ -125,7 +125,7 @@ void Request::setStatusCode(const std::string &status_code)
 
 
 //TODO: Server에서 getRequest() 함수를 실행시킬 때 먼저 req_message에 read버퍼를 모두 담아주어야 한다.
-Request Server::getRequest()
+Request Server::receiveRequest(Request &request)
 {
     int bytes;
     std::string req_message;
