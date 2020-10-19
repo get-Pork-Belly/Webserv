@@ -146,7 +146,7 @@ void Request::setStatusCode(const std::string &status_code)
 //NOTE: message body가 있다면 octets의 양이 message_body_length와 같을 때까지 읽거나 커넥션을 닫는다.
 //NOTE: HTTP 메세지를 octet sequence로 인코딩해야 하며 그것은 US-ASCII로 이루어진다.
 
-bool Request::parseRequest(std::string req_message)
+bool Request::parseRequest(std::string &req_message)
 {
     std::string line;
 

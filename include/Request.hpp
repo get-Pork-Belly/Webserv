@@ -60,7 +60,7 @@ public:
 
     // void initMembers(std::string req_message);
 
-    bool parseRequest(std::string req_message);
+    bool parseRequest(std::string &req_message);
     bool parseRequestLine(std::string &req_message);
     bool parseRequestHeaders(std::string &req_message);
     void parseRequestBodies(std::string &req_message);
