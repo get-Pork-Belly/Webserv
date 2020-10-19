@@ -9,6 +9,7 @@
 # include <sys/time.h>
 # include <netinet/in.h>
 # include "types.hpp"
+# include "Request.hpp"
 
 class ServerManager;
 
@@ -49,11 +50,13 @@ public:
     void setServerSocket();
     /* Exception */
     /* Util */
-    //TODO: 구현
-    // bool isValidRequest(Request);
-    // Response makeResponse(Request);
+
+    /* Server function */
     void init();
     void run(ServerManager *server_manager);
+    Request receiveRequest();
+    void makeResponse(Request& request, int fd);
+    bool sendResponse(int fd);
 };
 
 #endif

@@ -131,14 +131,14 @@ void Server::run(ServerManager *server_manager)
             {
                 if (server_manager->fdIsSet(fd, WRITE_FDSET))
                 {
-                    if (!(sendResponse(fd))
+                    if (!(sendResponse(fd)))
                     {
                         std::cerr<<"Error: sendResponse"<<std::endl;
                     }
                     server_manager->fdClr(fd, WRITE_FDSET);
-                    continue ;
+                    // cont
                 }
-                if (server_manager->fdIsSet(fd, READ_FDSET))
+                else if (server_manager->fdIsSet(fd, READ_FDSET))
                 {
                     this->makeResponse(this->receiveRequest(), fd);
                     server_manager->fdSet(fd, WRITE_FDSET);
