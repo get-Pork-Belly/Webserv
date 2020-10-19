@@ -90,6 +90,12 @@ ServerManager::fdSet(int fd, int type)
         ft::fdSet(fd, &this->_writefds);
     else if (type == EXCEPT_FDSET)
         ft::fdSet(fd, &this->_exceptfds);
+    else
+    {
+        ft::fdSet(fd, &this->_readfds);
+        ft::fdSet(fd, &this->_writefds);
+        ft::fdSet(fd, &this->_exceptfds);
+    }
 }
 
 bool
@@ -140,6 +146,12 @@ ServerManager::runServers()
 
     timeout.tv_sec = 5;
     timeout.tv_usec = 5;
+    for (Server *server : this->_servers)
+    {
+        int server_socket = server->getServerSocket();
+        this->fdSet(server_socket, ALL_FDSET);
+        this->setFdMax(server_socket);
+    }
 
     //TODO: siganl 입력시 반복종료 구현
     while (true)
@@ -154,11 +166,15 @@ ServerManager::runServers()
         }
         else if (selected_fds == 0)
         {
-            std::cout << " time out " << std::endl;
+            std::cout<<"Time Out"<<std::endl;
             continue ;
         }
+        std::cout<<"start server run"<<std::endl;
         for (Server *server : this->_servers)
+        {
+            std::cout<<"run server"<<std::endl;
             server->run(this);
+        }
     }
     return (true);
 }

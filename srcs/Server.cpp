@@ -92,7 +92,7 @@ Server::init()
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
-
+    std::cout<<"server socket fd: " << this->_server_socket <<std::endl;
     int option = true;
     setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
@@ -102,7 +102,8 @@ Server::init()
     this->_server_address.sin_addr.s_addr = ft::hToNL(INADDR_ANY);
     this->_server_address.sin_port = ft::hToNS(stoi(this->_port));
 
-    if (bind(this->_server_socket, reinterpret_cast<struct sockaddr *>(&this->_server_address), static_cast<socklen_t>(sizeof(this->_server_address))))
+    if (bind(this->_server_socket, reinterpret_cast<struct sockaddr *>(&this->_server_address),
+        static_cast<socklen_t>(sizeof(this->_server_address))))
         throw "Bind error";
 
     if (listen(this->_server_socket, 128) == -1)
