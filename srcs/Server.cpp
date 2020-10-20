@@ -2,10 +2,6 @@
 #include "utils.hpp"
 #include "ServerManager.hpp"
 
-//NOTE: 테스트용 iostream 헤더
-#include <iostream>
-
-
 /*============================================================================*/
 /****************************  Static variables  ******************************/
 /*============================================================================*/
@@ -79,7 +75,6 @@ int Server::getServerSocket()
 void
 Server::init()
 {
-
     for (auto& conf: this->_server_config)
     {
         if (conf.first == "server_name")
@@ -92,6 +87,7 @@ Server::init()
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
+    fcntl(this->_server_socket, F_SETFL, O_NONBLOCK);
     std::cout<<"server socket fd: " << this->_server_socket <<std::endl;
     int option = true;
     setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
@@ -131,6 +127,7 @@ Server::receiveRequest(int fd)
     return (req);
 }
 
+//TODO 이 부분 작업하기.
 void
 Server::makeResponse(Request& request, int fd)
 {
@@ -146,46 +143,52 @@ Server::sendResponse(int fd)
     return (true);
 }
 
+bool
+Server::isServerClient(int fd)
+{
+    return ((std::find(this->_client_sockets.begin(),
+            this->_client_sockets.end(), fd)
+            == this->_client_sockets.end()) ? false : true);
+}
+
 void
-Server::run(ServerManager *server_manager)
+Server::run(ServerManager *server_manager, int fd)
 {
     int client_len;
-    struct sockaddr_in client_address;
     int client_socket;
+    struct sockaddr_in client_address;
 
-    // for (this->_fd = 0; this->_fd < server_manager->getFdMax(); this->_fd++)
-    for (int fd = 0; fd < server_manager->getFdMax(); fd++)
+    if (fd == this->getServerSocket())
     {
-        if (server_manager->fdIsSet(fd, ALL_FDSET))
+        client_len = sizeof(client_address);
+        if ((client_socket = accept(this->getServerSocket(), reinterpret_cast<struct sockaddr *>(&client_address), reinterpret_cast<socklen_t *>(&client_len))) == -1)
+            std::cerr<<"accept error"<<std::endl;
+        this->_client_sockets.push_back(client_socket);
+        if (client_socket > server_manager->getFdMax())
+            server_manager->setFdMax(client_socket);
+        server_manager->fdSet(client_socket, READ_FDSET);
+        fcntl(client_socket, F_SETFL, O_NONBLOCK);
+    }
+    else
+    {
+        if (server_manager->fdIsSet(fd, WRITE_FDSET))
         {
-            if (fd == this->getServerSocket())
-            {
-                client_len = sizeof(client_address);
-                //TODO: client_address 지역변수로 써도되는지 체크
-                if ((client_socket = accept(this->getServerSocket(), reinterpret_cast<struct sockaddr *>(&client_address), reinterpret_cast<socklen_t *>(&client_len))) == -1)
-                    std::cerr<<"accept error"<<std::endl;
-                if (server_manager->getFdMax() < client_socket)
-                    server_manager->setFdMax(client_socket);
-            }
-            else
-            {
-                if (server_manager->fdIsSet(fd, WRITE_FDSET))
-                {
-                    if (!(sendResponse(fd)))
-                    {
-                        std::cerr<<"Error: sendResponse"<<std::endl;
-                    }
-                    server_manager->fdClr(fd, WRITE_FDSET);
-                    // continue
-                }
-                else if (server_manager->fdIsSet(fd, READ_FDSET))
-                {
-                    Request request = this->receiveRequest(fd);
-                    this->makeResponse(request, fd);
-                    server_manager->fdSet(fd, WRITE_FDSET);
-                    server_manager->fdClr(fd, READ_FDSET);
-                }
-            }
+            if (!(sendResponse(fd)))
+                std::cerr<<"Error: sendResponse"<<std::endl;
+            server_manager->fdClr(fd, WRITE_FDSET);
+            close(fd);
+            _client_sockets.erase(std::find(_client_sockets.begin(),
+                        _client_sockets.end(), fd));
+            //TODO setFdMax를 효율적으로 할것.
+            if (fd == server_manager->getFdMax())
+                server_manager->setFdMax(fd - 1);
+        }
+        else if (server_manager->fdIsSet(fd, READ_FDSET))
+        {
+            Request request = this->receiveRequest(fd);
+            this->makeResponse(request, fd);
+            server_manager->fdSet(fd, WRITE_FDSET);
+            server_manager->fdClr(fd, READ_FDSET);
         }
     }
 }
