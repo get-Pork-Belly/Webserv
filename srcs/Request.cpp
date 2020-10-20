@@ -199,7 +199,6 @@ bool Request::parseRequest(std::string& req_message)
     }
     else
         parseRequestBodies(line);
-
     return (true);
 }
 

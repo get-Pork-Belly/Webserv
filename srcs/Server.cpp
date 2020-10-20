@@ -115,15 +115,32 @@ Server::receiveRequest(int fd)
     char buf[1024];
 
     bytes = 0;
+    memset(reinterpret_cast<void *>(buf), 0, 1024);
     while ((bytes = read(fd, buf, 1024)) > 0)
-        req_message += buf;
-    if (bytes == 0) //TODO valid 체크 반영하기
-        req.parseRequest(req_message);
-    else if (bytes < 0)
     {
-        req.setStatusCode("400");
-        return (req);
+        buf[bytes] = 0;
+        req_message += buf;
     }
+    std::cout << "=========req message========\n" << req_message << std::endl;
+    req.parseRequest(req_message);
+    // if (bytes == 0) //TODO valid 체크 반영하기
+    //     req.parseRequest(req_message);
+    // else if (bytes < 0)
+    // {
+    //     std::cout << "in error" << std::endl;
+    //     req.setStatusCode("400");
+    //     return (req);
+    // }
+    // std::map<std::string, std::string> getRequestHeaders();
+    
+    std::cout << "======== Headers ========= " << std::endl;
+    std::map<std::string, std::string> headers = req.getRequestHeaders();
+    for (auto& s : headers)
+        std::cout << "key: " << s.first << "value: " << s.second << std::endl;
+    std::cout << "\n======= bodies ========" << std::endl;
+    std::cout << req.getRequestBodies() << std::endl;
+    std::cout << "\n======= uri ======== " << std::endl;
+    std::cout <<  req.getRequestUri()<< std::endl;
     return (req);
 }
 
@@ -185,7 +202,7 @@ Server::run(ServerManager *server_manager, int fd)
         }
         else if (server_manager->fdIsSet(fd, READ_FDSET))
         {
-            Request request = this->receiveRequest(fd);
+            Request request(this->receiveRequest(fd));
             this->makeResponse(request, fd);
             server_manager->fdSet(fd, WRITE_FDSET);
             server_manager->fdClr(fd, READ_FDSET);

@@ -135,7 +135,7 @@ void
 ServerManager::initServers()
 {
     ServerGenerator server_generator(this);
-    server_generator.generateServers(this->_servers); // config파일을 순회하며 Server객체 생성 _servers.push_b
+    server_generator.generateServers(this->_servers);
 }
 
 bool
@@ -158,7 +158,9 @@ ServerManager::runServers()
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
-        if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
+        if ((selected_fds = select(this->getFdMax() + 1,
+             &this->_copy_readfds, &this->_copy_writefds,
+             &this->_copy_exceptfds, &timeout)) == -1)
         {
             std::cerr<<"Error : select"<<std::endl;
             return (false);
@@ -176,7 +178,8 @@ ServerManager::runServers()
                 {
                     for (Server *server : this->_servers)
                     {
-                        if (fd == server->getServerSocket() || server->isServerClient(fd))
+                        if (fd == server->getServerSocket() ||
+                            server->isServerClient(fd))
                             server->run(this, fd);
                     }
                 }
