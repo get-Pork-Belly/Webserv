@@ -59,7 +59,7 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     fd = open(config_file_path, O_RDONLY, 0644);
     if (fd < 0)
         throw (strerror(errno));
-    memset(reinterpret_cast<void *>(buf), 0, BUF_SIZE);
+    ft::memset(reinterpret_cast<void *>(buf), 0, BUF_SIZE);
     while ((readed = read(fd, reinterpret_cast<void *>(buf), BUF_SIZE)))
     {
         if (readed < 0)
