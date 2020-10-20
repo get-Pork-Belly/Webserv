@@ -65,6 +65,8 @@ public:
     bool parseRequestHeaders(std::string& req_message);
     void parseRequestBodies(std::string& req_message);
 
+    bool parseChunkedBody(std::string &req_message);
+
 };
 
 #endif

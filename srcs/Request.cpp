@@ -170,35 +170,47 @@ bool Request::parseRequest(std::string& req_message)
     }
 
     if (ft::substr(line, req_message, "\r\n\r\n") == false)
-    {
-        if (line.find("\r\n") && line.find(":") != std::string::npos)
-        {
-            if (parseRequestHeaders(line) == false)
-                return (false);
-        }
-        else if (line.find("\r\n"))
-        {
-            parseRequestBodies(line);
-            return (false);
-        }
-        else
-            return (false);
-    }
+        return (false);
     else
     {
         if (parseRequestHeaders(line) == false)
             return (false);
     }
 
-    if (ft::substr(line, req_message, "\r\n\r\n") == false)
+    if (this->_request_headers.find("Transfer-Encoding") != this->_request_headers.end())
     {
-        if (line.find("\r\n"))
-            parseRequestBodies(line);
+        if (this->_request_headers["Transfer-Encoding"] == "chunked")
+            return (parseChunkedBody(req_message));
+    }
+
+    if (ft::substr(line, req_message, "\r\n\r\n") == false)
+        return (false);
+    else
+        parseRequestBodies(line);
+    return (true);
+}
+
+bool
+Request::parseChunkedBody(std::string &req_message)
+{
+    int line_len;
+    std::string line;
+
+    while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
+    {
+        line_len = ft::stoiHex(line);
+        if (line_len == 0)
+            return (true);
+        else if (line_len != -1)
+        {
+            if (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
+                this->_request_bodies += line.substr(0, line_len) + "\r\n";
+            else
+                return (false);
+        }
         else
             return (false);
     }
-    else
-        parseRequestBodies(line);
     return (true);
 }
 
