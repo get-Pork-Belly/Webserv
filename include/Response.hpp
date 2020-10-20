@@ -10,16 +10,17 @@ class Response
 private:
     std::string _status_code;
     std::string _status_description;
-    std::string _headers;
+    std::map<std::string, std::string> _headers;
     std::string _transfer_type;
     std::string _clients;
     std::string _message_body;
+    std::map<std::string, std::string> _status_code_table;
 
 public:
     /* Constructor */
     Response();
     Response(const Response& other);
-    Response(Request& request, Server* server); //TODO 인자를 const로.
+    // Response(Request& request, Server* server); //TODO 인자를 const로.
 
     /* Destructor */
     virtual ~Response();
@@ -35,9 +36,14 @@ public:
     /* Setter */
     void setStatusCode(Request& request);
     void setStatusCode(std::string& status_code);
+    void setStatusDescription();
     // void setMessageBody();
     /* Exception */
     /* Util */
+
+    void init();
+    void initStatusCodeTable();
+    void initAndUpdate(Request& request);
 };
 
 #endif

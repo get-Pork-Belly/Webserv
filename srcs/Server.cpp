@@ -144,13 +144,11 @@ Server::makeResponse(Request& request, int fd)
     {
         this->_response.resize(fd);
         Response response;
-        // response.resetAndUpdate(request, this); 
+        response.initAndUpdate(request); 
         this->_response[fd] = response;
     }
     else
-        this->_response[fd] = Response(request, this); 
-        // this->_response[fd].resetAndUpdate(request, this); 
-    // std::string res = "OPTION / HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh;) Firefox/51.0\r\nAccept-Charsets: text/html\r\nAccept-Language: en-US\r\nContent-Type: multipart/form-data\r\nContent-Length: 345\r\n\r\nHelloWorld, everybody, buddy, whatsup\r\n";
+        this->_response[fd].initAndUpdate(request); 
 }
 
 bool
