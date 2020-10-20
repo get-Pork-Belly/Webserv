@@ -19,5 +19,6 @@ public:
 /* Setter */
 /* Exception */
 /* Util */
-#endif
 };
+
+#endif
