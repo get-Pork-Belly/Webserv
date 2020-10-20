@@ -119,11 +119,11 @@ void
 ServerManager::fdClr(int fd, int type)
 {
     if (type == READ_FDSET)
-        ft::fdClr(fd, &this->_copy_readfds);
+        ft::fdClr(fd, &this->_readfds);
     else if (type == WRITE_FDSET)
-        ft::fdClr(fd, &this->_copy_writefds);
+        ft::fdClr(fd, &this->_writefds);
     else if (type == EXCEPT_FDSET)
-        ft::fdClr(fd, &this->_copy_exceptfds);
+        ft::fdClr(fd, &this->_exceptfds);
 }
 
 /*============================================================================*/
@@ -152,7 +152,6 @@ ServerManager::runServers()
         this->fdSet(server_socket, ALL_FDSET);
         this->setFdMax(server_socket);
     }
-
     //TODO: siganl 입력시 반복종료 구현
     while (true)
     {
@@ -169,59 +168,23 @@ ServerManager::runServers()
             std::cout<<"Time Out"<<std::endl;
             continue ;
         }
-        std::cout<<"start server run"<<std::endl;
-        for (Server *server : this->_servers)
+        else
         {
-            std::cout<<"run server"<<std::endl;
-            server->run(this);
+            for (int fd = 0; fd < this->getFdMax() + 1; fd++)
+            {
+                if (this->fdIsSet(fd, ALL_FDSET))
+                {
+                    for (Server *server : this->_servers)
+                    {
+                        if (fd == server->getServerSocket() || server->isServerClient(fd))
+                            server->run(this, fd);
+                    }
+                }
+            }
         }
     }
     return (true);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
