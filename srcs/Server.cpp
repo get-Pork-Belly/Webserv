@@ -114,12 +114,16 @@ Server::receiveRequest(int fd)
     std::string req_message;
     char buf[BUFFER_SIZE + 1];
 
-    bytes = 0;
+    bytes = -42;
     memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
     while ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
-        bytes = read(fd, buf, len);
+        if ((bytes = read(fd, buf, len)) < 0)
+        {
+            req.setStatusCode("400");
+            return (req);
+        }
         buf[bytes] = 0;
         req_message += buf;
     }
@@ -127,14 +131,8 @@ Server::receiveRequest(int fd)
     //TODO 우아한 종료 되었을 때 체크하기.
     // if (len == 0)
 
-    //TODO valid 체크 반영하기
     if (bytes >= 0)
         req.parseRequest(req_message);
-    else if (bytes < 0)
-    {
-        req.setStatusCode("400");
-        return (req);
-    }
     return (req);
 }
 
