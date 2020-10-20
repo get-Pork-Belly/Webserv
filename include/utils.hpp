@@ -24,6 +24,8 @@ namespace ft
 
     bool substr(std::string &line, std::string &lines, const std::string &delim);
     void* memset(void* b, int c, size_t len);
+
+    int stoiHex(std::string str);
 }
 
 #endif
