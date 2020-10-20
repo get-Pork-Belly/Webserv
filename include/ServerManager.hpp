@@ -38,7 +38,6 @@ private:
     std::string _port;
     int _fd;
     int _fd_max;
-    std::map<int, std::string> _status_code_msg;
 
 public:
     /* Constructor */
