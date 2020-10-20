@@ -2,6 +2,7 @@
 # define SERVER_HPP
 
 # include <string>
+# include <string>
 # include <map>
 # include <vector>
 # include <sys/socket.h>
