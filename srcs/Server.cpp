@@ -172,13 +172,18 @@ Server::run(ServerManager *server_manager, int fd)
     if (fd == this->getServerSocket())
     {
         client_len = sizeof(client_address);
-        if ((client_socket = accept(this->getServerSocket(), reinterpret_cast<struct sockaddr *>(&client_address), reinterpret_cast<socklen_t *>(&client_len))) == -1)
-            std::cerr<<"accept error"<<std::endl;
-        this->_client_sockets.push_back(client_socket);
-        if (client_socket > server_manager->getFdMax())
-            server_manager->setFdMax(client_socket);
-        server_manager->fdSet(client_socket, READ_FDSET);
-        fcntl(client_socket, F_SETFL, O_NONBLOCK);
+        if ((client_socket = accept(this->getServerSocket(),
+            reinterpret_cast<struct sockaddr *>(&client_address),
+            reinterpret_cast<socklen_t *>(&client_len))) != -1)
+        {
+            this->_client_sockets.push_back(client_socket);
+            if (client_socket > server_manager->getFdMax())
+                server_manager->setFdMax(client_socket);
+            server_manager->fdSet(client_socket, READ_FDSET);
+            fcntl(client_socket, F_SETFL, O_NONBLOCK);
+        }
+        else
+            std::cerr<<"Accept error"<<std::endl;
     }
     else
     {
