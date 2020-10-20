@@ -84,6 +84,7 @@ Server::init()
         else if (conf.first == "listen")
             this->_port = conf.second;
     }
+    this->_response = std::vector<Response>(1024);
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
@@ -92,7 +93,7 @@ Server::init()
     int option = true;
     setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
-    memset(&this->_server_address, 0, sizeof(this->_server_address));
+    ft::memset(&this->_server_address, 0, sizeof(this->_server_address));
     this->_server_address.sin_family = AF_INET;
     this->_server_address.sin_addr.s_addr = ft::hToNL(INADDR_ANY);
     this->_server_address.sin_port = ft::hToNS(stoi(this->_port));
@@ -136,13 +137,20 @@ Server::receiveRequest(int fd)
     return (req);
 }
 
-//TODO 이 부분 작업하기.
 void
 Server::makeResponse(Request& request, int fd)
 {
-    (void)fd;
-    (void)request;
-    std::string res = "OPTION / HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh;) Firefox/51.0\r\nAccept-Charsets: text/html\r\nAccept-Language: en-US\r\nContent-Type: multipart/form-data\r\nContent-Length: 345\r\n\r\nHelloWorld, everybody, buddy, whatsup\r\n";
+    if (static_cast<size_t>(fd) >= this->_response.size())
+    {
+        this->_response.resize(fd);
+        Response response;
+        // response.resetAndUpdate(request, this); 
+        this->_response[fd] = response;
+    }
+    else
+        this->_response[fd] = Response(request, this); 
+        // this->_response[fd].resetAndUpdate(request, this); 
+    // std::string res = "OPTION / HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh;) Firefox/51.0\r\nAccept-Charsets: text/html\r\nAccept-Language: en-US\r\nContent-Type: multipart/form-data\r\nContent-Length: 345\r\n\r\nHelloWorld, everybody, buddy, whatsup\r\n";
 }
 
 bool
