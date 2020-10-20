@@ -1,8 +1,8 @@
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
 
-# include "Server.hpp"
 # include "utils.hpp"
+# include <map>
 
 //TODO: 테스트용
 # include <iostream>
