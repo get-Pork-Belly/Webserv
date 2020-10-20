@@ -20,13 +20,13 @@ private:
     std::string _status_code;
 
 private:
-    Request(const Request& other);
-    /* Overload */
+    /* Canonical but not implements */
     Request& operator=(const Request& rhs);
 
 public:
     /* Constructor */
     Request();
+    Request(const Request& other);
 
     /* Destructor */
     virtual ~Request();

@@ -9,7 +9,15 @@
 /*============================================================================*/
 
 Request::Request()
-: _request_method(""), _request_uri(""), _request_version(""), _request_protocol(""), _request_bodies(""), _request_transfer_type(""), _status_code("") {}
+: _request_method(""), _request_uri(""), _request_version(""),
+ _request_protocol(""),
+_request_bodies(""), _request_transfer_type(""), _status_code("") {}
+
+Request::Request(const Request& other)
+: _request_method(other._request_method), _request_uri(other._request_uri), 
+_request_version(other._request_version), _request_headers(other._request_headers),
+_request_protocol(other._request_protocol), _request_bodies(other._request_bodies), 
+_request_transfer_type(other._request_transfer_type), _status_code(other._status_code) {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -192,7 +200,6 @@ bool Request::parseRequest(std::string& req_message)
     }
     else
         parseRequestBodies(line);
-
     return (true);
 }
 

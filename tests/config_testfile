@@ -2,19 +2,20 @@ http {
     include mime.types;
     root /test/folder;
     server {
-        listen       80;
-        root html;
-        location / {
+        server_name second_server;
+        listen       8080;
+        location /please {
             index  index.html index.htm;
-            limit_except GET POST
         }
-        location /abc {
-            root  /user/sanam;
-            index  hahahoho.html;
+        location /only-put {
+            root  /user/iwoo;
+            index  html;
+            limit_except PUT
         }
     }
     server {
-        listen       8080;
+        server_name second_server;
+        listen       8081;
         location /please {
             index  index.html index.htm;
         }
