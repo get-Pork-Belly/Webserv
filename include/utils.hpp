@@ -23,6 +23,7 @@ namespace ft
     unsigned short nToHS(unsigned short hostshort);
 
     bool substr(std::string &line, std::string &lines, const std::string &delim);
+    void* memset(void* b, int c, size_t len);
 }
 
 #endif

@@ -126,4 +126,14 @@ bool substr(std::string &line, std::string &lines, const std::string &delim)
     return (true);
 }
 
+void* memset(void* b, int c, size_t len)
+{
+    size_t i = 0;
+    unsigned char* copy = (unsigned char*)b;
+
+    while (i++ < len)
+        *copy++ = c;
+    return (b);
+}
+
 }
