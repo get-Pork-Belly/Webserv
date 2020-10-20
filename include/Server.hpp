@@ -15,7 +15,7 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-const int BUFFER_SIZE = 65536;
+const int BUFFER_SIZE = 1;
 
 class ServerManager;
 class Request;
@@ -66,7 +66,7 @@ public:
     Request receiveRequest(int fd);
     void makeResponse(Request& request, int fd);
     bool sendResponse(int fd);
-    bool isServerClient(int fd);
+    bool isClientOfServer(int fd);
 };
 
 #endif

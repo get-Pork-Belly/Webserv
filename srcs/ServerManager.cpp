@@ -179,7 +179,7 @@ ServerManager::runServers()
                     for (Server *server : this->_servers)
                     {
                         if (fd == server->getServerSocket() ||
-                            server->isServerClient(fd))
+                            server->isClientOfServer(fd))
                             server->run(this, fd);
                     }
                 }

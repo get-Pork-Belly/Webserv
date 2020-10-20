@@ -123,6 +123,10 @@ Server::receiveRequest(int fd)
         buf[bytes] = 0;
         req_message += buf;
     }
+
+    //TODO 우아한 종료 되었을 때 체크하기.
+    // if (len == 0)
+
     //TODO valid 체크 반영하기
     if (bytes >= 0)
         req.parseRequest(req_message);
@@ -151,7 +155,7 @@ Server::sendResponse(int fd)
 }
 
 bool
-Server::isServerClient(int fd)
+Server::isClientOfServer(int fd)
 {
     return ((std::find(this->_client_sockets.begin(),
             this->_client_sockets.end(), fd)
