@@ -189,9 +189,11 @@ Server::run(ServerManager *server_manager, int fd)
     {
         if (server_manager->fdIsSet(fd, WRITE_FDSET))
         {
+            // TODO: sendResponse error handling
             if (!(sendResponse(fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
             server_manager->fdClr(fd, WRITE_FDSET);
+            //TODO: check chunked response before close(fd);
             close(fd);
             _client_sockets.erase(std::find(_client_sockets.begin(),
                         _client_sockets.end(), fd));
