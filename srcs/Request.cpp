@@ -190,30 +190,6 @@ bool Request::parseRequest(std::string& req_message)
     return (true);
 }
 
-bool
-Request::parseChunkedBody(std::string &req_message)
-{
-    int line_len;
-    std::string line;
-
-    while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
-    {
-        line_len = ft::stoiHex(line);
-        if (line_len == 0)
-            return (true);
-        else if (line_len != -1)
-        {
-            if (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
-                this->_request_bodies += line.substr(0, line_len) + "\r\n";
-            else
-                return (false);
-        }
-        else
-            return (false);
-    }
-    return (true);
-}
-
 bool Request::parseRequestLine(std::string& req_message)
 {
     std::vector<std::string> request_line = ft::split(req_message, " ");
@@ -248,6 +224,30 @@ bool Request::parseRequestHeaders(std::string& req_message)
     headers[key] = value;
     this->setRequestHeaders(key, value);
 
+    return (true);
+}
+
+bool
+Request::parseChunkedBody(std::string &req_message)
+{
+    int line_len;
+    std::string line;
+
+    while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
+    {
+        line_len = ft::stoiHex(line);
+        if (line_len == 0)
+            return (true);
+        else if (line_len != -1)
+        {
+            if (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
+                this->_request_bodies += line.substr(0, line_len) + "\r\n";
+            else
+                return (false);
+        }
+        else
+            return (false);
+    }
     return (true);
 }
 
