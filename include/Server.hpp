@@ -8,6 +8,9 @@
 # include <sys/types.h>
 # include <sys/time.h>
 # include <netinet/in.h>
+# include <algorithm>
+# include <vector>
+# include <fcntl.h>
 # include "types.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
@@ -57,10 +60,11 @@ public:
 
     /* Server function */
     void init();
-    void run(ServerManager *server_manager);
+    void run(ServerManager *server_manager, int fd);
     Request receiveRequest(int fd);
     void makeResponse(Request& request, int fd);
     bool sendResponse(int fd);
+    bool isServerClient(int fd);
 };
 
 #endif
