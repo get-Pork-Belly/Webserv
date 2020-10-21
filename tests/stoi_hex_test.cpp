@@ -7,7 +7,7 @@ int main()
 	std::string test2 = "z123";
 	std::string test3 = "1a87";
 	std::string test4 = "0";
-	std::string test5 = "a";
+	std::string test5 = "az";
 
 	std::cout << "Test1: " << ft::stoiHex(test1) << std::endl;
 	std::cout << "Test2: " << ft::stoiHex(test2) << std::endl;
