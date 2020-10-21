@@ -63,7 +63,7 @@ public:
     bool parseRequest(std::string& req_message);
     bool parseRequestLine(std::string& req_message);
     bool parseRequestHeaders(std::string& req_message);
-    void parseRequestBodies(std::string& req_message);
+    bool parseRequestBodies(std::string& req_message);
 
     bool parseChunkedBody(std::string &req_message);
 
