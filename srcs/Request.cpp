@@ -170,6 +170,7 @@ Request::parseRequest(std::string& req_message)
             return (false);
         }
     }
+
     if (ft::substr(line, req_message, "\r\n\r\n") == false)
     {
         this->setStatusCode("400");
@@ -189,14 +190,7 @@ Request::parseRequest(std::string& req_message)
         if (this->_request_headers["Transfer-Encoding"] == "chunked")
             return (parseChunkedBody(req_message));
     }
-
-    // if (ft::substr(line, req_message, "\r\n") == false)
-    // {
-    //     std::cout << "in if" << std::endl;
-    //     this->setStatusCode("400");
-    //     return (false);
-    // }
-    return (parseRequestBodies(line));
+    return (parseRequestBodies(req_message));
 }
 
 bool
@@ -288,12 +282,6 @@ Request::parseChunkedBody(std::string &req_message)
 bool
 Request::parseRequestBodies(std::string& req_message)
 {
-    for (auto& kv : this->getRequestHeaders())
-        std::cout << "headers key: " << kv.first << " " << kv.second << std::endl;
-    std::cout << "---------------------------" << std::endl;
-    std::cout << req_message << std::endl;
-    std::cout << "---------------------------" << std::endl;
-
     this->setRequestBodies(req_message);
     return (true);
 }
