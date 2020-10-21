@@ -136,18 +136,36 @@ void* memset(void* b, int c, size_t len)
     return (b);
 }
 
-int stoiHex(std::string str)
+// int stoiHex(std::string str)
+// {
+//     int ret = 0;
+//     std::string digit = "0123456789abcdef";
+
+//     if (str.empty() || digit.find(str[0]) == std::string::npos)
+//         return (-1);
+//     while (!str.empty() && digit.find(str[0]) != std::string::npos)
+//     {
+//         ret *= 16;
+//         ret += digit.find(str[0]);
+//         str.erase(str.begin());
+//     }
+//     return (ret);
+// }
+
+int stoiHex(const std::string& str)
 {
     int ret = 0;
-    std::string digit = "0123456789abcdef";
+    int i = 0;
+    size_t pos = 0;
+    const std::string digit = "0123456789abcdef";
 
-    if (str.empty() || digit.find(str[0]) == std::string::npos)
+    if (str.empty() || digit.find(str[i]) == std::string::npos)
         return (-1);
-    while (!str.empty() && digit.find(str[0]) != std::string::npos)
+    while ((pos = digit.find(str[i])) != std::string::npos)
     {
         ret *= 16;
-        ret += digit.find(str[0]);
-        str.erase(str.begin());
+        ret += pos;
+        i++;
     }
     return (ret);
 }
