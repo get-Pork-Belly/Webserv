@@ -136,4 +136,22 @@ void* memset(void* b, int c, size_t len)
     return (b);
 }
 
+int stoiHex(const std::string& str)
+{
+    int ret = 0;
+    int i = 0;
+    size_t pos = 0;
+    const std::string digit = "0123456789abcdef";
+
+    if (str.empty() || digit.find(str[i]) == std::string::npos)
+        return (-1);
+    while ((pos = digit.find(str[i])) != std::string::npos)
+    {
+        ret *= 16;
+        ret += pos;
+        i++;
+    }
+    return (ret);
+}
+
 }

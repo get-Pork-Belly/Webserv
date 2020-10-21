@@ -29,17 +29,20 @@ Request::~Request() {}
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
-std::string Request::getRequestMethod()
+std::string
+Request::getRequestMethod()
 {
     return (this->_request_method);
 }
 
-std::string Request::getRequestUri()
+std::string
+Request::getRequestUri()
 {
     return (this->_request_uri);
 }
 
-std::string Request::getRequestVersion()
+std::string
+Request::getRequestVersion()
 {
     return (this->_request_version);
 }
@@ -49,22 +52,26 @@ std::map<std::string, std::string> Request::getRequestHeaders()
     return (this->_request_headers);
 }
 
-std::string Request::getRequestProtocol()
+std::string
+Request::getRequestProtocol()
 {
     return (this->_request_protocol);
 }
 
-std::string Request::getRequestBodies()
+std::string
+Request::getRequestBodies()
 {
     return (this->_request_bodies);
 }
 
-std::string Request::getRequestTransferType()
+std::string
+Request::getRequestTransferType()
 {
     return (this->_request_transfer_type);
 }
 
-std::string Request::getStatusCode()
+std::string
+Request::getStatusCode()
 {
     return (this->_status_code);
 }
@@ -73,49 +80,58 @@ std::string Request::getStatusCode()
 /********************************  Setter  ************************************/
 /*============================================================================*/
 
-void Request::setRequestMethod(const std::string& method)
+void
+Request::setRequestMethod(const std::string& method)
 {
     this->_request_method = method;
 }
 
-void Request::setRequestUri(const std::string& uri)
+void
+Request::setRequestUri(const std::string& uri)
 {
     this->_request_uri = uri;
 }
 
-void Request::setRequestVersion(const std::string& version)
+void
+Request::setRequestVersion(const std::string& version)
 {
     this->_request_version = version;
 }
 
 //TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
-void Request::setRequestHeaders(std::map<std::string, std::string>& headers)
+void
+Request::setRequestHeaders(std::map<std::string, std::string>& headers)
 {
     for (auto& h : headers)
         this->_request_headers.insert(make_pair(h.first, h.second));
 }
 
-void Request::setRequestHeaders(const std::string& key, const std::string& value)
+void
+Request::setRequestHeaders(const std::string& key, const std::string& value)
 {
     this->_request_headers[key] = value;
 }
 
-void Request::setRequestProtocol(const std::string& protocol)
+void
+Request::setRequestProtocol(const std::string& protocol)
 {
     this->_request_protocol = protocol;
 }
 
-void Request::setRequestBodies(const std::string& req_message)
+void
+Request::setRequestBodies(const std::string& req_message)
 {
     this->_request_bodies = req_message;
 }
 
-void Request::setRequestTransferType(const std::string& transfer_type)
+void
+Request::setRequestTransferType(const std::string& transfer_type)
 {
     this->_request_transfer_type = transfer_type;
 }
 
-void Request::setStatusCode(const std::string& status_code)
+void
+Request::setStatusCode(const std::string& status_code)
 {
     this->_status_code = status_code;
 }
@@ -154,7 +170,8 @@ void Request::setStatusCode(const std::string& status_code)
 //NOTE: message body가 있다면 octets의 양이 message_body_length와 같을 때까지 읽거나 커넥션을 닫는다.
 //NOTE: HTTP 메세지를 octet sequence로 인코딩해야 하며 그것은 US-ASCII로 이루어진다.
 
-bool Request::parseRequest(std::string& req_message)
+bool
+Request::parseRequest(std::string& req_message)
 {
     std::string line;
 
@@ -170,39 +187,26 @@ bool Request::parseRequest(std::string& req_message)
     }
 
     if (ft::substr(line, req_message, "\r\n\r\n") == false)
-    {
-        if (line.find("\r\n") && line.find(":") != std::string::npos)
-        {
-            if (parseRequestHeaders(line) == false)
-                return (false);
-        }
-        else if (line.find("\r\n"))
-        {
-            parseRequestBodies(line);
-            return (false);
-        }
-        else
-            return (false);
-    }
+        return (false);
     else
     {
         if (parseRequestHeaders(line) == false)
             return (false);
     }
 
-    if (ft::substr(line, req_message, "\r\n\r\n") == false)
+    if (this->_request_headers.find("Transfer-Encoding") != this->_request_headers.end())
     {
-        if (line.find("\r\n"))
-            parseRequestBodies(line);
-        else
-            return (false);
+        if (this->_request_headers["Transfer-Encoding"] == "chunked")
+            return (parseChunkedBody(req_message));
     }
-    else
-        parseRequestBodies(line);
-    return (true);
+
+    if (ft::substr(line, req_message, "\r\n\r\n") == false)
+        return (false);
+    return (parseRequestBodies(line));
 }
 
-bool Request::parseRequestLine(std::string& req_message)
+bool
+Request::parseRequestLine(std::string& req_message)
 {
     std::vector<std::string> request_line = ft::split(req_message, " ");
 
@@ -212,7 +216,8 @@ bool Request::parseRequestLine(std::string& req_message)
     return (true);
 }
 
-bool Request::parseRequestHeaders(std::string& req_message)
+bool
+Request::parseRequestHeaders(std::string& req_message)
 {
     std::string key;
     std::string value;
@@ -239,7 +244,34 @@ bool Request::parseRequestHeaders(std::string& req_message)
     return (true);
 }
 
-void Request::parseRequestBodies(std::string& req_message)
+bool
+Request::parseChunkedBody(std::string &req_message)
+{
+    int line_len;
+    std::string line;
+
+    //TODO: 라인에서 \r\n을 찾지 못하면 true로 종료됨. 이후 valid check 시 상태코드 업데이트하게끔 수정요망.
+    while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
+    {
+        line_len = ft::stoiHex(line);
+        if (line_len == 0)
+            return (true);
+        else if (line_len != -1)
+        {
+            if (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
+                this->_request_bodies += line.substr(0, line_len) + "\r\n";
+            else
+                return (false);
+        }
+        else
+            return (false);
+    }
+    return (true);
+}
+
+bool
+Request::parseRequestBodies(std::string& req_message)
 {
     this->setRequestBodies(req_message);
+    return (true);
 }
