@@ -209,7 +209,6 @@ Request::parseRequestHeaders(std::string& req_message)
 {
     std::string key;
     std::string value;
-    std::map<std::string, std::string> headers;
     std::string line;
 
     while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
@@ -233,7 +232,6 @@ Request::parseRequestHeaders(std::string& req_message)
             return (false);
         }
 
-        headers[key] = value;
         this->setRequestHeaders(key, value);
     }
     if (ft::substr(key, line, ":") == false)
@@ -249,7 +247,6 @@ Request::parseRequestHeaders(std::string& req_message)
         return (false);
     }
 
-    headers[key] = value;
     this->setRequestHeaders(key, value);
 
     return (true);
