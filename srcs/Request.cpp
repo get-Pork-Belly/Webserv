@@ -10,8 +10,8 @@
 
 Request::Request()
 : _request_method(""), _request_uri(""), _request_version(""),
- _request_protocol(""),
-_request_bodies(""), _request_transfer_type(""), _status_code("") {}
+ _request_protocol(""), _request_bodies(""), _request_transfer_type(""), 
+ _status_code("") {}
 
 Request::Request(const Request& other)
 : _request_method(other._request_method), _request_uri(other._request_uri), 

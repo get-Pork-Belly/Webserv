@@ -16,7 +16,7 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-const int BUFFER_SIZE = 1;
+const int BUFFER_SIZE = 9000;
 
 class ServerManager;
 class Request;
@@ -42,7 +42,7 @@ private:
     int _limit_client_body_size;
     std::string _default_error_page;
     struct sockaddr_in _server_address;
-    std::vector<Response> _response;
+    std::vector<Request> _requests;
 
 public:
     /* Constructor */
@@ -63,10 +63,10 @@ public:
 
     /* Server function */
     void init();
-    void run(ServerManager *server_manager, int fd);
-    Request receiveRequest(int fd);
-    void makeResponse(Request& request, int fd);
-    bool sendResponse(int fd);
+    void run(ServerManager* server_manager, int fd);
+    Request receiveRequest(ServerManager* server_manager, int fd);
+    std::string makeResponseMessage(Request& request);
+    bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd);
 };
 
