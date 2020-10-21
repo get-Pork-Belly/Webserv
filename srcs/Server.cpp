@@ -120,7 +120,6 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
 
     if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
-        std::cout<<"len: "<<len<<std::endl;
         if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
         {
             req.setStatusCode("400");
@@ -128,8 +127,8 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         }
         buf[bytes] = 0;
         req_message += buf;
-        std::cout<<req_message<<std::endl;
         server_manager->fdSet(fd, WRITE_FDSET);
+        req.parseRequest(req_message);
     }
     else if (len == 0)
     {
@@ -152,9 +151,8 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         if (fd == server_manager->getFdMax())
             server_manager->setFdMax(fd - 1);
     }
-
-    if (bytes >= 0)
-        req.parseRequest(req_message);
+    // if (bytes >= 0)
+    //     req.parseRequest(req_message);
     return (req);
 }
 
@@ -162,25 +160,39 @@ std::string
 Server::makeResponseMessage(Request& request)
 {
     // Response response;
-    std::string start_line;
-    std::string headers;
-    std::string body;
+    // std::string start_line;
+    // std::string headers;
+    // std::string body;
 
-    (void)request;
     // body = response.makeBody(request);
     // headers = response.makeHeaders(request);
     // start_line = response.makeStartLine(request);
-    return (start_line + headers + body);
+    // return (start_line + headers + body);
+    std::string ret;
+    std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
+    ret = (status_line + "\n");
+    std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
+    std::string blue =  "\033[1;34;40m";
+    std::string yellow =  "\033[1;33;40m";
+    std::string reset = "\033[0m";
+    std::string headers;
+    for (auto& m : request.getRequestHeaders())
+    {
+        headers += (blue + "key: " + reset + m.first );
+        headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
+    }
+    ret += headers;
+    std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
+    ret += response_body;
+    return ret;
 }
 
 bool
 Server::sendResponse(std::string& response_message, int fd)
 {
-    (void)response_message;
-    std::string tmp = "fd: ";
-    tmp += std::to_string(fd);
-    tmp += " in send response\n";
-    write(fd, tmp.c_str(), tmp.length());
+    std::string body = "\033[1;31;40m========= REQUEST MESSAGE ========\033[0m\n";
+    write(fd, body.c_str(), body.size());
+    write(fd, response_message.c_str(), response_message.length());
     return (true);
 }
 
@@ -225,19 +237,11 @@ Server::run(ServerManager *server_manager, int fd)
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
             server_manager->fdClr(fd, WRITE_FDSET);
-            //TODO: check chunked response before close(fd);
-            // close(fd);
-            // _client_sockets.erase(std::find(_client_sockets.begin(),
-            //             _client_sockets.end(), fd));
-            //TODO setFdMax를 효율적으로 할것.
-            // if (fd == server_manager->getFdMax())
-            //     server_manager->setFdMax(fd - 1);
         }
         else if (server_manager->fdIsSet(fd, READ_FDSET))
         {
             Request request(this->receiveRequest(server_manager, fd));
-            // server_manager->fdSet(fd, WRITE_FDSET);
-            // server_manager->fdClr(fd, READ_FDSET);
+            _requests[fd] = request;
         }
     }
 }
