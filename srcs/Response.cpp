@@ -208,9 +208,8 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
             return (true);
         }
         if (index == 0)
-            break ;
+            return (false);
     }
-    return (false);
 }
 
 // bool
