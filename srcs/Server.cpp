@@ -120,7 +120,6 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
 
     if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
-        std::cout<<"len: "<<len<<std::endl;
         if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
         {
             req.setStatusCode("400");
@@ -128,8 +127,8 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         }
         buf[bytes] = 0;
         req_message += buf;
-        std::cout<<req_message<<std::endl;
         server_manager->fdSet(fd, WRITE_FDSET);
+        req.parseRequest(req_message);
     }
     else if (len == 0)
     {
@@ -152,9 +151,8 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         if (fd == server_manager->getFdMax())
             server_manager->setFdMax(fd - 1);
     }
-
-    if (bytes >= 0)
-        req.parseRequest(req_message);
+    // if (bytes >= 0)
+    //     req.parseRequest(req_message);
     return (req);
 }
 
@@ -171,6 +169,23 @@ Server::makeResponseMessage(Request& request)
     // headers = response.makeHeaders(request);
     start_line = response.makeStartLine();
     return (start_line + headers + body);
+    // std::string ret;
+    // std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
+    // ret = (status_line + "\n");
+    // std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
+    // std::string blue =  "\033[1;34;40m";
+    // std::string yellow =  "\033[1;33;40m";
+    // std::string reset = "\033[0m";
+    // std::string headers;
+    // for (auto& m : request.getRequestHeaders())
+    // {
+    //     headers += (blue + "key: " + reset + m.first );
+    //     headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
+    // }
+    // ret += headers;
+    // std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
+    // ret += response_body;
+    // return ret;
 }
 
 bool
@@ -230,6 +245,9 @@ Server::run(ServerManager *server_manager, int fd)
             server_manager->fdClr(fd, WRITE_FDSET);
         }
         else if (server_manager->fdIsSet(fd, READ_FDSET))
+        {
             Request request(this->receiveRequest(server_manager, fd));
+            _requests[fd] = request;
+        }
     }
 }
