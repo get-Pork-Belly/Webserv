@@ -54,6 +54,12 @@ int Server::getServerSocket()
     return (this->_server_socket);
 }
 
+const std::map<std::string, location_info>&
+Server::getLocationConfig()
+{
+    return (this->_location_config);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -158,33 +164,33 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
 std::string
 Server::makeResponseMessage(Request& request)
 {
-    // Response response;
-    // std::string status_line;
-    // std::string headers;
-    // std::string body;
+    Response response;
+    std::string status_line;
+    std::string headers;
+    std::string body;
 
-    // response.checkRequest(request);
+    response.applyAndCheckRequest(request, this);
     // body = response.makeBody(request);
     // headers = response.makeHeaders(request);
-    // status_line = response.makeStatusLine();
-    // return (status_line+ headers + body);
-    std::string ret;
-    std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
-    ret = (status_line + "\n");
-    std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
-    std::string blue =  "\033[1;34;40m";
-    std::string yellow =  "\033[1;33;40m";
-    std::string reset = "\033[0m";
-    std::string headers;
-    for (auto& m : request.getRequestHeaders())
-    {
-        headers += (blue + "key: " + reset + m.first );
-        headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
-    }
-    ret += headers;
-    std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
-    ret += response_body;
-    return ret;
+    status_line = response.makeStatusLine();
+    return (status_line+ headers + body);
+    // std::string ret;
+    // std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
+    // ret = (status_line + "\n");
+    // std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
+    // std::string blue =  "\033[1;34;40m";
+    // std::string yellow =  "\033[1;33;40m";
+    // std::string reset = "\033[0m";
+    // std::string headers;
+    // for (auto& m : request.getRequestHeaders())
+    // {
+    //     headers += (blue + "key: " + reset + m.first );
+    //     headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
+    // }
+    // ret += headers;
+    // std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
+    // ret += response_body;
+    // return ret;
 }
 
 bool

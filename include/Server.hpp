@@ -30,7 +30,6 @@ private:
 
 private:
     std::map<std::string, std::string> _server_config;
-    // int _fd; 
     int _server_socket;
     std::vector<int> _client_sockets;
     std::string _server_name;
@@ -48,7 +47,7 @@ private:
 public:
     /* Constructor */
     Server(server_info& server_config, std::map<std::string, location_info>& location_config);
-        /* Destructor */
+    /* Destructor */
     virtual ~Server();
 
     /* Overload */
@@ -56,6 +55,7 @@ public:
     //TODO: 구현
     // Request getRequest();
     const std::map<std::string, std::string> getServerConfig();
+    const std::map<std::string, location_info>& getLocationConfig();
     int getServerSocket();
     /* Setter */
     void setServerSocket();
