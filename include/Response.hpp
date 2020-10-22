@@ -43,7 +43,7 @@ public:
     void initStatusCodeTable();
     // std::string makeBody(Request& request);
     // std::string makeHeaders(Request& request);
-    std::string makeStartLine();
+    std::string makeStatusLine();
 };
 
 #endif

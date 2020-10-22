@@ -160,15 +160,15 @@ std::string
 Server::makeResponseMessage(Request& request)
 {
     Response response;
-    std::string start_line;
+    std::string status_line;
     std::string headers;
     std::string body;
 
-    (void)request;
+    // response.checkRequest(request);
     // body = response.makeBody(request);
     // headers = response.makeHeaders(request);
-    start_line = response.makeStartLine();
-    return (start_line + headers + body);
+    status_line = response.makeStatusLine();
+    return (status_line+ headers + body);
     // std::string ret;
     // std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
     // ret = (status_line + "\n");

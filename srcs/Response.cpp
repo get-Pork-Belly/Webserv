@@ -134,15 +134,15 @@ Response::getStatusMessage(const std::string& code)
 }
 
 std::string
-Response::makeStartLine()
+Response::makeStatusLine()
 {
-    std::string start_line;
+    std::string status_line;
 
     this->setStatusCode(std::string("400"));
-    start_line = "HTTP/1.1 ";
-    start_line += this->getStatusCode();
-    start_line += " ";
-    start_line += this->getStatusMessage(this->getStatusCode());
-    start_line += "\r\n";
-    return (start_line);
+    status_line = "HTTP/1.1 ";
+    status_line += this->getStatusCode();
+    status_line += " ";
+    status_line += this->getStatusMessage(this->getStatusCode());
+    status_line += "\r\n";
+    return (status_line);
 }
