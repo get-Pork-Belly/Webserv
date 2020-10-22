@@ -134,6 +134,7 @@ Response::applyAndCheckRequest(Request& request, Server* server)
     this->setStatusCode(request.getStatusCode());
     if (checkAndSetLocation(request.getRequestUri(), server) == true)
     {
+        std::cout << "True! " << std::endl;
         // if (isExistentLimitExcept(server) == true)
         //     std::cout<<"Yes limit exist"<<std::endl;
         // else
@@ -141,15 +142,40 @@ Response::applyAndCheckRequest(Request& request, Server* server)
         // if (isExistentLimitExcept() == true && !isAllowedMethod())
         //     this->setStatusCode("405");
     }
+    std::cout << "False" << std::endl;
 }
 
-    //NOTE:
-    // 1) /one.html          X 마지막에 슬래쉬가 없고, 중간에 슬래쉬가 없다. 
-    // 2) /one.html/         O 마지막에 슬래쉬가 있다.
-    // 3) /one/index.html    O
-    // 4) /one/two/          O
-    // 5) /one/two           O 마지막에 슬래쉬가 없지만, 중간에 슬래쉬가 있다.
-    // 6) /                  △ 로케이션에 / 블록이 있는지 먼저 탐색 후 없으면 location이 아니다.
+bool
+Response::checkAndSetLocation(const std::string& uri, Server* server)
+{
+    std::map<std::string, location_info> location_config = server->getLocationConfig();
+    std::string router;
+
+    if (uri[0] != '/')
+        return (false);
+    if (uri.length() == 1)
+        if (location_config.find("/") != location_config.end())
+        {
+            router = "/";
+            return (true);
+        }
+        else
+            return (false);
+    }
+    size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
+    while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
+    {
+        router = uri.substr(0, index);
+        if (location_config.find(router) != location_config.end())
+        {
+            this->_location = router;
+            return (true);
+        }
+        if (index == 0)
+            break ;
+    }
+    return (false);
+}
 
 // bool
 // Response::isLocationUri(const std::string& uri, Server *server)
@@ -183,28 +209,33 @@ Response::applyAndCheckRequest(Request& request, Server* server)
 // bool
 // Resopnse::isExistentLocation(location)
 
-bool
-Response::checkAndSetLocation(const std::string& uri, Server* server)
-{
-    if (uri[0] != '/')
-        return (false);
 
-    size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
-    std::map<std::string, location_info> location_config = server->getLocationConfig();
-    std::string router;
-    while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
-    {
-        router = uri.substr(0, index);
-        if (location_config.find(router) != location_config.end())
-        {
-            this->_location = router;
-            return (true);
-        }
-        if (index == 0)
-            break ;
-    }
-    return (false);
-}
+//NOTE: 1) 슬래시 하나만 들어왔을 때
+//NOTE: 2) 중간에 경로가 있고 뒤에 슬래시로 끝나지 않을 때(파일일 때) <-- 경로를 뒤에서부터 끊으며 Location 탐색
+//NOTE: 3) 중간에 경로가 있고 뒤에 슬래시로 끝날 때(경로일 때) <-- 경로를 뒤에서부터 끊으며 Location 탐색
+
+// bool
+// Response::checkAndSetLocation(const std::string& uri, Server* server)
+// {
+//     if (uri[0] != '/')
+//         return (false);
+
+//     size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
+//     std::map<std::string, location_info> location_config = server->getLocationConfig();
+//     std::string router;
+//     while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
+//     {
+//         router = uri.substr(0, index);
+//         if (location_config.find(router) != location_config.end())
+//         {
+//             this->_location = router;
+//             return (true);
+//         }
+//         if (index == 0)
+//             break ;
+//     }
+//     return (false);
+// }
 
 // bool
 // Response::isExistentLimitExcept(Server* server)
