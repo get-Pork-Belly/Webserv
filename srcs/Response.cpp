@@ -10,18 +10,16 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code(""), _status_description(""), _transfer_type(""),
-_clients(""), _message_body("") 
+: _status_code(""), _transfer_type(""), _clients(""), _message_body("") 
 {
     this->_headers = { {"", ""} };
     this->initStatusCodeTable();
 }
 
 Response::Response(const Response& other)
-: _status_code(other._status_code), _status_description(other._status_description), 
-_headers(other._headers), _transfer_type(other._transfer_type),
-_clients(other._clients), _message_body(other._message_body),
-_status_code_table(other._status_code_table) {}
+: _status_code(other._status_code),  _headers(other._headers),
+_transfer_type(other._transfer_type), _clients(other._clients),
+_message_body(other._message_body), _status_code_table(other._status_code_table) {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -39,7 +37,6 @@ Response&
 Response::operator=(const Response& rhs)
 {
     this->_status_code = rhs._status_code;
-    this->_status_description = rhs._status_description;
     this->_headers = rhs._headers;
     this->_transfer_type = rhs._transfer_type;
     this->_clients = rhs._clients;
@@ -69,15 +66,9 @@ Response::setStatusCode(Request& request)
 }
 
 void
-Response::setStatusCode(std::string& status_code)
+Response::setStatusCode(const std::string& status_code)
 {
     this->_status_code = status_code;
-}
-
-void
-Response::setStatusDescription()
-{
-    this->_status_description = this->_status_code_table[this->getStatusCode()];
 }
 
 /*============================================================================*/
@@ -92,7 +83,6 @@ void
 Response::init()
 {
     this->_status_code = "";
-    this->_status_description = "";
     this->_headers = { {"", ""} };
     this->_transfer_type = "";
     this->_clients = "";
@@ -135,4 +125,24 @@ Response::initStatusCodeTable()
         {"416", "Requested Range Not Satisfiable"},
         {"417", "Expectation Failed"}
     };
+}
+
+std::string
+Response::getStatusMessage(const std::string& code)
+{
+    return (this->_status_code_table[code]);
+}
+
+std::string
+Response::makeStartLine()
+{
+    std::string start_line;
+
+    this->setStatusCode(std::string("400"));
+    start_line = "HTTP/1.1 ";
+    start_line += this->getStatusCode();
+    start_line += " ";
+    start_line += this->getStatusMessage(this->getStatusCode());
+    start_line += "\r\n";
+    return (start_line);
 }

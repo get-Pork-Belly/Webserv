@@ -161,7 +161,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
 std::string
 Server::makeResponseMessage(Request& request)
 {
-    // Response response;
+    Response response;
     std::string start_line;
     std::string headers;
     std::string body;
@@ -169,17 +169,20 @@ Server::makeResponseMessage(Request& request)
     (void)request;
     // body = response.makeBody(request);
     // headers = response.makeHeaders(request);
-    // start_line = response.makeStartLine(request);
+    start_line = response.makeStartLine();
     return (start_line + headers + body);
 }
 
 bool
 Server::sendResponse(std::string& response_message, int fd)
 {
-    (void)response_message;
     std::string tmp = "fd: ";
     tmp += std::to_string(fd);
     tmp += " in send response\n";
+    tmp += "===============================\n";
+    tmp += "response_message\n ";
+    tmp += "===============================\n";
+    tmp += response_message;
     write(fd, tmp.c_str(), tmp.length());
     return (true);
 }
@@ -225,19 +228,8 @@ Server::run(ServerManager *server_manager, int fd)
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
             server_manager->fdClr(fd, WRITE_FDSET);
-            //TODO: check chunked response before close(fd);
-            // close(fd);
-            // _client_sockets.erase(std::find(_client_sockets.begin(),
-            //             _client_sockets.end(), fd));
-            //TODO setFdMax를 효율적으로 할것.
-            // if (fd == server_manager->getFdMax())
-            //     server_manager->setFdMax(fd - 1);
         }
         else if (server_manager->fdIsSet(fd, READ_FDSET))
-        {
             Request request(this->receiveRequest(server_manager, fd));
-            // server_manager->fdSet(fd, WRITE_FDSET);
-            // server_manager->fdClr(fd, READ_FDSET);
-        }
     }
 }

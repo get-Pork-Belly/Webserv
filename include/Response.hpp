@@ -9,7 +9,6 @@ class Response
 {
 private:
     std::string _status_code;
-    std::string _status_description;
     std::map<std::string, std::string> _headers;
     std::string _transfer_type;
     std::string _clients;
@@ -29,21 +28,22 @@ public:
     Response& operator=(const Response& rhs);
     /* Getter */
     std::string getStatusCode() const;
-    // std::string getStatusDescription() const;
+    std::string getStatusMessage(const std::string& code);
     // std::string getHeaders() const;
     // std::string getTransferType() const;
     // std::string getClients() const;
     /* Setter */
     void setStatusCode(Request& request);
-    void setStatusCode(std::string& status_code);
-    void setStatusDescription();
+    void setStatusCode(const std::string& status_code);
     // void setMessageBody();
     /* Exception */
     /* Util */
 
     void init();
     void initStatusCodeTable();
-    void initAndUpdate(Request& request);
+    // std::string makeBody(Request& request);
+    // std::string makeHeaders(Request& request);
+    std::string makeStartLine();
 };
 
 #endif
