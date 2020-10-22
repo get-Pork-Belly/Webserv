@@ -89,19 +89,6 @@ Response::init()
     this->_message_body = "";
 }
 
-// void 
-// Response::initAndUpdate(Request& request)
-// {
-//     this->init();
-//     this->setStatusCode(request);
-//     if (this->getStatusCode()[0] != '4')
-//     {
-//         // 헤더를 읽어서 필요한 응답 생성 하며 상태코드 셋팅
-//         // ex) CGI 실행, html body 불러오기
-//     }
-//     this->setStatusDescription();
-// }
-
 void
 Response::initStatusCodeTable()
 {

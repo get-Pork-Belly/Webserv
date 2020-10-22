@@ -44,12 +44,14 @@ Server::~Server()
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
-const std::map<std::string, std::string> Server::getServerConfig()
+const std::map<std::string, std::string> 
+Server::getServerConfig()
 {
     return (this->_server_config);
 }
 
-int Server::getServerSocket()
+int 
+Server::getServerSocket()
 {
     return (this->_server_socket);
 }
