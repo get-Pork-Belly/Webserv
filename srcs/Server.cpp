@@ -10,14 +10,13 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-Server::Server(server_info& server_config, std::map<std::string, location_info> location_config)
+Server::Server(server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_config(server_config), _server_socket(-1),
 _client_sockets(0), _server_name(""), _host(""),
 _port(""), _status_code(0), _request_uri_limit_size(0),
-_request_header_limit_size(0), _limit_client_body_size(0), _default_error_page("")
+_request_header_limit_size(0), _limit_client_body_size(0),
+_default_error_page(""), _location_config(location_config)
 {
-    //TODO: location_config 를 서버에 반영
-    (void)location_config;
     try
     {
         this->init();
@@ -77,9 +76,9 @@ Server::init()
 {
     for (auto& conf: this->_server_config)
     {
-        if (conf.first == "server_name")
-            this->_server_name = conf.second;
-        else if (conf.first == "host")
+        // if (conf.first == "server_name")
+        //     this->_server_name = conf.second;
+        if (conf.first == "host")
             this->_host = conf.second;
         else if (conf.first == "listen")
             this->_port = conf.second;
@@ -159,33 +158,33 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
 std::string
 Server::makeResponseMessage(Request& request)
 {
-    Response response;
-    std::string status_line;
-    std::string headers;
-    std::string body;
+    // Response response;
+    // std::string status_line;
+    // std::string headers;
+    // std::string body;
 
     // response.checkRequest(request);
     // body = response.makeBody(request);
     // headers = response.makeHeaders(request);
-    status_line = response.makeStatusLine();
-    return (status_line+ headers + body);
-    // std::string ret;
-    // std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
-    // ret = (status_line + "\n");
-    // std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
-    // std::string blue =  "\033[1;34;40m";
-    // std::string yellow =  "\033[1;33;40m";
-    // std::string reset = "\033[0m";
-    // std::string headers;
-    // for (auto& m : request.getRequestHeaders())
-    // {
-    //     headers += (blue + "key: " + reset + m.first );
-    //     headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
-    // }
-    // ret += headers;
-    // std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
-    // ret += response_body;
-    // return ret;
+    // status_line = response.makeStatusLine();
+    // return (status_line+ headers + body);
+    std::string ret;
+    std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
+    ret = (status_line + "\n");
+    std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
+    std::string blue =  "\033[1;34;40m";
+    std::string yellow =  "\033[1;33;40m";
+    std::string reset = "\033[0m";
+    std::string headers;
+    for (auto& m : request.getRequestHeaders())
+    {
+        headers += (blue + "key: " + reset + m.first );
+        headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
+    }
+    ret += headers;
+    std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
+    ret += response_body;
+    return ret;
 }
 
 bool

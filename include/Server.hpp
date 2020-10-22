@@ -43,10 +43,11 @@ private:
     std::string _default_error_page;
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
+    std::map<std::string, location_info> _location_config;
 
 public:
     /* Constructor */
-    Server(server_info& server_config, std::map<std::string, location_info> location_config);
+    Server(server_info& server_config, std::map<std::string, location_info>& location_config);
         /* Destructor */
     virtual ~Server();
 
