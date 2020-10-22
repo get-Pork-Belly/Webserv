@@ -3,10 +3,10 @@ INCLUDES = -I include
 CC = clang++
 CFLAGS = -Wall -Wextra -Werror -std=c++11 -fsanitize=address -g
 RM = rm -rf
+DEBUG = -D DEBUG=1
+STDOUT = -D STDOUT=1
 
-# MAIN_FILES = main 
-MAIN_FILES = runServers_test ServerManager ServerGenerator Server utils Request Response
-# MAIN_FILES = utils Request Chunked_test
+MAIN_FILES = logger_test Logger utils ServerManager ServerGenerator Server Response Request
 
 SRCS_PATH = $(MAIN_FILES)
 VPATH := .:srcs:tests
@@ -35,7 +35,7 @@ ${NAME}: ${OBJS}
 
 $(OBJDIR)/%.o : %.cpp
 	@mkdir -p $(OBJDIR)
-	@${CC} ${CFLAGS} ${INCLUDES} -c $< -o $@
+	@${CC} ${CFLAGS} ${INCLUDES} ${DEBUG} ${STDOUT} -c $< -o $@
 
 # test: $(TEST_NAME)
 
