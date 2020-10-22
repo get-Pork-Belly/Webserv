@@ -10,14 +10,13 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-Server::Server(server_info& server_config, std::map<std::string, location_info> location_config)
+Server::Server(server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_config(server_config), _server_socket(-1),
 _client_sockets(0), _server_name(""), _host(""),
 _port(""), _status_code(0), _request_uri_limit_size(0),
-_request_header_limit_size(0), _limit_client_body_size(0), _default_error_page("")
+_request_header_limit_size(0), _limit_client_body_size(0),
+_default_error_page(""), _location_config(location_config)
 {
-    //TODO: location_config 를 서버에 반영
-    (void)location_config;
     try
     {
         this->init();
@@ -77,13 +76,14 @@ Server::init()
 {
     for (auto& conf: this->_server_config)
     {
-        if (conf.first == "server_name")
-            this->_server_name = conf.second;
-        else if (conf.first == "host")
+        // if (conf.first == "server_name")
+        //     this->_server_name = conf.second;
+        if (conf.first == "host")
             this->_host = conf.second;
         else if (conf.first == "listen")
             this->_port = conf.second;
     }
+    this->_requests = std::vector<Request>(1024);
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
@@ -92,7 +92,7 @@ Server::init()
     int option = true;
     setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
-    memset(&this->_server_address, 0, sizeof(this->_server_address));
+    ft::memset(&this->_server_address, 0, sizeof(this->_server_address));
     this->_server_address.sin_family = AF_INET;
     this->_server_address.sin_addr.s_addr = ft::hToNL(INADDR_ANY);
     this->_server_address.sin_port = ft::hToNS(stoi(this->_port));
@@ -106,7 +106,7 @@ Server::init()
 }
 
 Request
-Server::receiveRequest(int fd)
+Server::receiveRequest(ServerManager* server_manager, int fd)
 {
     Request req;
     int bytes;
@@ -117,38 +117,87 @@ Server::receiveRequest(int fd)
     bytes = -42;
     memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
-    while ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
+    if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
-        if ((bytes = read(fd, buf, len)) < 0)
+        if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
         {
             req.setStatusCode("400");
             return (req);
         }
         buf[bytes] = 0;
         req_message += buf;
-    }
-
-    //TODO 우아한 종료 되었을 때 체크하기.
-    // if (len == 0)
-
-    if (bytes >= 0)
+        server_manager->fdSet(fd, WRITE_FDSET);
         req.parseRequest(req_message);
+    }
+    else if (len == 0)
+    {
+        std::cout<<"len: 0"<<std::endl;
+        server_manager->fdClr(fd, READ_FDSET);
+        close(fd);
+        _client_sockets.erase(std::find(_client_sockets.begin(), _client_sockets.end(), fd));
+        //TODO setFdMax를 효율적으로 할것.
+        if (fd == server_manager->getFdMax())
+            server_manager->setFdMax(fd - 1);
+    }
+    else
+    {
+        std::cout<<"len: -1"<<std::endl;
+        req.setStatusCode("400");
+        server_manager->fdClr(fd, READ_FDSET);
+        close(fd);
+        _client_sockets.erase(std::find(_client_sockets.begin(), _client_sockets.end(), fd));
+        //TODO setFdMax를 효율적으로 할것.
+        if (fd == server_manager->getFdMax())
+            server_manager->setFdMax(fd - 1);
+    }
+    // if (bytes >= 0)
+    //     req.parseRequest(req_message);
     return (req);
 }
 
-//TODO 이 부분 작업하기.
-void
-Server::makeResponse(Request& request, int fd)
+std::string
+Server::makeResponseMessage(Request& request)
 {
-    (void)fd;
-    (void)request;
-    std::string res = "OPTION / HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nUser-Agent: Mozilla/5.0 (Macintosh;) Firefox/51.0\r\nAccept-Charsets: text/html\r\nAccept-Language: en-US\r\nContent-Type: multipart/form-data\r\nContent-Length: 345\r\n\r\nHelloWorld, everybody, buddy, whatsup\r\n";
+    // Response response;
+    // std::string status_line;
+    // std::string headers;
+    // std::string body;
+
+    // response.checkRequest(request);
+    // body = response.makeBody(request);
+    // headers = response.makeHeaders(request);
+    // status_line = response.makeStatusLine();
+    // return (status_line+ headers + body);
+    std::string ret;
+    std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
+    ret = (status_line + "\n");
+    std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
+    std::string blue =  "\033[1;34;40m";
+    std::string yellow =  "\033[1;33;40m";
+    std::string reset = "\033[0m";
+    std::string headers;
+    for (auto& m : request.getRequestHeaders())
+    {
+        headers += (blue + "key: " + reset + m.first );
+        headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
+    }
+    ret += headers;
+    std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
+    ret += response_body;
+    return ret;
 }
 
 bool
-Server::sendResponse(int fd)
+Server::sendResponse(std::string& response_message, int fd)
 {
-    std::cout<<"in sendResponse fd: " << fd << std::endl;
+    std::string tmp = "fd: ";
+    tmp += std::to_string(fd);
+    tmp += " in send response\n";
+    tmp += "===============================\n";
+    tmp += "response_message\n ";
+    tmp += "===============================\n";
+    tmp += response_message;
+    write(fd, tmp.c_str(), tmp.length());
     return (true);
 }
 
@@ -187,24 +236,17 @@ Server::run(ServerManager *server_manager, int fd)
     {
         if (server_manager->fdIsSet(fd, WRITE_FDSET))
         {
+            std::string response_message;
+            response_message = this->makeResponseMessage(this->_requests[fd]);
             // TODO: sendResponse error handling
-            if (!(sendResponse(fd)))
+            if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
             server_manager->fdClr(fd, WRITE_FDSET);
-            //TODO: check chunked response before close(fd);
-            close(fd);
-            _client_sockets.erase(std::find(_client_sockets.begin(),
-                        _client_sockets.end(), fd));
-            //TODO setFdMax를 효율적으로 할것.
-            if (fd == server_manager->getFdMax())
-                server_manager->setFdMax(fd - 1);
         }
         else if (server_manager->fdIsSet(fd, READ_FDSET))
         {
-            Request request(this->receiveRequest(fd));
-            this->makeResponse(request, fd);
-            server_manager->fdSet(fd, WRITE_FDSET);
-            server_manager->fdClr(fd, READ_FDSET);
+            Request request(this->receiveRequest(server_manager, fd));
+            _requests[fd] = request;
         }
     }
 }

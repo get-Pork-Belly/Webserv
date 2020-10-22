@@ -15,7 +15,6 @@ ServerManager::ServerManager(const char *config_path)
 {
     this->initServers();
 
-    //TODO: FD_ZERO 구현
     ft::fdZero(&this->_readfds);
     ft::fdZero(&this->_writefds);
     ft::fdZero(&this->_exceptfds);
@@ -28,11 +27,6 @@ ServerManager::ServerManager(const char *config_path)
     this->_port = "default";
     this->_fd = 0;
     this->_fd_max = 0;
-
-    this->_status_code_msg = {
-        {101, "wowowo"},
-        {102, "wowowo"}
-    };
 }
 
 /*============================================================================*/
