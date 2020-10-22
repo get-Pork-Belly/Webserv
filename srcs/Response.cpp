@@ -156,7 +156,7 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
     if (uri.length() == 1)
         if (location_config.find("/") != location_config.end())
         {
-            router = "/";
+            this->_location = "/";
             return (true);
         }
         else
