@@ -33,17 +33,19 @@ public:
     // std::string getTransferType() const;
     // std::string getClients() const;
     /* Setter */
-    void setStatusCode(Request& request);
     void setStatusCode(const std::string& status_code);
     // void setMessageBody();
     /* Exception */
     /* Util */
+    bool isLocationUri(const std::string& uri, Server* server);
 
     void init();
     void initStatusCodeTable();
     // std::string makeBody(Request& request);
     // std::string makeHeaders(Request& request);
     std::string makeStatusLine();
+
+    void applyAndCheckRequest(Request& request, Server* server);
 };
 
 #endif

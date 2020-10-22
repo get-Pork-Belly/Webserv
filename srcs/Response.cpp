@@ -55,15 +55,15 @@ Response::getStatusCode() const
     return (this->_status_code);
 }
 
+std::string
+Response::getStatusMessage(const std::string& code)
+{
+    return (this->_status_code_table[code]);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
-
-void
-Response::setStatusCode(Request& request)
-{
-    this->_status_code = request.getStatusCode();
-}
 
 void
 Response::setStatusCode(const std::string& status_code)
@@ -128,12 +128,6 @@ Response::initStatusCodeTable()
 }
 
 std::string
-Response::getStatusMessage(const std::string& code)
-{
-    return (this->_status_code_table[code]);
-}
-
-std::string
 Response::makeStatusLine()
 {
     std::string status_line;
@@ -146,3 +140,58 @@ Response::makeStatusLine()
     status_line += "\r\n";
     return (status_line);
 }
+
+void
+Response::applyAndCheckRequest(Request& request, Server* server)
+{
+    this->setStatusCode(request.getStatusCode());
+    if (isLocationUri(request.getRequestUri(), server))
+    {
+        std::cout<<"It's location!"<<std::endl;
+        // if (isExistLocation() == true && isExistLimitExcept() == true)
+        // {
+        //     if (!isAllowedMethod())
+        //         this->setStatusCode("405");
+        // }
+    }
+    else
+        std::cout<<"It's not location!"<<std::endl;
+}
+
+bool
+Response::isLocationUri(const std::string& uri, Server* server)
+{
+    if (uri[0] != '/')
+        return (false);
+
+    size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
+    std::map<std::string, location_info> location_config = server->getLocationConfig();
+    std::string router;
+    while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
+    {
+        router = uri.substr(0, index);
+        if (location_config.find(router) != location_config.end())
+            return (true);
+        if (index == 0)
+            break ;
+    }
+    return (false);
+}
+
+// bool
+// Response::isExistLocation()
+// {
+
+// }
+
+// bool
+// Response::isExistLimitExcept()
+// {
+
+// }
+
+// bool
+// Response::isAllowedMethod()
+// {
+
+// }

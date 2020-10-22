@@ -30,7 +30,7 @@ public:
 
     /* Getter */
     std::string getRequestMethod();
-    std::string getRequestUri();
+    const std::string& getRequestUri();
     std::string getRequestVersion();
     std::map<std::string, std::string> getRequestHeaders();
     std::string getRequestProtocol();

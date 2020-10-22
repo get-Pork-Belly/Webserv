@@ -49,7 +49,7 @@ Request::getRequestMethod()
     return (this->_request_method);
 }
 
-std::string
+const std::string&
 Request::getRequestUri()
 {
     return (this->_request_uri);
@@ -318,7 +318,7 @@ Request::isValidRequestMethod(const std::string& method)
         method.compare("TRACE") == 0 ||
         method.compare("CONNECT") == 0)
         return (true);
-    this->setStatusCode("400");
+    this->setStatusCode("501");
     return (false);
 }
 
