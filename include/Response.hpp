@@ -14,6 +14,7 @@ private:
     std::string _clients;
     std::string _message_body;
     std::map<std::string, std::string> _status_code_table;
+    std::string _location;
 
 public:
     /* Constructor */
@@ -37,7 +38,9 @@ public:
     // void setMessageBody();
     /* Exception */
     /* Util */
-    bool isLocationUri(const std::string& uri, Server* server);
+    // bool isLocationUri(const std::string& uri, Server* server);
+    bool checkAndSetLocation(const std::string& uri, Server* server);
+    // bool isExistentLimitExcept(Server* server);
 
     void init();
     void initStatusCodeTable();

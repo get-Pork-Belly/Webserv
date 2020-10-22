@@ -19,10 +19,12 @@ http {
         location /first {
             index  index.html index.htm;
         }
-        location /first/second {
+        location /second {
             root  /user/iwoo;
             index  html;
             limit_except PUT
         }
     }
 }
+
+GET /second HTTP:1.0

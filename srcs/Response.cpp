@@ -132,21 +132,59 @@ void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
     this->setStatusCode(request.getStatusCode());
-    if (isLocationUri(request.getRequestUri(), server))
+    if (checkAndSetLocation(request.getRequestUri(), server) == true)
     {
-        std::cout<<"It's location!"<<std::endl;
-        // if (isExistLocation() == true && isExistLimitExcept() == true)
-        // {
-        //     if (!isAllowedMethod())
-        //         this->setStatusCode("405");
-        // }
+        // if (isExistentLimitExcept(server) == true)
+        //     std::cout<<"Yes limit exist"<<std::endl;
+        // else
+        //     std::cout<<"Yes limit exist"<<std::endl;
+        // if (isExistentLimitExcept() == true && !isAllowedMethod())
+        //     this->setStatusCode("405");
     }
-    else
-        std::cout<<"It's not location!"<<std::endl;
 }
 
+    //NOTE:
+    // 1) /one.html          X 마지막에 슬래쉬가 없고, 중간에 슬래쉬가 없다. 
+    // 2) /one.html/         O 마지막에 슬래쉬가 있다.
+    // 3) /one/index.html    O
+    // 4) /one/two/          O
+    // 5) /one/two           O 마지막에 슬래쉬가 없지만, 중간에 슬래쉬가 있다.
+    // 6) /                  △ 로케이션에 / 블록이 있는지 먼저 탐색 후 없으면 location이 아니다.
+
+// bool
+// Response::isLocationUri(const std::string& uri, Server *server)
+// {
+//     if (uri[0] != '/')
+//         return (false);
+
+//     std::map<std::string, location_info> location_config = server->getLocationConfig();
+//     if (uri.length() == 1)
+//     {
+//         if (location_config.find("/") != location_config.end())
+//             return (true);
+//         else
+//             return (false);
+//     }
+ 
+//     if (uri[uri.length() - 1] == '/')
+//         return (true);
+//     else if (uri.find("/", 1) != std::string::npos)
+//         return (true);
+
+//     return (false);
+// }
+
+// std::string
+// Response::parseLocationUri(const std::string& uri, Server* server)
+
+
+// location = 
+
+// bool
+// Resopnse::isExistentLocation(location)
+
 bool
-Response::isLocationUri(const std::string& uri, Server* server)
+Response::checkAndSetLocation(const std::string& uri, Server* server)
 {
     if (uri[0] != '/')
         return (false);
@@ -158,7 +196,10 @@ Response::isLocationUri(const std::string& uri, Server* server)
     {
         router = uri.substr(0, index);
         if (location_config.find(router) != location_config.end())
+        {
+            this->_location = router;
             return (true);
+        }
         if (index == 0)
             break ;
     }
@@ -166,15 +207,15 @@ Response::isLocationUri(const std::string& uri, Server* server)
 }
 
 // bool
-// Response::isExistLocation()
+// Response::isExistentLimitExcept(Server* server)
 // {
+//     std::map<std::string, location_info> location_config = server->getLocationConfig();
 
-// }
-
-// bool
-// Response::isExistLimitExcept()
-// {
-
+//     for (auto& kv : location_config)
+//     {
+//         if (kv.first == "limit_except")
+//         kv.second
+//     }
 // }
 
 // bool
