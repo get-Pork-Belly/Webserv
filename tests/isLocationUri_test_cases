@@ -1,6 +1,0 @@
-URI "/"                         --> not location
-URI "/one"                      --> not location
-URI "/index.html                --> not location
-URI "/one/index.html"           --> location /one
-URI "/one/two/index.html"       --> location /one/two
-URI "/index.html"               --> not location

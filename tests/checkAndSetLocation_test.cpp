@@ -20,8 +20,15 @@ bool checkAndSetLocation(const std::string &uri)
     if (uri[0] != '/')
         return (false);
 
-    size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
     // std::map<std::string, location_info> location_config = server->getLocationConfig();
+    if (uri.length() == 1 && location_config.find("/") != location_config.end())
+    {
+        // this->_location = "/";
+        std::cout<<"router: "<<"/"<<std::endl;
+        return (true);
+    }
+    // size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
+    size_t index = uri.length();
     std::string router;
     while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
     {
@@ -29,7 +36,7 @@ bool checkAndSetLocation(const std::string &uri)
         if (location_config.find(router) != location_config.end())
         {
             // this->_location = router;
-            std::cout<<router<<std::endl;
+            std::cout<<"router: "<<router<<std::endl;
             return (true);
         }
         if (index == 0)
@@ -80,16 +87,33 @@ int main()
     std::string uri6 = "/";
     bool ret;
 
+    std::cout<<"==================="<<std::endl;
+    std::cout <<"Case: " << uri1 <<std::endl;
     ret = checkAndSetLocation(uri1);
-    std::cout << "Result1: " << ret << std::endl;
+    std::cout<<"--> Result1: " << ret << std::endl;
+
+    std::cout<<"==================="<<std::endl;
+    std::cout <<"Case: " << uri2 << std::endl;
     ret = checkAndSetLocation(uri2);
-    std::cout << "Result2: " << ret << std::endl;
+    std::cout<<"--> Result2: " << ret << std::endl;
+
+    std::cout<<"==================="<<std::endl;
+    std::cout <<"Case: " << uri3 << std::endl;
     ret = checkAndSetLocation(uri3);
-    std::cout << "Result3: " << ret << std::endl;
+    std::cout <<"--> Result3: " << ret << std::endl;
+
+    std::cout<<"==================="<<std::endl;
+    std::cout <<"Case: " << uri4 << std::endl;
     ret = checkAndSetLocation(uri4);
-    std::cout << "Result4: " << ret << std::endl;
+    std::cout <<"--> Result4: " << ret << std::endl;
+
+    std::cout<<"==================="<<std::endl;
+    std::cout <<"Case: " << uri5 << std::endl;
     ret = checkAndSetLocation(uri5);
-    std::cout << "Result5: " << ret << std::endl;
+    std::cout <<"--> Result5: " << ret << std::endl;
+
+    std::cout<<"==================="<<std::endl;
+    std::cout <<"Case: " << uri6 << std::endl;
     ret = checkAndSetLocation(uri6);
-    std::cout << "Result6: " << ret << std::endl;
+    std::cout <<"--> Result6: " << ret << std::endl;
 }

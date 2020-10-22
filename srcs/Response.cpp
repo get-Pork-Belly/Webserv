@@ -189,9 +189,16 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
     if (uri[0] != '/')
         return (false);
 
-    size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
     std::map<std::string, location_info> location_config = server->getLocationConfig();
+
+    if (uri.length() == 1 && location_config.find("/") != location_config.end())
+    {
+        this->_location = "/";
+        return (true);
+    }
+
     std::string router;
+    size_t index = uri.length();
     while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
     {
         router = uri.substr(0, index);
