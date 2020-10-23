@@ -9,26 +9,26 @@
 /*============================================================================*/
 
 Request::Request()
-: _request_method(""), _request_uri(""), _request_version(""),
- _request_protocol(""), _request_bodies(""), _request_transfer_type(""), 
+: _method(""), _uri(""), _version(""),
+ _protocol(""), _bodies(""), _transfer_type(""), 
  _status_code("") {}
 
 Request::Request(const Request& other)
-: _request_method(other._request_method), _request_uri(other._request_uri), 
-_request_version(other._request_version), _request_headers(other._request_headers),
-_request_protocol(other._request_protocol), _request_bodies(other._request_bodies), 
-_request_transfer_type(other._request_transfer_type), _status_code(other._status_code) {}
+: _method(other._method), _uri(other._uri), 
+_version(other._version), _headers(other._headers),
+_protocol(other._protocol), _bodies(other._bodies), 
+_transfer_type(other._transfer_type), _status_code(other._status_code) {}
 
 Request&
 Request::operator=(const Request& other)
 {
-    this->_request_method= other._request_method;
-    this->_request_uri = other._request_uri;
-    this->_request_version = other._request_version;
-    this->_request_headers = other._request_headers;
-    this->_request_protocol = other._request_protocol;
-    this->_request_bodies = other._request_bodies;
-    this->_request_transfer_type = other._request_transfer_type;
+    this->_method= other._method;
+    this->_uri = other._uri;
+    this->_version = other._version;
+    this->_headers = other._headers;
+    this->_protocol = other._protocol;
+    this->_bodies = other._bodies;
+    this->_transfer_type = other._transfer_type;
     this->_status_code = other._status_code;
     return (*this);
 }
@@ -44,45 +44,45 @@ Request::~Request() {}
 /*============================================================================*/
 
 std::string
-Request::getRequestMethod()
+Request::getMethod()
 {
-    return (this->_request_method);
+    return (this->_method);
 }
 
 const std::string&
-Request::getRequestUri()
+Request::getUri()
 {
-    return (this->_request_uri);
+    return (this->_uri);
 }
 
 std::string
-Request::getRequestVersion()
+Request::getVersion()
 {
-    return (this->_request_version);
+    return (this->_version);
 }
 
 std::map<std::string, std::string>
-Request::getRequestHeaders()
+Request::getHeaders()
 {
-    return (this->_request_headers);
+    return (this->_headers);
 }
 
 std::string
-Request::getRequestProtocol()
+Request::getProtocol()
 {
-    return (this->_request_protocol);
+    return (this->_protocol);
 }
 
 std::string
-Request::getRequestBodies()
+Request::getBodies()
 {
-    return (this->_request_bodies);
+    return (this->_bodies);
 }
 
 std::string
-Request::getRequestTransferType()
+Request::getTransferType()
 {
-    return (this->_request_transfer_type);
+    return (this->_transfer_type);
 }
 
 std::string
@@ -96,46 +96,46 @@ Request::getStatusCode()
 /*============================================================================*/
 
 void
-Request::setRequestMethod(const std::string& method)
+Request::setMethod(const std::string& method)
 {
-    this->_request_method = method;
+    this->_method = method;
 }
 
 void
-Request::setRequestUri(const std::string& uri)
+Request::setUri(const std::string& uri)
 {
-    this->_request_uri = uri;
+    this->_uri = uri;
 }
 
 void
-Request::setRequestVersion(const std::string& version)
+Request::setVersion(const std::string& version)
 {
-    this->_request_version = version;
+    this->_version = version;
 }
 
 //TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
 void
-Request::setRequestHeaders(const std::string& key, const std::string& value)
+Request::setHeaders(const std::string& key, const std::string& value)
 {
-    this->_request_headers[key] = value;
+    this->_headers[key] = value;
 }
 
 void
-Request::setRequestProtocol(const std::string& protocol)
+Request::setProtocol(const std::string& protocol)
 {
-    this->_request_protocol = protocol;
+    this->_protocol = protocol;
 }
 
 void
-Request::setRequestBodies(const std::string& req_message)
+Request::setBodies(const std::string& req_message)
 {
-    this->_request_bodies = req_message;
+    this->_bodies = req_message;
 }
 
 void
-Request::setRequestTransferType(const std::string& transfer_type)
+Request::setTransferType(const std::string& transfer_type)
 {
-    this->_request_transfer_type = transfer_type;
+    this->_transfer_type = transfer_type;
 }
 
 void
@@ -178,19 +178,19 @@ Request::parseRequest(std::string& req_message)
     }
     else
     {
-        if (parseRequestHeaders(line) == false)
+        if (parseHeaders(line) == false)
         {
             this->setStatusCode("400");
             return (false);
         }
     }
 
-    if (this->_request_headers.find("Transfer-Encoding") != this->_request_headers.end())
+    if (this->_headers.find("Transfer-Encoding") != this->_headers.end())
     {
-        if (this->_request_headers["Transfer-Encoding"] == "chunked")
+        if (this->_headers["Transfer-Encoding"] == "chunked")
             return (parseChunkedBody(req_message));
     }
-    return (parseRequestBodies(req_message));
+    return (parseBodies(req_message));
 }
 
 bool
@@ -198,20 +198,20 @@ Request::parseRequestLine(std::string& req_message)
 {
     std::vector<std::string> request_line = ft::split(req_message, " ");
     
-    if (isValidRequestLine(request_line) == false)
+    if (isValidLine(request_line) == false)
     {
         this->setStatusCode("400");
         return (false);
     }
 
-    setRequestMethod(request_line[0]);
-    setRequestUri(request_line[1]);
-    setRequestVersion(request_line[2]);
+    this->setMethod(request_line[0]);
+    this->setUri(request_line[1]);
+    this->setVersion(request_line[2]);
     return (true);
 }
 
 bool
-Request::parseRequestHeaders(std::string& req_message)
+Request::parseHeaders(std::string& req_message)
 {
     std::string key;
     std::string value;
@@ -225,12 +225,12 @@ Request::parseRequestHeaders(std::string& req_message)
             return (false);
         }
         value = ft::ltrim(line, " ");
-        if (this->isValidRequestHeaders(key, value) == false)
+        if (this->isValidHeaders(key, value) == false)
         {
             this->setStatusCode("400");
             return (false);
         }
-        this->setRequestHeaders(key, value);
+        this->setHeaders(key, value);
     }
     if (ft::substr(key, line, ":") == false)
     {
@@ -238,12 +238,12 @@ Request::parseRequestHeaders(std::string& req_message)
         return (false);
     }
     value = ft::ltrim(line, " ");
-    if (this->isValidRequestHeaders(key, value) == false)
+    if (this->isValidHeaders(key, value) == false)
     {
         this->setStatusCode("400");
         return (false);
     }
-    this->setRequestHeaders(key, value);
+    this->setHeaders(key, value);
 
     return (true);
 }
@@ -263,7 +263,7 @@ Request::parseChunkedBody(std::string &req_message)
         else if (line_len != -1)
         {
             if (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
-                this->_request_bodies += line.substr(0, line_len) + "\r\n";
+                this->_bodies += line.substr(0, line_len) + "\r\n";
             else
             {
                 this->setStatusCode("400");
@@ -280,9 +280,9 @@ Request::parseChunkedBody(std::string &req_message)
 }
 
 bool
-Request::parseRequestBodies(std::string& req_message)
+Request::parseBodies(std::string& req_message)
 {
-    this->setRequestBodies(req_message);
+    this->setBodies(req_message);
     return (true);
 }
 
@@ -293,12 +293,12 @@ Request::parseRequestBodies(std::string& req_message)
 //TODO: return false 일 경우 this->setStatusCode("PROPER STATUS_CODE"); 처리를 해주어야 합니다.
 
 bool
-Request::isValidRequestLine(std::vector<std::string>& request_line)
+Request::isValidLine(std::vector<std::string>& request_line)
 {
     if (request_line.size() != 3 ||
-        this->isValidRequestMethod(request_line[0]) == false ||
-        this->isValidRequestUri(request_line[1]) == false ||
-        this->isValidRequestVersion(request_line[2]) == false)
+        this->isValidMethod(request_line[0]) == false ||
+        this->isValidUri(request_line[1]) == false ||
+        this->isValidVersion(request_line[2]) == false)
     {
         this->setStatusCode("400");
         return (false);
@@ -307,7 +307,7 @@ Request::isValidRequestLine(std::vector<std::string>& request_line)
 }
 
 bool
-Request::isValidRequestMethod(const std::string& method)
+Request::isValidMethod(const std::string& method)
 {
     if (method.compare("GET") == 0 ||
         method.compare("POST") == 0 ||
@@ -324,7 +324,7 @@ Request::isValidRequestMethod(const std::string& method)
 
 //TODO: uri 유효성 검사 부분 더 알아보기.
 bool
-Request::isValidRequestUri(const std::string& uri)
+Request::isValidUri(const std::string& uri)
 {
     if (uri[0] == '/' || uri[0] == 'w')
         return (true);
@@ -333,7 +333,7 @@ Request::isValidRequestUri(const std::string& uri)
 }
 
 bool
-Request::isValidRequestVersion(const std::string& version)
+Request::isValidVersion(const std::string& version)
 {
     if (version.compare("HTTP/1.1") == 0 || version.compare("HTTP/1.0") == 0)
         return (true);
@@ -342,11 +342,11 @@ Request::isValidRequestVersion(const std::string& version)
 }
 
 bool
-Request::isValidRequestHeaders(std::string& key, std::string& value)
+Request::isValidHeaders(std::string& key, std::string& value)
 {
     if (key.empty() || value.empty() ||
         this->isValidSP(key) == false ||
-        this->isDuplicated(key) == false)
+        this->isDuplicatedHeader(key) == false)
     {
         this->setStatusCode("400");
         return (false);
@@ -397,9 +397,9 @@ Request::isValidSP(std::string& str)
 }
 
 bool
-Request::isDuplicated(std::string& key)
+Request::isDuplicatedHeader(std::string& key)
 {
-    if (this->_request_headers.find(key) == this->_request_headers.end())
+    if (this->_headers.find(key) == this->_headers.end())
         return (true);
     this->setStatusCode("400");
     return (false);
