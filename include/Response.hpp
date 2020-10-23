@@ -2,6 +2,7 @@
 # define RESPONSE_HPP
 
 # include "Request.hpp"
+# include "types.hpp"
 
 class Server;
 
@@ -14,6 +15,7 @@ private:
     std::string _clients;
     std::string _message_body;
     std::map<std::string, std::string> _status_code_table;
+    location_info _location_info;
 
 public:
     /* Constructor */
@@ -32,18 +34,25 @@ public:
     // std::string getHeaders() const;
     // std::string getTransferType() const;
     // std::string getClients() const;
+    const location_info& getLocationInfo() const;
+
     /* Setter */
-    void setStatusCode(Request& request);
     void setStatusCode(const std::string& status_code);
     // void setMessageBody();
     /* Exception */
     /* Util */
+    // bool isLocationUri(const std::string& uri, Server* server);
+    bool checkAndSetLocation(const std::string& uri, Server* server);
+    bool isLimitExceptInLocation();
+    bool isAllowedMethod(const std::string& method);
 
     void init();
     void initStatusCodeTable();
     // std::string makeBody(Request& request);
     // std::string makeHeaders(Request& request);
     std::string makeStatusLine();
+
+    void applyAndCheckRequest(Request& request, Server* server);
 };
 
 #endif

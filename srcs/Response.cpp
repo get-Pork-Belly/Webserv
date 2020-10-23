@@ -55,15 +55,21 @@ Response::getStatusCode() const
     return (this->_status_code);
 }
 
+std::string
+Response::getStatusMessage(const std::string& code)
+{
+    return (this->_status_code_table[code]);
+}
+
+const location_info&
+Response::getLocationInfo() const
+{
+    return (this->_location_info);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
-
-void
-Response::setStatusCode(Request& request)
-{
-    this->_status_code = request.getStatusCode();
-}
 
 void
 Response::setStatusCode(const std::string& status_code)
@@ -88,19 +94,6 @@ Response::init()
     this->_clients = "";
     this->_message_body = "";
 }
-
-// void 
-// Response::initAndUpdate(Request& request)
-// {
-//     this->init();
-//     this->setStatusCode(request);
-//     if (this->getStatusCode()[0] != '4')
-//     {
-//         // 헤더를 읽어서 필요한 응답 생성 하며 상태코드 셋팅
-//         // ex) CGI 실행, html body 불러오기
-//     }
-//     this->setStatusDescription();
-// }
 
 void
 Response::initStatusCodeTable()
@@ -128,12 +121,6 @@ Response::initStatusCodeTable()
 }
 
 std::string
-Response::getStatusMessage(const std::string& code)
-{
-    return (this->_status_code_table[code]);
-}
-
-std::string
 Response::makeStatusLine()
 {
     std::string status_line;
@@ -145,4 +132,59 @@ Response::makeStatusLine()
     status_line += this->getStatusMessage(this->getStatusCode());
     status_line += "\r\n";
     return (status_line);
+}
+
+void
+Response::applyAndCheckRequest(Request& request, Server* server)
+{
+    this->setStatusCode(request.getStatusCode());
+    if (checkAndSetLocation(request.getUri(), server))
+    {
+        if (isLimitExceptInLocation() && isAllowedMethod(request.getMethod()) == false)
+            this->setStatusCode("405");
+    }
+}
+
+bool
+Response::checkAndSetLocation(const std::string& uri, Server* server)
+{
+    std::map<std::string, location_info> location_config = server->getLocationConfig();
+    std::string router;
+
+    if (uri[0] != '/')
+        return (false);
+    if (uri.length() == 1)
+    {
+        if (location_config.find("/") != location_config.end())
+        {
+            this->_location_info = location_config["/"];
+            return (true);
+        }
+        return (false);
+    }
+    size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
+    while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
+    {
+        router = uri.substr(0, index);
+        if (location_config.find(router) != location_config.end())
+        {
+            this->_location_info = location_config[router];
+            return (true);
+        }
+        if (index == 0)
+            break ;
+    }
+    return (false);
+}
+
+bool
+Response::isLimitExceptInLocation()
+{
+    return (this->getLocationInfo().find("limit_except") != this->getLocationInfo().end());
+}
+
+bool
+Response::isAllowedMethod(const std::string& method)
+{
+    return (this->_location_info["limit_except"].find(method) != std::string::npos);
 }
