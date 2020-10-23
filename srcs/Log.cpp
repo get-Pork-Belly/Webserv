@@ -1,4 +1,4 @@
-#include "Logger.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -9,11 +9,11 @@
 /*============================================================================*/
 
 int
-Logger::access_fd = open("./log/access_log",
+Log::access_fd = open("./log/access_log",
         O_CREAT | O_APPEND | O_WRONLY, 0644);
 
 int
-Logger::error_fd = open("./log/error_log",
+Log::error_fd = open("./log/error_log",
         O_CREAT | O_APPEND | O_WRONLY, 0644);
 
 /*============================================================================*/
@@ -37,7 +37,7 @@ Logger::error_fd = open("./log/error_log",
 /*============================================================================*/
 
 void
-Logger::timeLog(int fd)
+Log::timeLog(int fd)
 {
     struct tm time;
     struct timeval tv;
@@ -52,64 +52,64 @@ Logger::timeLog(int fd)
 }
 
 void
-Logger::serverWasCreated(Server& server)
+Log::serverIsCreated(Server& server)
 {
     if (DEBUG == 0)
         return ;
 
     std::string line;
     int server_fd = server.getServerSocket();
-    int fd = (STDOUT == 1) ? 1 : Logger::access_fd;
+    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     line = ("SERVER(\033[1;31;40m" + std::to_string(server_fd) +
             "\033[0m) HAS CREATED\n");
-    Logger::timeLog(fd);
+    Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
 
 void
-Logger::serverHasNewClient(Server& server, int client_fd)
+Log::newClient(Server& server, int client_fd)
 {
     if (DEBUG == 0)
         return ;
 
     std::string line;
     int server_fd = server.getServerSocket();
-    int fd = (STDOUT == 1) ? 1 : Logger::access_fd;
+    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     line = ("SERVER(\033[1;31;40m" + std::to_string(server_fd) +
             "\033[0m) HAS NEW CLIENT: \033[1;31;40m" +
             std::to_string(client_fd) + "\033[0m\n");
-    Logger::timeLog(fd);
+    Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
 
 void
-Logger::serverCloseClient(Server& server, int client_fd)
+Log::closeClient(Server& server, int client_fd)
 {
     if (DEBUG == 0)
         return ;
 
     std::string line;
     int server_fd = server.getServerSocket();
-    int fd = (STDOUT == 1) ? 1 : Logger::access_fd;
+    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     line = ("SERVER(\033[1;31;40m" + std::to_string(server_fd) +
             "\033[0m) BYBY CLIENT(\033[1;31;40m" + std::to_string(client_fd)
            + "\033[0m)\n");
-    Logger::timeLog(fd);
+    Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
 
 void
-Logger::serverGetRequest(Server& server, int client_fd)
+Log::getRequest(Server& server, int client_fd)
 {
     if (DEBUG == 0)
         return ;
 
     std::string line;
     int server_fd = server.getServerSocket();
-    int fd = (STDOUT == 1) ? 1 : Logger::access_fd;
+    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
     std::string method = server.getRequest(client_fd).getRequestMethod();
     std::string uri = server.getRequest(client_fd).getRequestUri();
     std::string version = server.getRequest(client_fd).getRequestVersion();
@@ -118,16 +118,17 @@ Logger::serverGetRequest(Server& server, int client_fd)
             "\033[0m) GOT REQUEST FROM: CLIENT(\033[1;31;40m" +
             std::to_string(client_fd) + "\033[0m)" + " \"" + method + " " +
             uri + " "+ version + "\"\n");
-    Logger::timeLog(fd);
+    Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
 
 void
-Logger::error(const std::string& error)
+Log::error(const std::string& error)
 {
     if (DEBUG == 0)
         return ;
 
-    int fd = (STDOUT == 1) ? 1 : Logger::error_fd;
+    int fd = (STDOUT == 1) ? 1 : Log::error_fd;
+    Log::timeLog(fd);
     write(fd, error.c_str(), error.length());
 }

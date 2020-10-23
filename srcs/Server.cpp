@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "utils.hpp"
 #include "ServerManager.hpp"
-#include "Logger.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -95,7 +95,7 @@ Server::init()
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
     fcntl(this->_server_socket, F_SETFL, O_NONBLOCK);
-    Logger::serverWasCreated(*this);
+    Log::serverIsCreated(*this);
     int option = true;
     setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
@@ -145,7 +145,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         //TODO setFdMax를 효율적으로 할것.
         if (fd == server_manager->getFdMax())
             server_manager->setFdMax(fd - 1);
-        Logger::serverCloseClient(*this, fd);
+        Log::closeClient(*this, fd);
     }
     else
     {
@@ -157,7 +157,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         //TODO setFdMax를 효율적으로 할것.
         if (fd == server_manager->getFdMax())
             server_manager->setFdMax(fd - 1);
-        Logger::serverCloseClient(*this, fd);
+        Log::closeClient(*this, fd);
     }
     // if (bytes >= 0)
     //     req.parseRequest(req_message);
@@ -239,7 +239,7 @@ Server::run(ServerManager *server_manager, int fd)
                 server_manager->setFdMax(client_socket);
             server_manager->fdSet(client_socket, READ_FDSET);
             fcntl(client_socket, F_SETFL, O_NONBLOCK);
-            Logger::serverHasNewClient(*this, client_socket);
+            Log::newClient(*this, client_socket);
         }
         else
             std::cerr<<"Accept error"<<std::endl;
@@ -259,7 +259,7 @@ Server::run(ServerManager *server_manager, int fd)
         {
             Request request(this->receiveRequest(server_manager, fd));
             _requests[fd] = request;
-            Logger::serverGetRequest(*this, fd);
+            Log::getRequest(*this, fd);
         }
     }
 }

@@ -1,5 +1,5 @@
-#ifndef LOGGER_HPP
-# define LOGGER_HPP
+#ifndef LOG_HPP
+# define LOG_HPP
 
 # include <iostream>
 # include <fcntl.h>
@@ -10,22 +10,22 @@
 # include "Server.hpp"
 # include "utils.hpp"
 
-class Logger
+class Log
 {
 private:
-    Logger();
-    Logger(const Logger& other);
-    Logger& operator=(const Logger& rhs);
+    Log();
+    Log(const Log& other);
+    Log& operator=(const Log& rhs);
 
 public:
     static int access_fd;
     static int error_fd;
     
     // access
-    static void serverWasCreated(Server& server);
-    static void serverHasNewClient(Server& server, int client_fd);
-    static void serverCloseClient(Server& server, int client_fd);
-    static void serverGetRequest(Server& server, int fd);
+    static void serverIsCreated(Server& server);
+    static void newClient(Server& server, int client_fd);
+    static void closeClient(Server& server, int client_fd);
+    static void getRequest(Server& server, int fd);
     static void timeLog(int fd);
     // error
     static void error(const std::string& message);
