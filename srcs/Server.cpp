@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include "utils.hpp"
 #include "ServerManager.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -56,10 +57,17 @@ Server::getServerSocket()
     return (this->_server_socket);
 }
 
+<<<<<<< HEAD
 const std::map<std::string, location_info>&
 Server::getLocationConfig()
 {
     return (this->_location_config);
+=======
+Request
+Server::getRequest(int fd)
+{
+    return (this->_requests[fd]);
+>>>>>>> develop
 }
 
 /*============================================================================*/
@@ -96,7 +104,7 @@ Server::init()
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
     fcntl(this->_server_socket, F_SETFL, O_NONBLOCK);
-    std::cout<<"server socket fd: " << this->_server_socket <<std::endl;
+    Log::serverIsCreated(*this);
     int option = true;
     setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
@@ -146,6 +154,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         //TODO setFdMax를 효율적으로 할것.
         if (fd == server_manager->getFdMax())
             server_manager->setFdMax(fd - 1);
+        Log::closeClient(*this, fd);
     }
     else
     {
@@ -157,6 +166,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         //TODO setFdMax를 효율적으로 할것.
         if (fd == server_manager->getFdMax())
             server_manager->setFdMax(fd - 1);
+        Log::closeClient(*this, fd);
     }
     // if (bytes >= 0)
     //     req.parseRequest(req_message);
@@ -236,6 +246,7 @@ Server::run(ServerManager *server_manager, int fd)
                 server_manager->setFdMax(client_socket);
             server_manager->fdSet(client_socket, READ_FDSET);
             fcntl(client_socket, F_SETFL, O_NONBLOCK);
+            Log::newClient(*this, client_socket);
         }
         else
             std::cerr<<"Accept error"<<std::endl;
@@ -255,6 +266,7 @@ Server::run(ServerManager *server_manager, int fd)
         {
             Request request(this->receiveRequest(server_manager, fd));
             _requests[fd] = request;
+            Log::getRequest(*this, fd);
         }
     }
 }
