@@ -61,10 +61,10 @@ Response::getStatusMessage(const std::string& code)
     return (this->_status_code_table[code]);
 }
 
-const std::string&
-Response::getLocation() const
+const location_info&
+Response::getLocationInfo() const
 {
-    return (this->_location);
+    return (this->_location_info);
 }
 
 /*============================================================================*/
@@ -138,15 +138,10 @@ void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
     this->setStatusCode(request.getStatusCode());
-    if (checkAndSetLocation(request.getRequestUri(), server))
+    if (checkAndSetLocation(request.getUri(), server))
     {
-        std::cout << "True! " << std::endl;
-        if (isLimitExceptInLocation(server) == true)
-            std::cout<<"Yes limit exist"<<std::endl;
-        else
-            std::cout<<"Yes limit exist"<<std::endl;
-        // if (isLimitExceptInLocation() == true && !isAllowedMethod())
-        //     this->setStatusCode("405");
+        if (isLimitExceptInLocation() && isAllowedMethod(request.getMethod()) == false)
+            this->setStatusCode("405");
     }
     std::cout << "False" << std::endl;
 }
@@ -163,7 +158,7 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
     {
         if (location_config.find("/") != location_config.end())
         {
-            this->_location = "/";
+            this->_location_info = location_config["/"];
             return (true);
         }
         return (false);
@@ -174,7 +169,7 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
         router = uri.substr(0, index);
         if (location_config.find(router) != location_config.end())
         {
-            this->_location = router;
+            this->_location_info = location_config[router];
             return (true);
         }
         if (index == 0)
@@ -184,14 +179,13 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
 }
 
 bool
-Response::isLimitExceptInLocation(Server* server)
+Response::isLimitExceptInLocation()
 {
-    std::map<std::string, location_info> location_config = server->getLocationConfig();
-    return (location_config[this->getLocation()].find("limit_except") != location_config[this->getLocation()].end());
+    return (this->getLocationInfo().find("limit_except") != this->getLocationInfo().end());
 }
 
-// bool
-// Response::isAllowedMethod()
-// {
-
-// }
+bool
+Response::isAllowedMethod(const std::string& method)
+{
+    return (this->_location_info["limit_except"].find(method) != std::string::npos);
+}
