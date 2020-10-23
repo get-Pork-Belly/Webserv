@@ -22,7 +22,7 @@ http {
         location /second {
             root  /user/iwoo;
             index  html;
-            limit_except PUT
+            limit_except PUT POST GET
         }
     }
 }
