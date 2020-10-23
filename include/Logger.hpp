@@ -26,7 +26,9 @@ public:
     static void serverHasNewClient(Server& server, int client_fd);
     static void serverCloseClient(Server& server, int client_fd);
     static void serverGetRequest(Server& server, int fd);
+    static void timeLog(int fd);
     // error
+    static void error(const std::string& message);
     // static void notAllowedMethod(Server& server);
     // static void fileNotfound();
 
