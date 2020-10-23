@@ -61,6 +61,12 @@ Response::getStatusMessage(const std::string& code)
     return (this->_status_code_table[code]);
 }
 
+const std::string&
+Response::getLocation() const
+{
+    return (this->_location);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -132,14 +138,14 @@ void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
     this->setStatusCode(request.getStatusCode());
-    if (checkAndSetLocation(request.getRequestUri(), server) == true)
+    if (checkAndSetLocation(request.getRequestUri(), server))
     {
         std::cout << "True! " << std::endl;
-        // if (isExistentLimitExcept(server) == true)
-        //     std::cout<<"Yes limit exist"<<std::endl;
-        // else
-        //     std::cout<<"Yes limit exist"<<std::endl;
-        // if (isExistentLimitExcept() == true && !isAllowedMethod())
+        if (isLimitExceptInLocation(server) == true)
+            std::cout<<"Yes limit exist"<<std::endl;
+        else
+            std::cout<<"Yes limit exist"<<std::endl;
+        // if (isLimitExceptInLocation() == true && !isAllowedMethod())
         //     this->setStatusCode("405");
     }
     std::cout << "False" << std::endl;
@@ -154,13 +160,13 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
     if (uri[0] != '/')
         return (false);
     if (uri.length() == 1)
+    {
         if (location_config.find("/") != location_config.end())
         {
             this->_location = "/";
             return (true);
         }
-        else
-            return (false);
+        return (false);
     }
     size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
     while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
@@ -177,50 +183,12 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
     return (false);
 }
 
-// bool
-// Response::isLocationUri(const std::string& uri, Server *server)
-// {
-//     if (uri[0] != '/')
-//         return (false);
-
-//     std::map<std::string, location_info> location_config = server->getLocationConfig();
-//     if (uri.length() == 1)
-//     {
-//         if (location_config.find("/") != location_config.end())
-//             return (true);
-//         else
-//             return (false);
-//     }
- 
-//     if (uri[uri.length() - 1] == '/')
-//         return (true);
-//     else if (uri.find("/", 1) != std::string::npos)
-//         return (true);
-
-//     return (false);
-// }
-
-// std::string
-// Response::parseLocationUri(const std::string& uri, Server* server)
-
-
-// location = 
-
-// bool
-// Resopnse::isExistentLocation(location)
-
-
-// bool
-// Response::isExistentLimitExcept(Server* server)
-// {
-//     std::map<std::string, location_info> location_config = server->getLocationConfig();
-
-//     for (auto& kv : location_config)
-//     {
-//         if (kv.first == "limit_except")
-//         kv.second
-//     }
-// }
+bool
+Response::isLimitExceptInLocation(Server* server)
+{
+    std::map<std::string, location_info> location_config = server->getLocationConfig();
+    return (location_config[this->getLocation()].find("limit_except") != location_config[this->getLocation()].end());
+}
 
 // bool
 // Response::isAllowedMethod()

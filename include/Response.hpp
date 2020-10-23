@@ -33,6 +33,8 @@ public:
     // std::string getHeaders() const;
     // std::string getTransferType() const;
     // std::string getClients() const;
+    const std::string& getLocation() const;
+
     /* Setter */
     void setStatusCode(const std::string& status_code);
     // void setMessageBody();
@@ -40,7 +42,7 @@ public:
     /* Util */
     // bool isLocationUri(const std::string& uri, Server* server);
     bool checkAndSetLocation(const std::string& uri, Server* server);
-    // bool isExistentLimitExcept(Server* server);
+    bool isLimitExceptInLocation(Server* server);
 
     void init();
     void initStatusCodeTable();

@@ -4,8 +4,8 @@ CC = clang++
 CFLAGS = -Wall -Wextra -Werror -std=c++11 -fsanitize=address -g
 RM = rm -rf
 
-# MAIN_FILES = runServers_test ServerManager ServerGenerator Server utils Request Response
-MAIN_FILES = checkAndSetLocation_test
+MAIN_FILES = runServers_test ServerManager ServerGenerator Server utils Request Response
+# MAIN_FILES = isLimitExceptInLocation_test
 
 SRCS_PATH = $(MAIN_FILES)
 VPATH := .:srcs:tests
