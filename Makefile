@@ -14,6 +14,8 @@ SRCS = $(addsuffix .cpp, $(SRCS_PATH))
 
 OBJDIR = ./objs
 OBJS = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(MAIN_FILES)))
+LOGDIR = ./log
+LOGS = $(LOGDIR)/access_log $(LOGDIR)/error_log
 
 # TEST_FILES = split_test
 # TEST_NAME = test
@@ -49,7 +51,7 @@ $(OBJDIR)/%.o : %.cpp
 
 clean:
 	@echo "$(RESET)Cleaning your object files$(RESET)"
-	@${RM} $(OBJDIR) 
+	@${RM} $(OBJDIR) $(LOGS)
 	@echo "$(RED)clean DONE"
 
 fclean: clean
