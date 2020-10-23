@@ -57,6 +57,7 @@ public:
     // Request getRequest();
     const std::map<std::string, std::string> getServerConfig();
     int getServerSocket();
+    Request getRequest(int fd);
     /* Setter */
     void setServerSocket();
     /* Exception */

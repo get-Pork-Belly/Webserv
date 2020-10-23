@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include "utils.hpp"
 #include "ServerManager.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -54,6 +55,12 @@ int Server::getServerSocket()
     return (this->_server_socket);
 }
 
+Request
+Server::getRequest(int fd)
+{
+    return (this->_requests[fd]);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -88,7 +95,7 @@ Server::init()
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
     fcntl(this->_server_socket, F_SETFL, O_NONBLOCK);
-    std::cout<<"server socket fd: " << this->_server_socket <<std::endl;
+    Log::serverIsCreated(*this);
     int option = true;
     setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
@@ -138,6 +145,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         //TODO setFdMax를 효율적으로 할것.
         if (fd == server_manager->getFdMax())
             server_manager->setFdMax(fd - 1);
+        Log::closeClient(*this, fd);
     }
     else
     {
@@ -149,6 +157,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         //TODO setFdMax를 효율적으로 할것.
         if (fd == server_manager->getFdMax())
             server_manager->setFdMax(fd - 1);
+        Log::closeClient(*this, fd);
     }
     // if (bytes >= 0)
     //     req.parseRequest(req_message);
@@ -169,7 +178,9 @@ Server::makeResponseMessage(Request& request)
     // status_line = response.makeStatusLine();
     // return (status_line+ headers + body);
     std::string ret;
-    std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
+    std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" +
+        request.getRequestMethod() + " " + request.getRequestUri() +
+        request.getRequestVersion();
     ret = (status_line + "\n");
     std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
     std::string blue =  "\033[1;34;40m";
@@ -228,6 +239,7 @@ Server::run(ServerManager *server_manager, int fd)
                 server_manager->setFdMax(client_socket);
             server_manager->fdSet(client_socket, READ_FDSET);
             fcntl(client_socket, F_SETFL, O_NONBLOCK);
+            Log::newClient(*this, client_socket);
         }
         else
             std::cerr<<"Accept error"<<std::endl;
@@ -247,6 +259,7 @@ Server::run(ServerManager *server_manager, int fd)
         {
             Request request(this->receiveRequest(server_manager, fd));
             _requests[fd] = request;
+            Log::getRequest(*this, fd);
         }
     }
 }
