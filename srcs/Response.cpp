@@ -143,7 +143,6 @@ Response::applyAndCheckRequest(Request& request, Server* server)
         if (isLimitExceptInLocation() && isAllowedMethod(request.getMethod()) == false)
             this->setStatusCode("405");
     }
-    std::cout << "False" << std::endl;
 }
 
 bool
