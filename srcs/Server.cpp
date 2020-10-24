@@ -57,17 +57,16 @@ Server::getServerSocket()
     return (this->_server_socket);
 }
 
-<<<<<<< HEAD
 const std::map<std::string, location_info>&
 Server::getLocationConfig()
 {
     return (this->_location_config);
-=======
+}
+
 Request
 Server::getRequest(int fd)
 {
     return (this->_requests[fd]);
->>>>>>> develop
 }
 
 /*============================================================================*/

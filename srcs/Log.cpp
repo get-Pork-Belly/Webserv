@@ -110,9 +110,9 @@ Log::getRequest(Server& server, int client_fd)
     std::string line;
     int server_fd = server.getServerSocket();
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
-    std::string method = server.getRequest(client_fd).getRequestMethod();
-    std::string uri = server.getRequest(client_fd).getRequestUri();
-    std::string version = server.getRequest(client_fd).getRequestVersion();
+    std::string method = server.getRequest(client_fd).getMethod();
+    std::string uri = server.getRequest(client_fd).getUri();
+    std::string version = server.getRequest(client_fd).getVersion();
 
     line = ("SERVER(\033[1;31;40m" + std::to_string(server_fd) +
             "\033[0m) GOT REQUEST FROM: CLIENT(\033[1;31;40m" +
