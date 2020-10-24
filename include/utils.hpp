@@ -8,6 +8,7 @@
 # include <sys/time.h>
 # include <cstring>
 # include <unistd.h>
+# include <map>
 
 namespace ft
 {

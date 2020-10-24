@@ -170,6 +170,19 @@ stoiHex(const std::string& str)
     return (ret);
 }
 
+static int
+getTimeDiffBetweenGMT(char *time_zone)
+{
+    std::map<std::string, int> time_diff_between_gmt = {
+        {"KST", 9 * 60 * 60},
+        {"JST", 9 * 60 * 60},
+        {"CTT", 8 * 60 * 60},
+        {"ECT", 1 * 60 * 60},
+        {"PST", -7 * 60 * 60},
+    };
+    return (time_diff_between_gmt[std::string(time_zone)]);
+}
+
 std::string 
 getCurrentDateTime()
 {
@@ -180,7 +193,8 @@ getCurrentDateTime()
 
     ft::memset(buf, 0, sizeof(buf));
     gettimeofday(&tv, NULL);
-    tv.tv_sec -= 32400;
+    strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
+    tv.tv_sec -= getTimeDiffBetweenGMT(time.tm_zone);
     strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
     strftime(buf, sizeof(buf), fmt, &time);
     return (buf);
