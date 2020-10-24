@@ -1,4 +1,6 @@
 #include "utils.hpp"
+#include <iostream>
+#include <iomanip>
 
 namespace ft {
 
@@ -152,6 +154,22 @@ int stoiHex(const std::string& str)
         i++;
     }
     return (ret);
+}
+
+std::string 
+getCurrentDateTime()
+{
+    struct tm time;
+    struct timeval tv;
+    char buf[64];
+    const char* fmt = "%a, %d %b %Y %X GMT";
+
+    ft::memset(buf, 0, sizeof(buf));
+    gettimeofday(&tv, NULL);
+    tv.tv_sec -= 32400;
+    strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
+    strftime(buf, sizeof(buf), fmt, &time);
+    return (buf);
 }
 
 }

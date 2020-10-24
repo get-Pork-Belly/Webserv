@@ -154,20 +154,6 @@ Response::initStatusCodeTable()
     };
 }
 
-std::string
-Response::makeStatusLine()
-{
-    std::string status_line;
-
-    this->setStatusCode(std::string("400"));
-    status_line = "HTTP/1.1 ";
-    status_line += this->getStatusCode();
-    status_line += " ";
-    status_line += this->getStatusMessage(this->getStatusCode());
-    status_line += "\r\n";
-    return (status_line);
-}
-
 void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
@@ -211,6 +197,28 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
     return (false);
 }
 
+std::string
+Response::makeStatusLine()
+{
+    std::string status_line;
+
+    this->setStatusCode(std::string("400"));
+    status_line = "HTTP/1.1 ";
+    status_line += this->getStatusCode();
+    status_line += " ";
+    status_line += this->getStatusMessage(this->getStatusCode());
+    status_line += "\r\n";
+    return (status_line);
+}
+
+// std::string
+// Response::makeHeaders(Request& request)
+// {
+//     std::string headers;
+
+//     headers += ft::getCurrentDateTime();
+// }
+
 bool
 Response::isLimitExceptInLocation()
 {
@@ -222,3 +230,4 @@ Response::isAllowedMethod(const std::string& method)
 {
     return (this->_location_info["limit_except"].find(method) != std::string::npos);
 }
+
