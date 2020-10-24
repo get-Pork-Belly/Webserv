@@ -47,7 +47,7 @@ Log::timeLog(int fd)
     gettimeofday(&tv, NULL);
     ft::memset(buf, 0, sizeof(buf));
     strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
-    strftime(buf, sizeof(buf), "[%d/%b/%Y/%X GMT] ", &time);
+    strftime(buf, sizeof(buf), "[%d/%b/%Y/%X %Z] ", &time);
     write(fd, static_cast<void *>(buf), sizeof(buf));
 }
 
