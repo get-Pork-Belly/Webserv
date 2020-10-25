@@ -1,8 +1,11 @@
 #include "utils.hpp"
+#include <iostream>
+#include <iomanip>
 
 namespace ft {
 
-std::vector<std::string> split(std::string str, std::string const &token)
+std::vector<std::string>
+split(std::string str, std::string const &token)
 {
     std::vector<std::string> result;
     size_t index;
@@ -27,25 +30,29 @@ std::vector<std::string> split(std::string str, std::string const &token)
     return (result);
 }
 
-std::string ltrim(const std::string& str, const char *token)
+std::string
+ltrim(const std::string& str, const char *token)
 {
     size_t n = str.find_first_not_of(token);
     return (n == std::string::npos ? str : str.substr(n, str.length()));
 }
 
-std::string rtrim(const std::string& str, const char *token)
+std::string
+rtrim(const std::string& str, const char *token)
 {
     size_t n = str.find_last_not_of(token);
     return (n == std::string::npos ? str : str.substr(0, n + 1));
 }
 
-void fdZero(fd_set *fds)
+void
+fdZero(fd_set *fds)
 {
     for (int i = 0; i < 32; ++i)
         fds->fds_bits[i] = 0;
 }
 
-void fdSet(int fd, fd_set *fds)
+void
+fdSet(int fd, fd_set *fds)
 {
     if (fd < 0 || fd >= 1024)
         return ;
@@ -53,7 +60,8 @@ void fdSet(int fd, fd_set *fds)
     fds->fds_bits[(unsigned long)fd/(sizeof(__int32_t) * 8)] |= mask;
 }
 
-bool fdIsSet(int fd, fd_set *fds)
+bool
+fdIsSet(int fd, fd_set *fds)
 {
     if (fd < 0 || fd >= 1024)
         return false;
@@ -63,7 +71,8 @@ bool fdIsSet(int fd, fd_set *fds)
     return false;
 }
 
-void fdClr(int fd, fd_set *fds)
+void
+fdClr(int fd, fd_set *fds)
 {
     if (fd < 0 || fd >= 1024)
         return ;
@@ -72,7 +81,8 @@ void fdClr(int fd, fd_set *fds)
     fds->fds_bits[(unsigned long)fd/(sizeof(__int32_t) * 8)] &= mask;
 }
   
-unsigned long hToNL(unsigned long hostlong)
+unsigned long
+hToNL(unsigned long hostlong)
 {
     return (
             (hostlong & 0x000000ffU) << 24 |
@@ -82,7 +92,8 @@ unsigned long hToNL(unsigned long hostlong)
            );
 }
 
-unsigned short hToNS(unsigned short hostshort)
+unsigned short
+hToNS(unsigned short hostshort)
 {
     return ( 
             (hostshort & 0x00ffU) << 8 |
@@ -90,7 +101,8 @@ unsigned short hToNS(unsigned short hostshort)
            );
 }
 
-unsigned long nToHL(unsigned long hostlong)
+unsigned long
+nToHL(unsigned long hostlong)
 {
     return (
             (hostlong & 0x000000ffU) << 24 |
@@ -100,7 +112,8 @@ unsigned long nToHL(unsigned long hostlong)
            );
 }
 
-unsigned short nToHS(unsigned short hostshort)
+unsigned short
+nToHS(unsigned short hostshort)
 {
     return (
             (hostshort & 0x00ffU) << 8 |
@@ -108,7 +121,8 @@ unsigned short nToHS(unsigned short hostshort)
            );
 }
 
-bool substr(std::string &line, std::string &lines, const std::string &delim)
+bool
+substr(std::string &line, std::string &lines, const std::string &delim)
 {
     size_t index;
 
@@ -126,7 +140,8 @@ bool substr(std::string &line, std::string &lines, const std::string &delim)
     return (true);
 }
 
-void* memset(void* b, int c, size_t len)
+void*
+memset(void* b, int c, size_t len)
 {
     size_t i = 0;
     unsigned char* copy = (unsigned char*)b;
@@ -136,7 +151,8 @@ void* memset(void* b, int c, size_t len)
     return (b);
 }
 
-int stoiHex(const std::string& str)
+int
+stoiHex(const std::string& str)
 {
     int ret = 0;
     int i = 0;
@@ -152,6 +168,36 @@ int stoiHex(const std::string& str)
         i++;
     }
     return (ret);
+}
+
+static int
+getTimeDiffBetweenGMT(char *time_zone)
+{
+    std::map<std::string, int> time_diff_between_gmt = {
+        {"KST", 9 * 60 * 60},
+        {"JST", 9 * 60 * 60},
+        {"CTT", 8 * 60 * 60},
+        {"ECT", 1 * 60 * 60},
+        {"PST", -7 * 60 * 60},
+    };
+    return (time_diff_between_gmt[std::string(time_zone)]);
+}
+
+std::string 
+getCurrentDateTime()
+{
+    struct tm time;
+    struct timeval tv;
+    char buf[64];
+    const char* fmt = "%a, %d %b %Y %X GMT";
+
+    ft::memset(buf, 0, sizeof(buf));
+    gettimeofday(&tv, NULL);
+    strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
+    tv.tv_sec -= getTimeDiffBetweenGMT(time.tm_zone);
+    strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
+    strftime(buf, sizeof(buf), fmt, &time);
+    return (buf);
 }
 
 }

@@ -49,7 +49,7 @@ public:
     void init();
     void initStatusCodeTable();
     // std::string makeBody(Request& request);
-    // std::string makeHeaders(Request& request);
+    std::string makeHeaders(Request& request);
     std::string makeStatusLine();
 
     void applyAndCheckRequest(Request& request, Server* server);

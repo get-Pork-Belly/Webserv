@@ -99,6 +99,27 @@ void
 Response::initStatusCodeTable()
 {
     this->_status_code_table = {
+        {"100", "Continue"},
+        {"101", "Switching Protocols"},
+        {"102", "Processing"},
+        {"200", "OK"},
+        {"201", "Created"},
+        {"202", "Accepted"},
+        {"203", "Non-authoritative Information"},
+        {"204", "No Content"},
+        {"205", "Reset Content"},
+        {"206", "Partial Content"},
+        {"207", "Multi-Status"},
+        {"208", "Already Reported"},
+        {"226", "IM Used"},
+        {"300", "Multiple Choices"},
+        {"301", "Moved Permanently"},
+        {"302", "Found"},
+        {"303", "See Other"},
+        {"304", "Not Modified"},
+        {"305", "Use Proxy"},
+        {"307", "Temporary Redirect"},
+        {"308", "Permanent Redirect"},
         {"400", "Bad Request"},
         {"401", "Unauthorized"},
         {"402", "Payment Required"},
@@ -116,22 +137,21 @@ Response::initStatusCodeTable()
         {"414", "Request URI Too Long"},
         {"415", "Unsupported Media Type"},
         {"416", "Requested Range Not Satisfiable"},
-        {"417", "Expectation Failed"}
+        {"417", "Expectation Failed"},
+        {"418", "IM_A_TEAPOT"},
+        {"500", "Internal Server Error"},
+        {"501", "Not Implemented"},
+        {"502", "Bad Gateway"},
+        {"503", "Service Unavailable"},
+        {"504", "Gateway Timeout"},
+        {"505", "HTTP Version Not Supported"},
+        {"506", "Variant Also Negotiates"},
+        {"507", "Insufficient Storage"},
+        {"508", "Loop Detected"},
+        {"510", "Not Extened"},
+        {"511", "Network Authentication Required"},
+        {"599", "Network Connect Timeout Error"},
     };
-}
-
-std::string
-Response::makeStatusLine()
-{
-    std::string status_line;
-
-    this->setStatusCode(std::string("400"));
-    status_line = "HTTP/1.1 ";
-    status_line += this->getStatusCode();
-    status_line += " ";
-    status_line += this->getStatusMessage(this->getStatusCode());
-    status_line += "\r\n";
-    return (status_line);
 }
 
 void
@@ -177,6 +197,28 @@ Response::checkAndSetLocation(const std::string& uri, Server* server)
     return (false);
 }
 
+std::string
+Response::makeStatusLine()
+{
+    std::string status_line;
+
+    this->setStatusCode(std::string("400"));
+    status_line = "HTTP/1.1 ";
+    status_line += this->getStatusCode();
+    status_line += " ";
+    status_line += this->getStatusMessage(this->getStatusCode());
+    status_line += "\r\n";
+    return (status_line);
+}
+
+// std::string
+// Response::makeHeaders(Request& request)
+// {
+//     std::string headers;
+
+//     headers += ft::getCurrentDateTime();
+// }
+
 bool
 Response::isLimitExceptInLocation()
 {
@@ -188,3 +230,4 @@ Response::isAllowedMethod(const std::string& method)
 {
     return (this->_location_info["limit_except"].find(method) != std::string::npos);
 }
+

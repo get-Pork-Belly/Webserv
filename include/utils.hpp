@@ -5,6 +5,10 @@
 # include <string>
 # include <sys/socket.h>
 # include <sys/types.h>
+# include <sys/time.h>
+# include <cstring>
+# include <unistd.h>
+# include <map>
 
 namespace ft
 {
@@ -26,6 +30,8 @@ namespace ft
     void* memset(void* b, int c, size_t len);
 
     int stoiHex(const std::string& str);
+
+    std::string getCurrentDateTime();
 }
 
 #endif
