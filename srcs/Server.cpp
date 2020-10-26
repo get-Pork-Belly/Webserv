@@ -118,7 +118,7 @@ Server::init()
 
     if (listen(this->_server_socket, 128) == -1)
         throw "Listen error";
-        
+
     this->_server_manager->setAtAllFds(this->_server_socket, FdType::SERVER_SOCKET);
     this->_server_manager->updateFdMax(this->_server_socket);
 }
@@ -144,13 +144,13 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         }
         buf[bytes] = 0;
         req_message += buf;
-        server_manager->fdSet(fd, WRITE_FDSET);
+        server_manager->fdSet(fd, FdSet::WRITE);
         req.parseRequest(req_message);
     }
     else if (len == 0)
     {
         std::cout<<"len: 0"<<std::endl;
-        server_manager->fdClr(fd, READ_FDSET);
+        server_manager->fdClr(fd, FdSet::READ);
         close(fd);
         _client_sockets.erase(std::find(_client_sockets.begin(), _client_sockets.end(), fd));
         this->_server_manager->setAtAllFds(fd, FdType::CLOSED);
@@ -161,7 +161,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
     {
         std::cout<<"len: -1"<<std::endl;
         req.setStatusCode("400");
-        server_manager->fdClr(fd, READ_FDSET);
+        server_manager->fdClr(fd, FdSet::READ);
         close(fd);
         _client_sockets.erase(std::find(_client_sockets.begin(), _client_sockets.end(), fd));
         this->_server_manager->setAtAllFds(fd, FdType::CLOSED);
@@ -244,7 +244,7 @@ Server::run(int fd)
             this->_client_sockets.push_back(client_socket);
             if (client_socket > this->_server_manager->getFdMax())
                 this->_server_manager->setFdMax(client_socket);
-            this->_server_manager->fdSet(client_socket, READ_FDSET);
+            this->_server_manager->fdSet(client_socket, FdSet::READ);
             fcntl(client_socket, F_SETFL, O_NONBLOCK);
             this->_server_manager->setAtAllFds(client_socket, FdType::CLIENT_SOCKET);
             this->_server_manager->updateFdMax(client_socket);
@@ -255,16 +255,16 @@ Server::run(int fd)
     }
     else
     {
-        if (this->_server_manager->fdIsSet(fd, WRITE_FDSET))
+        if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
             std::string response_message;
             response_message = this->makeResponseMessage(this->_requests[fd]);
             // TODO: sendResponse error handling
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
-            this->_server_manager->fdClr(fd, WRITE_FDSET);
+            this->_server_manager->fdClr(fd, FdSet::WRITE);
         }
-        else if (this->_server_manager->fdIsSet(fd, READ_FDSET))
+        else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
             Request request(this->receiveRequest(this->_server_manager, fd));
             _requests[fd] = request;

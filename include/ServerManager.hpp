@@ -55,9 +55,9 @@ public:
     void setAtAllFds(int fd, FdType type);
     /* Exception */
     /* Util */
-    bool fdIsSet(int fd, int type);
-    void fdClr(int fd, int type);
-    void fdSet(int fd, int type);
+    bool fdIsSet(int fd, FdSet type);
+    void fdClr(int fd, FdSet type);
+    void fdSet(int fd, FdSet type);
 
     void updateFdMax(int fd);
 

@@ -41,12 +41,12 @@ typedef struct Location
     std::string _autoindex;
 } Location;
 
-enum FdSetType
+enum class FdSet
 {
-    ALL_FDSET, // 0
-    READ_FDSET,
-    WRITE_FDSET,
-    EXCEPT_FDSET, // 3
+    ALL,
+    READ,
+    WRITE,
+    EXCEPT, 
 };
 
 enum class FdType
