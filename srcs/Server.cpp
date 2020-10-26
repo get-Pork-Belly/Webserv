@@ -135,6 +135,10 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
     bytes = -42;
     memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
+    // TODO: receive의 구조 바꾸기
+    // 처음에는 Header까지만 읽은 다음에 URI, Chunked 등의 미리 알아둬야 할 정보가 있다면 세팅을 하고
+    // 나머지 데이터를 읽는 방향으로 수정하자.
+
     if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
         if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
@@ -301,10 +305,7 @@ Server::run(int fd)
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
-            // if (isCGIPipe(fd))
-            // {
-            // }
-            // else if (isClientSocket(fd))
+            // if (isClientSocket(fd))
             // {
                 std::string response_message;
                 response_message = this->makeResponseMessage(this->_requests[fd]);
@@ -317,7 +318,7 @@ Server::run(int fd)
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
             // isResource, isCGIPipe, isClient
-            if (isStaticResource(fd))
+            if (this->isStaticResource(fd))
             {
                 // char test_buf[4096];
                 // ft::memset(static_cast<void *>(test_buf), 0, sizeof(test_buf));
@@ -330,10 +331,24 @@ Server::run(int fd)
                 // this->_server_manager->updateFdMax(fd);
                 // this->_server_manager->fdClr(fd, FdSet::READ);
             }
-            else if (isClientSocket(fd))
+            else if (this->isCGIPipe(fd))
+            {
+            }
+            else if (this->isClientSocket(fd))
             {
                 Request request(this->receiveRequest(this->_server_manager, fd));
                 _requests[fd] = request;
+                // 
+                // Request의 body 이전까지만 읽는다. 그리고 URI를 체크한다. 체크는 메서드 체크를 1차적으로 하고, URI를 체크한다.
+                // 만약 요청이 static_resource를 요구했다면, 
+                // fd순회를 반복하여 Request를 마저 읽는다. 
+                // static_resource를 open한 다음, read_fdset에 등록하고 fd 순회를 계속한다.
+                // 만약 요청이 CGI를 요구했다면(판단은 URI의 확장자로!)
+                // fd순회를 반복하여 Request를 마저 읽는다. 
+                // 다 읽으면 read_CLR(fd)하고, pipe를 설치한 다음에, read_fdset에 등록하고 fd 순회를 계속한다.
+                // 만약 요청에 대해서 별도의 body를 구성할 필요가 없다면, 걍 Response를 완성시킨 다음 write_fdset에 client_socket을 등록한다.
+
+
                 // int tmp_fd = open("Makefile", O_RDONLY, 0644);
                 // this->_server_manager->setResourceOnFdTable(tmp_fd, fd);
                 // this->_server_manager->updateFdMax(tmp_fd);
