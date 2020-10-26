@@ -119,7 +119,7 @@ Server::init()
     if (listen(this->_server_socket, 128) == -1)
         throw "Listen error";
 
-    this->_server_manager->setAtAllFds(this->_server_socket, FdType::SERVER_SOCKET);
+    this->_server_manager->updateFdTableFds(this->_server_socket, FdType::SERVER_SOCKET);
     this->_server_manager->updateFdMax(this->_server_socket);
 }
 
@@ -153,7 +153,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         server_manager->fdClr(fd, FdSet::READ);
         close(fd);
         _client_sockets.erase(std::find(_client_sockets.begin(), _client_sockets.end(), fd));
-        this->_server_manager->setAtAllFds(fd, FdType::CLOSED);
+        this->_server_manager->updateFdTableFds(fd, FdType::CLOSED);
         this->_server_manager->updateFdMax(fd);
         Log::closeClient(*this, fd);
     }
@@ -164,7 +164,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         server_manager->fdClr(fd, FdSet::READ);
         close(fd);
         _client_sockets.erase(std::find(_client_sockets.begin(), _client_sockets.end(), fd));
-        this->_server_manager->setAtAllFds(fd, FdType::CLOSED);
+        this->_server_manager->updateFdTableFds(fd, FdType::CLOSED);
         this->_server_manager->updateFdMax(fd);
         Log::closeClient(*this, fd);
     }
@@ -246,7 +246,7 @@ Server::run(int fd)
                 this->_server_manager->setFdMax(client_socket);
             this->_server_manager->fdSet(client_socket, FdSet::READ);
             fcntl(client_socket, F_SETFL, O_NONBLOCK);
-            this->_server_manager->setAtAllFds(client_socket, FdType::CLIENT_SOCKET);
+            this->_server_manager->updateFdTableFds(client_socket, FdType::CLIENT_SOCKET);
             this->_server_manager->updateFdMax(client_socket);
             Log::newClient(*this, client_socket);
         }

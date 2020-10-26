@@ -20,7 +20,7 @@ ServerManager::ServerManager(const char *config_path)
     ft::fdZero(&this->_copy_writefds);
     ft::fdZero(&this->_copy_exceptfds);
     this->_port = "default";
-    this->_all_fds.resize(1024, FdType::CLOSED);
+    this->_fd_table.resize(1024, FdType::CLOSED);
     this->_fd = 0;
     this->_fd_max = 2;
     this->initServers();
@@ -65,9 +65,9 @@ ServerManager::setFdMax(int fd)
 }
 
 void
-ServerManager::setAtAllFds(int fd, FdType type)
+ServerManager::updateFdTableFds(int fd, FdType type)
 {
-    this->_all_fds[fd] = type;
+    this->_fd_table[fd] = type;
 }
 
 /*============================================================================*/
@@ -152,14 +152,14 @@ ServerManager::fdClr(int fd, FdSet type)
 void
 ServerManager::updateFdMax(int fd)
 {
-    switch (this->_all_fds[fd])
+    switch (this->_fd_table[fd])
     {
     case FdType::CLOSED:
         if (this->_fd_max == fd)
         {
             for (int i = fd - 1; i > 2; i--)
             {
-                if (this->_all_fds[i] != FdType::CLOSED)
+                if (this->_fd_table[i] != FdType::CLOSED)
                 {
                     this->setFdMax(i);
                     break ;

@@ -44,7 +44,7 @@ private:
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
-    std::map<int, int> _client_by_fd;
+    std::map<int, int> _client_by_file_and_pipe;
 
 public:
     /* Constructor */
