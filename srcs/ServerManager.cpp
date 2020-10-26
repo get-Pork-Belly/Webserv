@@ -14,17 +14,14 @@ ServerManager::ServerManager(const char *config_path)
 : _config_file_path(config_path)
 {
     this->initServers();
-
     ft::fdZero(&this->_readfds);
     ft::fdZero(&this->_writefds);
     ft::fdZero(&this->_exceptfds);
     ft::fdZero(&this->_copy_readfds);
     ft::fdZero(&this->_copy_writefds);
     ft::fdZero(&this->_copy_exceptfds);
-
-    //TODO: 임시로 초기화. 수정 필요
-    // this->_servers = 0;
     this->_port = "default";
+    this->_all_fds.resize(1024, -1);
     this->_fd = 0;
     this->_fd_max = 0;
 }
@@ -174,7 +171,7 @@ ServerManager::runServers()
                     {
                         if (fd == server->getServerSocket() ||
                             server->isClientOfServer(fd))
-                            server->run(this, fd);
+                            server->run(fd);
                     }
                 }
             }

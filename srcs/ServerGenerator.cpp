@@ -10,7 +10,7 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-ServerGenerator::ServerGenerator(const ServerManager* server_manager)
+ServerGenerator::ServerGenerator(ServerManager* server_manager)
 : _server_manager(server_manager)
 {
     this->convertFileToStringVector(this->_server_manager->getConfigFilePath());
@@ -96,7 +96,7 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             parseServerBlock(it, server_config, locations);
             // testServerConfig(server_config);
             // testLocationConfig(locations);
-            servers.push_back(new Server(server_config, locations));
+            servers.push_back(new Server(this->_server_manager, server_config, locations));
         }
         it++;
     }

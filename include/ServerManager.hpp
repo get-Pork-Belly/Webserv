@@ -13,6 +13,7 @@
 # include <exception>
 # include <iostream>
 # include <string>
+# include <vector>
 # include "types.hpp"
 # include "ServerGenerator.hpp"
 
@@ -36,6 +37,7 @@ private:
     fd_set _copy_writefds;
     fd_set _copy_exceptfds;
     std::string _port;
+    std::vector<int> _all_fds;
     int _fd;
     int _fd_max;
 

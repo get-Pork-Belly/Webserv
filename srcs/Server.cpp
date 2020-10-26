@@ -11,12 +11,12 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-Server::Server(server_info& server_config, std::map<std::string, location_info>& location_config)
-: _server_config(server_config), _server_socket(-1),
-_client_sockets(0), _server_name(""), _host(""),
-_port(""), _status_code(0), _request_uri_limit_size(0),
-_request_header_limit_size(0), _limit_client_body_size(0),
-_default_error_page(""), _location_config(location_config)
+Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
+: _server_manager(server_manager), _server_config(server_config),
+_server_socket(-1), _client_sockets(0), _server_name(""), _host(""), _port(""),
+_status_code(0), _request_uri_limit_size(0), _request_header_limit_size(0), 
+_limit_client_body_size(0), _default_error_page(""), 
+_location_config(location_config)
 {
     try
     {
@@ -227,7 +227,7 @@ Server::isClientOfServer(int fd)
 }
 
 void
-Server::run(ServerManager *server_manager, int fd)
+Server::run(int fd)
 {
     int client_len;
     int client_socket;
@@ -241,9 +241,9 @@ Server::run(ServerManager *server_manager, int fd)
             reinterpret_cast<socklen_t *>(&client_len))) != -1)
         {
             this->_client_sockets.push_back(client_socket);
-            if (client_socket > server_manager->getFdMax())
-                server_manager->setFdMax(client_socket);
-            server_manager->fdSet(client_socket, READ_FDSET);
+            if (client_socket > this->_server_manager->getFdMax())
+                this->_server_manager->setFdMax(client_socket);
+            this->_server_manager->fdSet(client_socket, READ_FDSET);
             fcntl(client_socket, F_SETFL, O_NONBLOCK);
             Log::newClient(*this, client_socket);
         }
@@ -252,18 +252,18 @@ Server::run(ServerManager *server_manager, int fd)
     }
     else
     {
-        if (server_manager->fdIsSet(fd, WRITE_FDSET))
+        if (this->_server_manager->fdIsSet(fd, WRITE_FDSET))
         {
             std::string response_message;
             response_message = this->makeResponseMessage(this->_requests[fd]);
             // TODO: sendResponse error handling
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
-            server_manager->fdClr(fd, WRITE_FDSET);
+            this->_server_manager->fdClr(fd, WRITE_FDSET);
         }
-        else if (server_manager->fdIsSet(fd, READ_FDSET))
+        else if (this->_server_manager->fdIsSet(fd, READ_FDSET))
         {
-            Request request(this->receiveRequest(server_manager, fd));
+            Request request(this->receiveRequest(this->_server_manager, fd));
             _requests[fd] = request;
             Log::getRequest(*this, fd);
         }
