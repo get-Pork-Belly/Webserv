@@ -37,7 +37,7 @@ private:
     fd_set _copy_writefds;
     fd_set _copy_exceptfds;
     std::string _port;
-    std::vector<FdType> _fd_table;
+    std::vector<std::pair<FdType, int>> _fd_table;
     int _fd;
     int _fd_max;
 
@@ -50,9 +50,14 @@ public:
     /* Getter */
     const char *getConfigFilePath() const;
     int getFdMax() const;
+    const std::vector<std::pair<FdType, int> >& getFdTable() const;
     /* Setter */
     void setFdMax(int fd);
-    void updateFdTableFds(int fd, FdType type);
+    void setServerSocketOnFdTable(int fd);
+    void setClientSocketOnFdTable(int fd, int server_socket);
+    void setResourceOnFdTable(int fd, int client_socket);
+    void setCGIPipeOnFdTable(int fd, int client_socket);
+    void setClosedFdOnFdTable(int fd);
     /* Exception */
     /* Util */
     bool fdIsSet(int fd, FdSet type);
