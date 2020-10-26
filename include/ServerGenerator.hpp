@@ -22,12 +22,12 @@ private:
     ServerGenerator& operator=(const ServerGenerator& rhs);
 
 private:
-    const ServerManager*		_server_manager;
+    ServerManager*		_server_manager;
     std::vector<std::string>	_configfile_lines;
 
 public:
     /* Constructor */
-    ServerGenerator(const ServerManager* _server_manager);
+    ServerGenerator(ServerManager* _server_manager);
 
     /* Destructor */
     virtual ~ServerGenerator();

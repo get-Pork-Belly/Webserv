@@ -13,20 +13,17 @@
 ServerManager::ServerManager(const char *config_path)
 : _config_file_path(config_path)
 {
-    this->initServers();
-
     ft::fdZero(&this->_readfds);
     ft::fdZero(&this->_writefds);
     ft::fdZero(&this->_exceptfds);
     ft::fdZero(&this->_copy_readfds);
     ft::fdZero(&this->_copy_writefds);
     ft::fdZero(&this->_copy_exceptfds);
-
-    //TODO: 임시로 초기화. 수정 필요
-    // this->_servers = 0;
     this->_port = "default";
+    this->_fd_table.resize(1024, FdType::CLOSED);
     this->_fd = 0;
-    this->_fd_max = 0;
+    this->_fd_max = 2;
+    this->initServers();
 }
 
 /*============================================================================*/
@@ -67,6 +64,12 @@ ServerManager::setFdMax(int fd)
     this->_fd_max = fd;
 }
 
+void
+ServerManager::updateFdTableFds(int fd, FdType type)
+{
+    this->_fd_table[fd] = type;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -76,33 +79,45 @@ ServerManager::setFdMax(int fd)
 /*============================================================================*/
 
 void
-ServerManager::fdSet(int fd, int type)
+ServerManager::fdSet(int fd, FdSet type)
 {
-    if (type == READ_FDSET)
-        ft::fdSet(fd, &this->_readfds);
-    else if (type == WRITE_FDSET)
-        ft::fdSet(fd, &this->_writefds);
-    else if (type == EXCEPT_FDSET)
-        ft::fdSet(fd, &this->_exceptfds);
-    else
+    switch (type)
     {
+    case FdSet::READ:
+        ft::fdSet(fd, &this->_readfds);
+        break;
+
+    case FdSet::WRITE:
+        ft::fdSet(fd, &this->_writefds);
+        break;
+
+    case FdSet::EXCEPT:
+        ft::fdSet(fd, &this->_exceptfds);
+        break;
+    
+    default:
         ft::fdSet(fd, &this->_readfds);
         ft::fdSet(fd, &this->_writefds);
         ft::fdSet(fd, &this->_exceptfds);
+        break;
     }
 }
 
 bool
-ServerManager::fdIsSet(int fd, int type)
+ServerManager::fdIsSet(int fd, FdSet type)
 {
-    if (type == READ_FDSET)
-        return (ft::fdIsSet(fd, &this->_copy_readfds));
-    else if (type == WRITE_FDSET)
-        return (ft::fdIsSet(fd, &this->_copy_writefds));
-    else if (type == EXCEPT_FDSET)
-        return (ft::fdIsSet(fd, &this->_copy_exceptfds));
-    else
+    switch (type)
     {
+    case FdSet::READ:
+        return (ft::fdIsSet(fd, &this->_copy_readfds));
+
+    case FdSet::WRITE:
+        return (ft::fdIsSet(fd, &this->_copy_writefds));
+
+    case FdSet::EXCEPT:
+        return (ft::fdIsSet(fd, &this->_copy_exceptfds));
+
+    default:
         return (ft::fdIsSet(fd, &this->_copy_readfds) ||
         ft::fdIsSet(fd, &this->_copy_writefds) ||
         ft::fdIsSet(fd, &this->_copy_exceptfds));
@@ -110,14 +125,54 @@ ServerManager::fdIsSet(int fd, int type)
 }
 
 void
-ServerManager::fdClr(int fd, int type)
+ServerManager::fdClr(int fd, FdSet type)
 {
-    if (type == READ_FDSET)
+    switch (type)
+    {
+    case FdSet::READ:
         ft::fdClr(fd, &this->_readfds);
-    else if (type == WRITE_FDSET)
+        break;
+
+    case FdSet::WRITE:
         ft::fdClr(fd, &this->_writefds);
-    else if (type == EXCEPT_FDSET)
+        break;
+    
+    case FdSet::EXCEPT:
         ft::fdClr(fd, &this->_exceptfds);
+        break;
+
+    default:
+        ft::fdClr(fd, &this->_readfds);
+        ft::fdClr(fd, &this->_writefds);
+        ft::fdClr(fd, &this->_exceptfds);
+        break;
+    }
+}
+
+void
+ServerManager::updateFdMax(int fd)
+{
+    switch (this->_fd_table[fd])
+    {
+    case FdType::CLOSED:
+        if (this->_fd_max == fd)
+        {
+            for (int i = fd - 1; i > 2; i--)
+            {
+                if (this->_fd_table[i] != FdType::CLOSED)
+                {
+                    this->setFdMax(i);
+                    break ;
+                }
+            }
+        }
+        break;
+
+    default:
+        if (this->_fd_max < fd)
+            this->setFdMax(fd);
+        break;
+    }
 }
 
 /*============================================================================*/
@@ -143,8 +198,8 @@ ServerManager::runServers()
     for (Server *server : this->_servers)
     {
         int server_socket = server->getServerSocket();
-        this->fdSet(server_socket, ALL_FDSET);
-        this->setFdMax(server_socket);
+        this->fdSet(server_socket, FdSet::ALL);
+        this->updateFdMax(server_socket);
     }
     //TODO: siganl 입력시 반복종료 구현
     while (true)
@@ -168,13 +223,13 @@ ServerManager::runServers()
         {
             for (int fd = 0; fd < this->getFdMax() + 1; fd++)
             {
-                if (this->fdIsSet(fd, ALL_FDSET))
+                if (this->fdIsSet(fd, FdSet::ALL))
                 {
                     for (Server *server : this->_servers)
                     {
                         if (fd == server->getServerSocket() ||
                             server->isClientOfServer(fd))
-                            server->run(this, fd);
+                            server->run(fd);
                     }
                 }
             }

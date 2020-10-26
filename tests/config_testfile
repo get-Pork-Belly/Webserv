@@ -4,7 +4,7 @@ http {
     server {
         server_name first_server;
         listen       8080;
-        location /one {
+        location / {
             index  index.html index.htm;
         }
         location /one/two {

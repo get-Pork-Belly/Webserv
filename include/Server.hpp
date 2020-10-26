@@ -29,6 +29,7 @@ private:
     Server& operator=(const Server& rhs);
 
 private:
+    ServerManager* _server_manager;
     std::map<std::string, std::string> _server_config;
     int _server_socket;
     std::vector<int> _client_sockets;
@@ -43,10 +44,12 @@ private:
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
+    std::map<int, int> _client_by_file_and_pipe;
 
 public:
     /* Constructor */
-    Server(server_info& server_config, std::map<std::string, location_info>& location_config);
+    Server(ServerManager* server_manager, server_info& server_config, 
+                        std::map<std::string, location_info>& location_config);
     /* Destructor */
     virtual ~Server();
 
@@ -65,7 +68,7 @@ public:
 
     /* Server function */
     void init();
-    void run(ServerManager* server_manager, int fd);
+    void run(int fd);
     Request receiveRequest(ServerManager* server_manager, int fd);
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
