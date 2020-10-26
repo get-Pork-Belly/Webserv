@@ -49,4 +49,13 @@ enum FdSetType
     EXCEPT_FDSET, // 3
 };
 
+enum class FdType
+{
+    SERVER_SOCKET,
+    CLIENT_SOCKET,
+    RESOURCE,
+    PIPE,
+    CLOSED,
+};
+
 #endif

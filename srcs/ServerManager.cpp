@@ -13,7 +13,6 @@
 ServerManager::ServerManager(const char *config_path)
 : _config_file_path(config_path)
 {
-    this->initServers();
     ft::fdZero(&this->_readfds);
     ft::fdZero(&this->_writefds);
     ft::fdZero(&this->_exceptfds);
@@ -21,9 +20,10 @@ ServerManager::ServerManager(const char *config_path)
     ft::fdZero(&this->_copy_writefds);
     ft::fdZero(&this->_copy_exceptfds);
     this->_port = "default";
-    this->_all_fds.resize(1024, -1);
+    this->_all_fds.resize(1024, FdType::CLOSED);
     this->_fd = 0;
-    this->_fd_max = 0;
+    this->_fd_max = 2;
+    this->initServers();
 }
 
 /*============================================================================*/
@@ -62,6 +62,12 @@ void
 ServerManager::setFdMax(int fd)
 {
     this->_fd_max = fd;
+}
+
+void
+ServerManager::setAtAllFds(int fd, FdType type)
+{
+    this->_all_fds[fd] = type;
 }
 
 /*============================================================================*/
@@ -117,6 +123,32 @@ ServerManager::fdClr(int fd, int type)
         ft::fdClr(fd, &this->_exceptfds);
 }
 
+void
+ServerManager::updateFdMax(int fd)
+{
+    switch (this->_all_fds[fd])
+    {
+    case FdType::CLOSED:
+        if (this->_fd_max == fd)
+        {
+            for (int i = fd - 1; i > 2; i--)
+            {
+                if (this->_all_fds[i] != FdType::CLOSED)
+                {
+                    this->setFdMax(i);
+                    break ;
+                }
+            }
+        }
+        break;
+
+    default:
+        if (this->_fd_max < fd)
+            this->setFdMax(fd);
+        break;
+    }
+}
+
 /*============================================================================*/
 /************************  Manage Server functions  ***************************/
 /*============================================================================*/
@@ -141,7 +173,7 @@ ServerManager::runServers()
     {
         int server_socket = server->getServerSocket();
         this->fdSet(server_socket, ALL_FDSET);
-        this->setFdMax(server_socket);
+        this->updateFdMax(server_socket);
     }
     //TODO: siganl 입력시 반복종료 구현
     while (true)

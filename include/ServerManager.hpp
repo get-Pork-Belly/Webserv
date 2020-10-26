@@ -37,7 +37,7 @@ private:
     fd_set _copy_writefds;
     fd_set _copy_exceptfds;
     std::string _port;
-    std::vector<int> _all_fds;
+    std::vector<FdType> _all_fds;
     int _fd;
     int _fd_max;
 
@@ -52,11 +52,14 @@ public:
     int getFdMax() const;
     /* Setter */
     void setFdMax(int fd);
+    void setAtAllFds(int fd, FdType type);
     /* Exception */
     /* Util */
     bool fdIsSet(int fd, int type);
     void fdClr(int fd, int type);
     void fdSet(int fd, int type);
+
+    void updateFdMax(int fd);
 
     /* Manage Server functions */
     void initServers();
