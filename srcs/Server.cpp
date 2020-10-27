@@ -154,20 +154,27 @@ Server::receiveRequest(int fd)
                 if ((bytes = read(fd, buf, header_end_pos + 4)) < 0)
                 {
                     req.setStatusCode("400");
+                    throw "";
                     // throw (SocketReadException());
                 }
                 else if (bytes == 0)
                 {
                     req.setStatusCode("502"); // "Bad GateWay"
+                    throw "";
                     // throw (BadGateWayException());
                 }
                 else
                 {
                     req_message += buf;
                     req.parseRequestWithoutBody(req_message);
+                    std::cout << "Before" << static_cast<int>(req.getReqInfo()) << std::endl;
                     req.updateReqInfo();
+                    std::cout << "After" << static_cast<int>(req.getReqInfo()) << std::endl;
                     if (req.getReqInfo() == ReqInfo::COMPLETE)
+                    {
                         server_manager->fdSet(fd, FdSet::WRITE);
+                        this->_server_manager->fdClr(fd, FdSet::READ);
+                    }
                 }
             }
             else
@@ -217,6 +224,7 @@ Server::receiveRequest(int fd)
         if ((bytes = recv(fd, body_buf, size, 0)) < 0)
         {
              req.setStatusCode("400");
+             throw "";
              // throw (SocketReadException());
         }
         else if (bytes == 0)
@@ -233,17 +241,22 @@ Server::receiveRequest(int fd)
     }
     else if (req.getReqInfo() == ReqInfo::CHUNKED_BODY)
     {
-        std::cout << "hello in chunked" << std::endl;
         if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) < 0)
         {
             req.setStatusCode("400");
             throw "";
         }
+        else if (bytes == 0)
+        {
+            this->closeClientSocket(fd);
+        }
         else
         {
             req_message += buf;
             if (req.parseChunkedBody(req_message)) //&& req.getReqInfo() == ReqInfo::COMPLETE)
+            {
                 server_manager->fdSet(fd, FdSet::WRITE);
+            }
             else
             {
                 req.setStatusCode("400");
@@ -325,7 +338,7 @@ Server::makeResponseMessage(Request& request)
     // for (auto& m : request.getRequestHeaders())
     // {
     //     headers += (blue + "key: " + reset + m.first );
-    //     headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
+    //     headers += ("\n" + yellow + "value: " + reset + m.second +j "\n");
     // }
     // ret += headers;
     // std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
@@ -501,12 +514,14 @@ Server::closeClientSocket(int fd)
     int ret;
     Log::closeClient(*this, fd);
 
+    std::cout << "In Close" << std::endl;
+
     this->_server_manager->fdClr(fd, FdSet::READ);
-    if ((ret = close(fd)) < 0)
-        return (false);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
     this->_requests[fd].clear();
     Log::closeClient(*this, fd);
+    if ((ret = close(fd)) < 0)
+        return (false);
     return (true);
 }
