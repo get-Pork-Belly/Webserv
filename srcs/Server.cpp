@@ -13,7 +13,7 @@
 
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
-_server_socket(-1), _client_sockets(0), _server_name(""), _host(""), _port(""),
+_server_socket(-1), _server_name(""), _host(""), _port(""),
 _status_code(0), _request_uri_limit_size(0), _request_header_limit_size(0), 
 _limit_client_body_size(0), _default_error_page(""), 
 _location_config(location_config)
@@ -51,8 +51,8 @@ Server::getServerConfig()
     return (this->_server_config);
 }
 
-int 
-Server::getServerSocket()
+int
+Server::getServerSocket() const
 {
     return (this->_server_socket);
 }
@@ -119,7 +119,7 @@ Server::init()
     if (listen(this->_server_socket, 128) == -1)
         throw "Listen error";
 
-    this->_server_manager->updateFdTableFds(this->_server_socket, FdType::SERVER_SOCKET);
+    this->_server_manager->setServerSocketOnFdTable(this->_server_socket);
     this->_server_manager->updateFdMax(this->_server_socket);
 }
 
@@ -134,6 +134,10 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
 
     bytes = -42;
     memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+
+    // TODO: receive의 구조 바꾸기
+    // 처음에는 Header까지만 읽은 다음에 URI, Chunked 등의 미리 알아둬야 할 정보가 있다면 세팅을 하고
+    // 나머지 데이터를 읽는 방향으로 수정하자.
 
     if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
@@ -152,8 +156,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         std::cout<<"len: 0"<<std::endl;
         server_manager->fdClr(fd, FdSet::READ);
         close(fd);
-        _client_sockets.erase(std::find(_client_sockets.begin(), _client_sockets.end(), fd));
-        this->_server_manager->updateFdTableFds(fd, FdType::CLOSED);
+        this->_server_manager->setClosedFdOnFdTable(fd);
         this->_server_manager->updateFdMax(fd);
         Log::closeClient(*this, fd);
     }
@@ -163,8 +166,7 @@ Server::receiveRequest(ServerManager* server_manager, int fd)
         req.setStatusCode("400");
         server_manager->fdClr(fd, FdSet::READ);
         close(fd);
-        _client_sockets.erase(std::find(_client_sockets.begin(), _client_sockets.end(), fd));
-        this->_server_manager->updateFdTableFds(fd, FdType::CLOSED);
+        this->_server_manager->setClosedFdOnFdTable(fd);
         this->_server_manager->updateFdMax(fd);
         Log::closeClient(*this, fd);
     }
@@ -220,12 +222,59 @@ Server::sendResponse(std::string& response_message, int fd)
 }
 
 bool
-Server::isClientOfServer(int fd)
+Server::isFdManagedByServer(int fd) const
 {
-    return ((std::find(this->_client_sockets.begin(),
-            this->_client_sockets.end(), fd)
-            == this->_client_sockets.end()) ? false : true);
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+
+    if (fd_table[fd].first == FdType::CLIENT_SOCKET)
+        return (isClientOfServer(fd));
+    else if (fd_table[fd].first == FdType::RESOURCE || fd_table[fd].first == FdType::PIPE)
+        return (isClientOfServer(fd_table[fd].second));
+    return (false);
 }
+
+bool
+Server::isClientOfServer(int fd) const
+{
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    return (fd_table[fd].first == FdType::CLIENT_SOCKET && fd_table[fd].second == this->getServerSocket());
+}
+
+bool
+Server::isServerSocket(int fd) const
+{
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    if (fd_table[fd].first == FdType::SERVER_SOCKET)
+        return true;
+    return false;
+}
+
+bool
+Server::isClientSocket(int fd) const
+{
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    if (fd_table[fd].first == FdType::CLIENT_SOCKET)
+        return true;
+    return false;
+}
+
+bool
+Server::isStaticResource(int fd) const
+{
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    if (fd_table[fd].first == FdType::RESOURCE)
+        return true;
+    return false;
+}
+
+bool
+Server::isCGIPipe(int fd) const
+{
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    if (fd_table[fd].first == FdType::PIPE)
+        return true;
+    return false;
+} 
 
 void
 Server::run(int fd)
@@ -234,19 +283,18 @@ Server::run(int fd)
     int client_socket;
     struct sockaddr_in client_address;
 
-    if (fd == this->getServerSocket())
+    if (isServerSocket(fd))
     {
         client_len = sizeof(client_address);
         if ((client_socket = accept(this->getServerSocket(),
             reinterpret_cast<struct sockaddr *>(&client_address),
             reinterpret_cast<socklen_t *>(&client_len))) != -1)
         {
-            this->_client_sockets.push_back(client_socket);
             if (client_socket > this->_server_manager->getFdMax())
                 this->_server_manager->setFdMax(client_socket);
             this->_server_manager->fdSet(client_socket, FdSet::READ);
             fcntl(client_socket, F_SETFL, O_NONBLOCK);
-            this->_server_manager->updateFdTableFds(client_socket, FdType::CLIENT_SOCKET);
+            this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
             this->_server_manager->updateFdMax(client_socket);
             Log::newClient(*this, client_socket);
         }
@@ -257,18 +305,58 @@ Server::run(int fd)
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
-            std::string response_message;
-            response_message = this->makeResponseMessage(this->_requests[fd]);
-            // TODO: sendResponse error handling
-            if (!(sendResponse(response_message, fd)))
-                std::cerr<<"Error: sendResponse"<<std::endl;
-            this->_server_manager->fdClr(fd, FdSet::WRITE);
+            // if (isClientSocket(fd))
+            // {
+                std::string response_message;
+                response_message = this->makeResponseMessage(this->_requests[fd]);
+                // TODO: sendResponse error handling
+                if (!(sendResponse(response_message, fd)))
+                    std::cerr<<"Error: sendResponse"<<std::endl;
+                this->_server_manager->fdClr(fd, FdSet::WRITE);
+            // }
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
-            Request request(this->receiveRequest(this->_server_manager, fd));
-            _requests[fd] = request;
-            Log::getRequest(*this, fd);
+            // isResource, isCGIPipe, isClient
+            if (this->isStaticResource(fd))
+            {
+                // char test_buf[4096];
+                // ft::memset(static_cast<void *>(test_buf), 0, sizeof(test_buf));
+                // read(fd, test_buf, 4096);
+                // std::cout<<"========== test  buf ========="<<std::endl;
+                // std::cout<<test_buf<<std::endl;
+                // // std::cout<<"TEST Success!!"<<std::endl;
+                // close(fd);
+                // this->_server_manager->setClosedFdOnFdTable(fd);
+                // this->_server_manager->updateFdMax(fd);
+                // this->_server_manager->fdClr(fd, FdSet::READ);
+            }
+            else if (this->isCGIPipe(fd))
+            {
+            }
+            else if (this->isClientSocket(fd))
+            {
+                Request request(this->receiveRequest(this->_server_manager, fd));
+                _requests[fd] = request;
+                // 
+                // Request의 body 이전까지만 읽는다. 그리고 URI를 체크한다. 체크는 메서드 체크를 1차적으로 하고, URI를 체크한다.
+                // 만약 요청이 static_resource를 요구했다면, 
+                // fd순회를 반복하여 Request를 마저 읽는다. 
+                // static_resource를 open한 다음, read_fdset에 등록하고 fd 순회를 계속한다.
+                // 만약 요청이 CGI를 요구했다면(판단은 URI의 확장자로!)
+                // fd순회를 반복하여 Request를 마저 읽는다. 
+                // 다 읽으면 read_CLR(fd)하고, pipe를 설치한 다음에, read_fdset에 등록하고 fd 순회를 계속한다.
+                // 만약 요청에 대해서 별도의 body를 구성할 필요가 없다면, 걍 Response를 완성시킨 다음 write_fdset에 client_socket을 등록한다.
+
+
+                // int tmp_fd = open("Makefile", O_RDONLY, 0644);
+                // this->_server_manager->setResourceOnFdTable(tmp_fd, fd);
+                // this->_server_manager->updateFdMax(tmp_fd);
+                // this->_server_manager->fdSet(tmp_fd, FdSet::READ);
+                // std::cout<<"tmp_fd: "<<tmp_fd<<std::endl;
+                // std::cout<<"Max fd: "<<this->_server_manager->getFdMax()<<std::endl;
+                Log::getRequest(*this, fd);
+            }
         }
     }
 }

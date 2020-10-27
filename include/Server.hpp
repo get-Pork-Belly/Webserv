@@ -32,7 +32,6 @@ private:
     ServerManager* _server_manager;
     std::map<std::string, std::string> _server_config;
     int _server_socket;
-    std::vector<int> _client_sockets;
     std::string _server_name;
     std::string _host;
     std::string _port;
@@ -44,7 +43,6 @@ private:
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
-    std::map<int, int> _client_by_file_and_pipe;
 
 public:
     /* Constructor */
@@ -59,12 +57,17 @@ public:
     // Request getRequest();
     const std::map<std::string, std::string> getServerConfig();
     const std::map<std::string, location_info>& getLocationConfig();
-    int getServerSocket();
+    int getServerSocket() const;
     Request getRequest(int fd);
     /* Setter */
     void setServerSocket();
     /* Exception */
     /* Util */
+    bool isFdManagedByServer(int fd) const;
+    bool isServerSocket(int fd) const;
+    bool isClientSocket(int fd) const;
+    bool isStaticResource(int fd) const;
+    bool isCGIPipe(int fd) const;
 
     /* Server function */
     void init();
@@ -72,7 +75,7 @@ public:
     Request receiveRequest(ServerManager* server_manager, int fd);
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
-    bool isClientOfServer(int fd);
+    bool isClientOfServer(int fd) const;
 };
 
 #endif
