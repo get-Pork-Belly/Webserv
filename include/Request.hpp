@@ -2,6 +2,7 @@
 # define REQUEST_HPP
 
 # include "utils.hpp"
+# include "types.hpp"
 # include <map>
 
 //TODO: 테스트용
@@ -18,6 +19,8 @@ private:
     std::string _bodies;
     std::string _transfer_type;
     std::string _status_code;
+    ReqInfo _info;
+    size_t _header_end_pos;
 
 public:
     /* Constructor */
@@ -37,6 +40,8 @@ public:
     std::string getBodies();
     std::string getTransferType();
     std::string getStatusCode();
+    const ReqInfo& getReqInfo() const;
+    const size_t& getHeaderEndPos() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -47,14 +52,20 @@ public:
     void setBodies(const std::string& body);
     void setTransferType(const std::string& transfer_type);
     void setStatusCode(const std::string& code);
+    void setHeaderEndPos(const size_t& header_end_pos);
+    void setReqInfo(const ReqInfo& info);
 
     /* Exception */
 
     /* Util */
 
+    void clear();
+
     // void initMembers(std::string req_message);
 
     /* parser */
+    bool parseRequestWithoutBody(std::string& buf);
+
     bool parseRequest(std::string& req_message);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
@@ -76,3 +87,4 @@ public:
 };
 
 #endif
+

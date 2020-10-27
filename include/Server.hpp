@@ -16,7 +16,7 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-const int BUFFER_SIZE = 9000;
+const int BUFFER_SIZE = 8192;
 
 class ServerManager;
 class Request;
@@ -63,6 +63,7 @@ public:
     void setServerSocket();
     /* Exception */
     /* Util */
+    bool closeClientSocket(int fd);
     bool isFdManagedByServer(int fd) const;
     bool isServerSocket(int fd) const;
     bool isClientSocket(int fd) const;
@@ -72,10 +73,24 @@ public:
     /* Server function */
     void init();
     void run(int fd);
-    Request receiveRequest(ServerManager* server_manager, int fd);
+    void receiveRequest(int fd);
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
+
+public:
+    class ParseRequestException : public std::exception
+    {
+    public:
+        virtual const char* what() const throw();
+    };
+
+// public:
+//     class ResponseException : public std::exception
+//     {
+//     public:
+//         virtual const char* what() const throw();
+//     };
 };
 
 #endif

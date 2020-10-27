@@ -58,4 +58,12 @@ enum class FdType
     CLOSED,
 };
 
+enum class ReqInfo
+{
+    READY,
+    COMPLETE,
+    NORMAL_BODY,
+    CHUNKED_BODY
+};
+
 #endif

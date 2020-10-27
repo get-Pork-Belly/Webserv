@@ -11,13 +11,14 @@
 Request::Request()
 : _method(""), _uri(""), _version(""),
  _protocol(""), _bodies(""), _transfer_type(""), 
- _status_code("") {}
+ _status_code(""), _info(ReqInfo::READY) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _bodies(other._bodies), 
-_transfer_type(other._transfer_type), _status_code(other._status_code) {}
+_transfer_type(other._transfer_type), _status_code(other._status_code), 
+_info(other._info) {}
 
 Request&
 Request::operator=(const Request& other)
@@ -30,6 +31,7 @@ Request::operator=(const Request& other)
     this->_bodies = other._bodies;
     this->_transfer_type = other._transfer_type;
     this->_status_code = other._status_code;
+    this->_info = other._info;
     return (*this);
 }
 
@@ -91,6 +93,18 @@ Request::getStatusCode()
     return (this->_status_code);
 }
 
+const ReqInfo&
+Request::getReqInfo() const
+{
+    return (this->_info);
+}
+
+const size_t&
+Request::getHeaderEndPos() const
+{
+    return (this->_header_end_pos);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -144,6 +158,12 @@ Request::setStatusCode(const std::string& status_code)
     this->_status_code = status_code;
 }
 
+void
+Request::setReqInfo(const ReqInfo& info)
+{
+    this->_info = info;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -152,7 +172,7 @@ Request::setStatusCode(const std::string& status_code)
 /*********************************  Util  *************************************/
 /*============================================================================*/
 
-bool
+void
 Request::parseRequest(std::string& req_message)
 {
     std::string line;
@@ -284,6 +304,18 @@ Request::parseBodies(std::string& req_message)
 {
     this->setBodies(req_message);
     return (true);
+}
+
+void
+Request::clear()
+{
+    this->_method = "";
+    this->_uri = "";
+    this->_version = "";
+    this->_protocol = "";
+    this->_transfer_type = "";
+    this->_status_code = "";
+    this->_info = ReqInfo::READY;
 }
 
 /*============================================================================*/
