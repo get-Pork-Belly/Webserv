@@ -225,7 +225,6 @@ Request::parseRequestWithoutBody(std::string& req_message)
     }
     else
     {
-        std::cout << "Without Body\n" << line<< std::endl;
         if (parseHeaders(line) == false)
         {
             this->setStatusCode("400");
@@ -334,7 +333,6 @@ Request::parseHeaders(std::string& req_message)
 bool
 Request::parseChunkedBody(std::string &req_message)
 {
-    std::cout << "=================== Chunked!!!!!! " << std::endl;
     int line_len;
     std::string line;
 
@@ -342,7 +340,10 @@ Request::parseChunkedBody(std::string &req_message)
     {
         line_len = ft::stoiHex(line);
         if (line_len == 0)
+        {
+            this->setReqInfo(ReqInfo::COMPLETE);
             return (true);
+        }
         else if (line_len != -1)
         {
             if (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
@@ -353,7 +354,6 @@ Request::parseChunkedBody(std::string &req_message)
         else
             return (false);
     }
-    this->updateReqInfo();
 
 
     //TODO: CRLF 못찾았을 때 처리해주기.
@@ -363,15 +363,14 @@ Request::parseChunkedBody(std::string &req_message)
 bool
 Request::parseBodies(std::string& req_message)
 {
-    std::cout << "======================= normal !!!" << std::endl;
     this->setBodies(req_message);
+    this->setReqInfo(ReqInfo::COMPLETE);
     return (true);
 }
 
 void
 Request::clear()
 {
-    std::cout << "clear" << std::endl;
     this->_method = "";
     this->_uri = "";
     this->_version = "";

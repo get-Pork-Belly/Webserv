@@ -140,6 +140,8 @@ Server::receiveRequest(int fd)
     ServerManager* server_manager = this->_server_manager;
     size_t header_end_pos = 0;
 
+std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
+
     bytes = -42;
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
@@ -167,9 +169,7 @@ Server::receiveRequest(int fd)
                 {
                     req_message += buf;
                     req.parseRequestWithoutBody(req_message);
-                    std::cout << "Before" << static_cast<int>(req.getReqInfo()) << std::endl;
                     req.updateReqInfo();
-                    std::cout << "After" << static_cast<int>(req.getReqInfo()) << std::endl;
                     if (req.getReqInfo() == ReqInfo::COMPLETE)
                     {
                         server_manager->fdSet(fd, FdSet::WRITE);
@@ -228,15 +228,12 @@ Server::receiveRequest(int fd)
              // throw (SocketReadException());
         }
         else if (bytes == 0)
-        {
             this->closeClientSocket(fd);
-        }
         else
         {
             req_message += body_buf;
             req.parseBodies(req_message);
-            req.updateReqInfo();
-            server_manager->fdSet(fd, FdSet::WRITE);
+            this->_server_manager->fdSet(fd, FdSet::WRITE);
         }
     }
     else if (req.getReqInfo() == ReqInfo::CHUNKED_BODY)
@@ -247,16 +244,12 @@ Server::receiveRequest(int fd)
             throw "";
         }
         else if (bytes == 0)
-        {
             this->closeClientSocket(fd);
-        }
         else
         {
             req_message += buf;
-            if (req.parseChunkedBody(req_message)) //&& req.getReqInfo() == ReqInfo::COMPLETE)
-            {
-                server_manager->fdSet(fd, FdSet::WRITE);
-            }
+            if (req.parseChunkedBody(req_message) && req.getReqInfo() == ReqInfo::COMPLETE)
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
             else
             {
                 req.setStatusCode("400");
@@ -266,52 +259,14 @@ Server::receiveRequest(int fd)
     }
     else if (req.getReqInfo() == ReqInfo::COMPLETE)
     {
+        std::cout << "In Complete" << std::endl;
         std::string method = req.getMethod();
-        if (!(method.compare("PUT") || method.compare("POST")))
-        {
-            // recv(); 버퍼를 비우는 용도로~
-        }
+        this->_server_manager->fdClr(fd, FdSet::READ);
+        // if (!(method.compare("PUT") || method.compare("POST")))
+        // {
+        //     // recv(); 버퍼를 비우는 용도로~
+        // }
     }
-
-
-    std::cout << "=============circle closed===========" << std::endl;
-
-    // if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
-    // {
-    //     if (header_end_pos = std::string(buf).find("\r\n\r\n") != std::string::npos)
-    //     {
-    //         req.setHeaderEndPos(header_end_pos);
-    //     }
-
-    //     if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
-    //     {
-    //         req.setStatusCode("400");
-    //         return (req);
-    //     }
-    //     buf[bytes] = 0;
-    //     req_message += buf;
-    //     server_manager->fdSet(fd, FdSet::WRITE);
-    //     req.parseRequest(req_message);
-    // }
-    // else if (len == 0)
-    // {
-    //     std::cout<<"len: 0"<<std::endl;
-    //     server_manager->fdClr(fd, FdSet::READ);
-    //     close(fd);
-    //     this->_server_manager->setClosedFdOnFdTable(fd);
-    //     this->_server_manager->updateFdMax(fd);
-    //     Log::closeClient(*this, fd);
-    // }
-    // else
-    // {
-    //     std::cout<<"len: -1"<<std::endl;
-    //     req.setStatusCode("400");
-    //     server_manager->fdClr(fd, FdSet::READ);
-    //     close(fd);
-    //     this->_server_manager->setClosedFdOnFdTable(fd);
-    //     this->_server_manager->updateFdMax(fd);
-    //     Log::closeClient(*this, fd);
-    // }
 }
 
 std::string
