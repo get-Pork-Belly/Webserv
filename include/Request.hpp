@@ -17,7 +17,6 @@ private:
     std::map<std::string, std::string> _headers;
     std::string _protocol;
     std::string _bodies;
-    std::string _transfer_type;
     std::string _status_code;
     ReqInfo _info;
     size_t _header_end_pos;
@@ -32,10 +31,10 @@ public:
     virtual ~Request();
 
     /* Getter */
-    std::string getMethod();
+    std::string getMethod() const;
     const std::string& getUri();
     std::string getVersion();
-    std::map<std::string, std::string> getHeaders();
+    std::map<std::string, std::string> getHeaders() const;
     std::string getProtocol();
     std::string getBodies();
     std::string getTransferType();
@@ -60,15 +59,17 @@ public:
     /* Util */
 
     void clear();
-
     void updateReqInfo();
+    bool isBodyUnnecessary() const;
+    bool isNormalBody() const;
+    bool isChunkedBody() const;
 
     // void initMembers(std::string req_message);
 
     /* parser */
-    void parseRequestWithoutBody(std::string& buf);
+    bool parseRequestWithoutBody(std::string& buf);
 
-    void parseRequest(std::string& req_message);
+    bool parseRequest(std::string& req_message);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
     bool parseBodies(std::string& req_message);

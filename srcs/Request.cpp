@@ -10,15 +10,13 @@
 
 Request::Request()
 : _method(""), _uri(""), _version(""),
- _protocol(""), _bodies(""), _transfer_type(""), 
- _status_code(""), _info(ReqInfo::READY) {}
+ _protocol(""), _bodies(""), _status_code(""), _info(ReqInfo::READY) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _bodies(other._bodies), 
-_transfer_type(other._transfer_type), _status_code(other._status_code), 
-_info(other._info) {}
+_status_code(other._status_code), _info(other._info) {}
 
 Request&
 Request::operator=(const Request& other)
@@ -29,7 +27,6 @@ Request::operator=(const Request& other)
     this->_headers = other._headers;
     this->_protocol = other._protocol;
     this->_bodies = other._bodies;
-    this->_transfer_type = other._transfer_type;
     this->_status_code = other._status_code;
     this->_info = other._info;
     return (*this);
@@ -46,7 +43,7 @@ Request::~Request() {}
 /*============================================================================*/
 
 std::string
-Request::getMethod()
+Request::getMethod() const
 {
     return (this->_method);
 }
@@ -64,7 +61,7 @@ Request::getVersion()
 }
 
 std::map<std::string, std::string>
-Request::getHeaders()
+Request::getHeaders() const
 {
     return (this->_headers);
 }
@@ -79,12 +76,6 @@ std::string
 Request::getBodies()
 {
     return (this->_bodies);
-}
-
-std::string
-Request::getTransferType()
-{
-    return (this->_transfer_type);
 }
 
 std::string
@@ -147,12 +138,6 @@ Request::setBodies(const std::string& req_message)
 }
 
 void
-Request::setTransferType(const std::string& transfer_type)
-{
-    this->_transfer_type = transfer_type;
-}
-
-void
 Request::setStatusCode(const std::string& status_code)
 {
     this->_status_code = status_code;
@@ -175,12 +160,7 @@ Request::setReqInfo(const ReqInfo& info)
 void
 Request::updateReqInfo()
 {
-    // 현재 이 Request 객체가 ReqInfo의 무엇에 해당하는지, 확인하여 업데이트한다.
-    //1. 만약에 메소드를 검사해서, 파싱된게 없다면, ReqInfo::READY
-    //2. 만약에 메소드를 검사해서, body 응답할게 없다면, ReqInfo::COMPLETE
-    //3. 헤더를 검사해서 CHUNKED body를 읽어야하면, ReqInfo::CHUNKED_BODY
-    //4. 헤더를 검사해서 Nomal body를 읽어야하면, ReqInfo::NORMAL_BODY
-    if (this->getMethod() == "" || this->getUri() == "" || this->getVersion() == "")
+    if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
         setReqInfo(ReqInfo::READY);
     else if (this->isBodyUnnecessary())
         setReqInfo(ReqInfo::COMPLETE);
@@ -190,7 +170,72 @@ Request::updateReqInfo()
         setReqInfo(ReqInfo::CHUNKED_BODY);
 }
 
-void
+bool
+Request::isBodyUnnecessary() const
+{
+    std::string method = this->getMethod();
+    if (method.compare("PUT") || method.compare("POST"))
+        return (false);
+    return (true);
+}
+
+bool
+Request::isNormalBody() const
+{
+    if (this->getReqInfo() == ReqInfo::COMPLETE)
+        return (false);
+
+    std::map<std::string, std::string> headers = this->getHeaders();
+    location_info::iterator it;
+    it = headers.find("Transfer-Encoding");
+    if (it != headers.end() && (it->second.find("chunked") != std::string::npos))
+        return (false);
+    return (true);
+}
+
+bool
+Request::isChunkedBody() const
+{
+    return ((this->getReqInfo() == ReqInfo::COMPLETE) ? false : !isNormalBody());
+}
+
+bool
+Request::parseRequestWithoutBody(std::string& req_message)
+{
+    std::string line;
+
+    if (ft::substr(line, req_message, "\r\n") == false)
+    {
+        this->setStatusCode("400");
+        return (false);
+    }
+    else
+    {
+        if (parseRequestLine(line) == false)
+        {
+            this->setStatusCode("400");
+            return (false);
+        }
+    }
+
+    if (ft::substr(line, req_message, "\r\n\r\n") == false)
+    {
+        this->setStatusCode("400");
+        return (false);
+    }
+    else
+    {
+        std::cout << "Without Body\n" << line<< std::endl;
+        if (parseHeaders(line) == false)
+        {
+            this->setStatusCode("400");
+            return (false);
+        }
+    }
+    return (true);
+}
+
+bool
 Request::parseRequest(std::string& req_message)
 {
     std::string line;
@@ -294,10 +339,11 @@ Request::parseChunkedBody(std::string &req_message)
 
     while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
     {
+        std::cout << "in parse chunked! " << std::endl << line << std::endl;
         line_len = ft::stoiHex(line);
         if (line_len == 0)
         {
-            this->updateReqInfo(ReqInfo::COMPLETE);
+            // this->updateReqInfo();
             return (true);
         }
         else if (line_len != -1)
@@ -310,7 +356,9 @@ Request::parseChunkedBody(std::string &req_message)
         else
             return (false);
     }
-    this->updateReqInfo(ReqInfo::CHUNKED_BODY);
+    // this->updateReqInfo();
+
+    //TODO: CRLF 못찾았을 때 처리해주기.
     return (true);
 }
 
@@ -318,6 +366,7 @@ bool
 Request::parseBodies(std::string& req_message)
 {
     this->setBodies(req_message);
+    std::cout << "normal body" << std::endl << req_message << std::endl;
     return (true);
 }
 
@@ -328,9 +377,10 @@ Request::clear()
     this->_uri = "";
     this->_version = "";
     this->_protocol = "";
-    this->_transfer_type = "";
     this->_status_code = "";
+    this->_bodies = "";
     this->_info = ReqInfo::READY;
+    std::cout << "clear??? " << std::endl;
 }
 
 /*============================================================================*/

@@ -166,12 +166,8 @@ Server::receiveRequest(int fd)
                     req_message += buf;
                     req.parseRequestWithoutBody(req_message);
                     req.updateReqInfo();
-                    //TODO: isbody naming & 기능
-                    if (!req.isBody() && req.getReqInfo() == ReqInfo::COMPLETE)
-                    {
-                        // req.updateReqInfo(ReqInfo::COMPLETE);
+                    if (req.getReqInfo() == ReqInfo::COMPLETE)
                         server_manager->fdSet(fd, FdSet::WRITE);
-                    }
                 }
             }
             else
@@ -184,21 +180,24 @@ Server::receiveRequest(int fd)
         else if (len == 0)
         {
             this->closeClientSocket(fd);
-
         }
         else
         {
             req.setStatusCode("400");
             Log::closeClient(*this, fd);
-            throw (RecvErrorException());
+            // throw (RecvErrorException());
         }
     }
     else if (req.getReqInfo() == ReqInfo::NORMAL_BODY)
     {
+        //TODO: 쓰레기값 들어옴 같은 fd에 대해 버퍼 클리어해주기.
+
         int content_length;
+        std::map<std::string, std::string> headers;
+        headers = req.getHeaders();
         location_info::iterator it;
-        it = req.getHeaders().find("Content-Length");
-        if (it == req.getHeaders().end)
+        it = headers.find("Content-Length");
+        if (it == req.getHeaders().end())
             throw "";
             // throw (NoContentLengthException());
         else
@@ -212,6 +211,8 @@ Server::receiveRequest(int fd)
 
         //TODO: 동적할당 고려해보기
         char body_buf[size + 1];
+        ft::memset(reinterpret_cast<void *>(body_buf), 0, size + 1);
+
 
         if ((bytes = recv(fd, body_buf, size, 0)) < 0)
         {
@@ -226,12 +227,13 @@ Server::receiveRequest(int fd)
         {
             req_message += body_buf;
             req.parseBodies(req_message);
-            req.updateReqInfo(ReqInfo::COMPLETE);
+            req.updateReqInfo();
             server_manager->fdSet(fd, FdSet::WRITE);
         }
     }
     else if (req.getReqInfo() == ReqInfo::CHUNKED_BODY)
     {
+        std::cout << "hello in chunked" << std::endl;
         if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) < 0)
         {
             req.setStatusCode("400");
@@ -249,7 +251,17 @@ Server::receiveRequest(int fd)
             }
         }
     }
+    else if (req.getReqInfo() == ReqInfo::COMPLETE)
+    {
+        std::string method = req.getMethod();
+        if (!(method.compare("PUT") || method.compare("POST")))
+        {
+            // recv(); 버퍼를 비우는 용도로~
+        }
+    }
 
+
+    std::cout << "=============circle closed===========" << std::endl;
 
     // if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     // {
@@ -287,7 +299,6 @@ Server::receiveRequest(int fd)
     //     this->_server_manager->updateFdMax(fd);
     //     Log::closeClient(*this, fd);
     // }
-    return (req);
 }
 
 std::string
@@ -435,7 +446,7 @@ Server::run(int fd)
             try
             {
                 // isResource, isCGIPipe, isClient
-                if (this->isStaticResource(fd))
+                if (this->isCGIPipe(fd))
                 {
                     // char test_buf[4096];
                     // ft::memset(static_cast<void *>(test_buf), 0, sizeof(test_buf));
@@ -448,7 +459,7 @@ Server::run(int fd)
                     // this->_server_manager->updateFdMax(fd);
                     // this->_server_manager->fdClr(fd, FdSet::READ);
                 }
-                else if (this->isCGIPipe(fd))
+                else if (this->isStaticResource(fd))
                 {
                 }
                 else if (this->isClientSocket(fd))
@@ -475,11 +486,8 @@ Server::run(int fd)
             }
             catch(const std::exception& e)
             {
-                this->_server_manager->fdClr(fd, FdSet::READ);
-                if ((ret = close(fd)) < 0)
-                    close(fd);
-                this->_server_manager->setClosedFdOnFdTable(fd);
-                this->_server_manager->updateFdMax(fd);
+                // this->_server_manager->fdClr(fd, FdSet::READ);
+                this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
             }
  
@@ -498,6 +506,7 @@ Server::closeClientSocket(int fd)
         return (false);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
+    this->_requests[fd].clear();
     Log::closeClient(*this, fd);
     return (true);
 }
