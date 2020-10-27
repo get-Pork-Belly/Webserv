@@ -173,6 +173,24 @@ Request::setReqInfo(const ReqInfo& info)
 /*============================================================================*/
 
 void
+Request::updateReqInfo()
+{
+    // 현재 이 Request 객체가 ReqInfo의 무엇에 해당하는지, 확인하여 업데이트한다.
+    //1. 만약에 메소드를 검사해서, 파싱된게 없다면, ReqInfo::READY
+    //2. 만약에 메소드를 검사해서, body 응답할게 없다면, ReqInfo::COMPLETE
+    //3. 헤더를 검사해서 CHUNKED body를 읽어야하면, ReqInfo::CHUNKED_BODY
+    //4. 헤더를 검사해서 Nomal body를 읽어야하면, ReqInfo::NORMAL_BODY
+    if (this->getMethod() == "" || this->getUri() == "" || this->getVersion() == "")
+        setReqInfo(ReqInfo::READY);
+    else if (this->isBodyUnnecessary())
+        setReqInfo(ReqInfo::COMPLETE);
+    else if (this->isNormalBody())
+        setReqInfo(ReqInfo::NORMAL_BODY);
+    else if (this->isChunkedBody())
+        setReqInfo(ReqInfo::CHUNKED_BODY);
+}
+
+void
 Request::parseRequest(std::string& req_message)
 {
     std::string line;
@@ -274,28 +292,25 @@ Request::parseChunkedBody(std::string &req_message)
     int line_len;
     std::string line;
 
-    //TODO: 라인에서 \r\n을 찾지 못하면 true로 종료됨. 이후 valid check 시 상태코드 업데이트하게끔 수정요망.
     while (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
     {
         line_len = ft::stoiHex(line);
         if (line_len == 0)
+        {
+            this->updateReqInfo(ReqInfo::COMPLETE);
             return (true);
+        }
         else if (line_len != -1)
         {
             if (ft::substr(line, req_message, "\r\n") == true && !req_message.empty())
                 this->_bodies += line.substr(0, line_len) + "\r\n";
             else
-            {
-                this->setStatusCode("400");
                 return (false);
-            }
         }
         else
-        {
-            this->setStatusCode("400");
             return (false);
-        }
     }
+    this->updateReqInfo(ReqInfo::CHUNKED_BODY);
     return (true);
 }
 

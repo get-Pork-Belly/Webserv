@@ -163,10 +163,15 @@ Server::receiveRequest(int fd)
                 }
                 else
                 {
-                    req.parseRequestWithoutBody(std::string(buf));
+                    req_message += buf;
+                    req.parseRequestWithoutBody(req_message);
                     req.updateReqInfo();
-                    if (req.getReqInfo() == ReqInfo::COMPLETE)
+                    //TODO: isbody naming & 기능
+                    if (!req.isBody() && req.getReqInfo() == ReqInfo::COMPLETE)
+                    {
+                        // req.updateReqInfo(ReqInfo::COMPLETE);
                         server_manager->fdSet(fd, FdSet::WRITE);
+                    }
                 }
             }
             else
@@ -177,7 +182,10 @@ Server::receiveRequest(int fd)
             }
         }
         else if (len == 0)
+        {
             this->closeClientSocket(fd);
+
+        }
         else
         {
             req.setStatusCode("400");
@@ -187,54 +195,98 @@ Server::receiveRequest(int fd)
     }
     else if (req.getReqInfo() == ReqInfo::NORMAL_BODY)
     {
-        if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
+        int content_length;
+        location_info::iterator it;
+        it = req.getHeaders().find("Content-Length");
+        if (it == req.getHeaders().end)
+            throw "";
+            // throw (NoContentLengthException());
+        else
+            content_length = std::stoi(it->second);
+
+        const int size = (BUFFER_SIZE < content_length) ? content_length : BUFFER_SIZE;
+
+        //TODO: 만약 일정 크기 이상의 바디가 들어오면 청크드로 다시 보내라는 등 메세지 띄워도 좋을듯
+        if (size > 50000)
+            throw "";
+
+        //TODO: 동적할당 고려해보기
+        char body_buf[size + 1];
+
+        if ((bytes = recv(fd, body_buf, size, 0)) < 0)
         {
-            
+             req.setStatusCode("400");
+             // throw (SocketReadException());
+        }
+        else if (bytes == 0)
+        {
+            this->closeClientSocket(fd);
+        }
+        else
+        {
+            req_message += body_buf;
+            req.parseBodies(req_message);
+            req.updateReqInfo(ReqInfo::COMPLETE);
+            server_manager->fdSet(fd, FdSet::WRITE);
         }
     }
-    else if (req.getRequestInfo() == ReqInfo::CHUNKED_BODY)
+    else if (req.getReqInfo() == ReqInfo::CHUNKED_BODY)
     {
-    }
-
-
-    if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
-    {
-        if (header_end_pos = std::string(buf).find("\r\n\r\n") != std::string::npos)
-        {
-            req.setHeaderEndPos(header_end_pos);
-        }
-
-        if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
+        if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) < 0)
         {
             req.setStatusCode("400");
-            return (req);
+            throw "";
         }
-        buf[bytes] = 0;
-        req_message += buf;
-        server_manager->fdSet(fd, FdSet::WRITE);
-        req.parseRequest(req_message);
+        else
+        {
+            req_message += buf;
+            if (req.parseChunkedBody(req_message)) //&& req.getReqInfo() == ReqInfo::COMPLETE)
+                server_manager->fdSet(fd, FdSet::WRITE);
+            else
+            {
+                req.setStatusCode("400");
+                throw "";
+            }
+        }
     }
-    else if (len == 0)
-    {
-        std::cout<<"len: 0"<<std::endl;
-        server_manager->fdClr(fd, FdSet::READ);
-        close(fd);
-        this->_server_manager->setClosedFdOnFdTable(fd);
-        this->_server_manager->updateFdMax(fd);
-        Log::closeClient(*this, fd);
-    }
-    else
-    {
-        std::cout<<"len: -1"<<std::endl;
-        req.setStatusCode("400");
-        server_manager->fdClr(fd, FdSet::READ);
-        close(fd);
-        this->_server_manager->setClosedFdOnFdTable(fd);
-        this->_server_manager->updateFdMax(fd);
-        Log::closeClient(*this, fd);
-    }
-    // if (bytes >= 0)
+
+
+    // if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
+    // {
+    //     if (header_end_pos = std::string(buf).find("\r\n\r\n") != std::string::npos)
+    //     {
+    //         req.setHeaderEndPos(header_end_pos);
+    //     }
+
+    //     if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
+    //     {
+    //         req.setStatusCode("400");
+    //         return (req);
+    //     }
+    //     buf[bytes] = 0;
+    //     req_message += buf;
+    //     server_manager->fdSet(fd, FdSet::WRITE);
     //     req.parseRequest(req_message);
+    // }
+    // else if (len == 0)
+    // {
+    //     std::cout<<"len: 0"<<std::endl;
+    //     server_manager->fdClr(fd, FdSet::READ);
+    //     close(fd);
+    //     this->_server_manager->setClosedFdOnFdTable(fd);
+    //     this->_server_manager->updateFdMax(fd);
+    //     Log::closeClient(*this, fd);
+    // }
+    // else
+    // {
+    //     std::cout<<"len: -1"<<std::endl;
+    //     req.setStatusCode("400");
+    //     server_manager->fdClr(fd, FdSet::READ);
+    //     close(fd);
+    //     this->_server_manager->setClosedFdOnFdTable(fd);
+    //     this->_server_manager->updateFdMax(fd);
+    //     Log::closeClient(*this, fd);
+    // }
     return (req);
 }
 
@@ -424,7 +476,8 @@ Server::run(int fd)
             catch(const std::exception& e)
             {
                 this->_server_manager->fdClr(fd, FdSet::READ);
-                close(fd);
+                if ((ret = close(fd)) < 0)
+                    close(fd);
                 this->_server_manager->setClosedFdOnFdTable(fd);
                 this->_server_manager->updateFdMax(fd);
                 std::cerr << e.what() << '\n';
@@ -439,10 +492,12 @@ Server::closeClientSocket(int fd)
 {
     int ret;
     Log::closeClient(*this, fd);
+
+    this->_server_manager->fdClr(fd, FdSet::READ);
     if ((ret = close(fd)) < 0)
         return (false);
-    this->_server_manager->fdClr(fd, FdSet::READ);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
+    Log::closeClient(*this, fd);
     return (true);
 }

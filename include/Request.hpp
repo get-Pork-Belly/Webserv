@@ -61,12 +61,14 @@ public:
 
     void clear();
 
+    void updateReqInfo();
+
     // void initMembers(std::string req_message);
 
     /* parser */
-    bool parseRequestWithoutBody(std::string& buf);
+    void parseRequestWithoutBody(std::string& buf);
 
-    bool parseRequest(std::string& req_message);
+    void parseRequest(std::string& req_message);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
     bool parseBodies(std::string& req_message);
