@@ -413,16 +413,9 @@ Server::run(int fd)
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
                 }
-                std::cout << this->_requests[fd] << std::endl;
             }
-            //TODO: Exception Class 만들고 ERROR ReqInfo 세팅하기.
             catch(const Request::RequestFormatException& e)
             {
-                std::cout << "========================= In RequestFormatException ========================" << std::endl;
-                std::cout << e.s_what() << std::endl;
-                
-                std::cout << "Before: " << static_cast<int>(this->_requests[fd].getReqInfo()) << std::endl;
-                
                 if (this->_requests[fd].isContentLeftInBuffer())
                     this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
                 else
@@ -430,9 +423,6 @@ Server::run(int fd)
                     this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
-
-                std::cout << "After: " << static_cast<int>(this->_requests[fd].getReqInfo()) << std::endl;
-
             }
             catch(const ReadErrorException& e)
             {
@@ -441,13 +431,11 @@ Server::run(int fd)
             }
             catch(const std::exception& e)
             {
-                // this->_server_manager->fdClr(fd, FdSet::READ);
                 this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
             }
             catch(const char* e)
             {
-                // this->_server_manager->fdClr(fd, FdSet::READ);
                 this->closeClientSocket(fd);
                 std::cerr << e << '\n';
             }
