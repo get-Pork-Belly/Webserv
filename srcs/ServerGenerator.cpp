@@ -75,8 +75,11 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     }
 }
 
+// void
+// ServerGenerator::defaultRoute(std::map<std::string, location_info>& locations,
+//                             server_info& server_config)
 void
-ServerGenerator::defaultRoute(std::map<std::string, location_info>& locations,
+ServerGenerator::setDefaultRouteToServer(std::map<std::string, location_info>& locations,
                             server_info& server_config)
 {
     location_info info;
@@ -114,7 +117,7 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             it++;
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
-            this->defaultRoute(locations, server_config);
+            this->setDefaultRouteToServer(locations, server_config);
             // testServerConfig(server_config);
             // testLocationConfig(locations);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
