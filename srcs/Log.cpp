@@ -114,10 +114,18 @@ Log::getRequest(Server& server, int client_fd)
     std::string uri = server.getRequest(client_fd).getUri();
     std::string version = server.getRequest(client_fd).getVersion();
 
-    line = ("SERVER(" + std::to_string(server_fd) +
-            ") GOT REQUEST FROM: CLIENT(" +
-            std::to_string(client_fd) + ")" + " \"" + method + " " +
-            uri + " "+ version + "\"\n");
+    if (!method.empty() && !uri.empty() && !version.empty())
+    {
+        line = ("SERVER(" + std::to_string(server_fd) +
+                ") GOT REQUEST FROM: CLIENT(" +
+                std::to_string(client_fd) + ")" + " \"" + method + " " +
+                uri + " "+ version + "\"\n");
+    }
+    else
+    {
+        line = ("SERVER(" + std::to_string(server_fd) + ") READ CLIENT(" +
+        std::to_string(client_fd) + ") BUFFER BUT EMPTY NOW\n"); 
+    }
     Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
