@@ -32,6 +32,7 @@ namespace ft
     int stoiHex(const std::string& str);
 
     std::string getCurrentDateTime();
+    size_t strlen(const char* str);
 }
 
 #endif

@@ -48,7 +48,7 @@ Log::timeLog(int fd)
     ft::memset(buf, 0, sizeof(buf));
     strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
     strftime(buf, sizeof(buf), "[%d/%b/%Y/%X %Z] ", &time);
-    write(fd, static_cast<void *>(buf), sizeof(buf));
+    write(fd, static_cast<void *>(buf), ft::strlen(buf));
 }
 
 void
@@ -61,8 +61,8 @@ Log::serverIsCreated(Server& server)
     int server_fd = server.getServerSocket();
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
-    line = ("SERVER(\033[1;31;40m" + std::to_string(server_fd) +
-            "\033[0m) HAS CREATED\n");
+    line = ("SERVER(" + std::to_string(server_fd) +
+            ") HAS CREATED\n");
     Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
@@ -77,9 +77,9 @@ Log::newClient(Server& server, int client_fd)
     int server_fd = server.getServerSocket();
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
-    line = ("SERVER(\033[1;31;40m" + std::to_string(server_fd) +
-            "\033[0m) HAS NEW CLIENT: \033[1;31;40m" +
-            std::to_string(client_fd) + "\033[0m\n");
+    line = ("SERVER(" + std::to_string(server_fd) +
+            ") HAS NEW CLIENT: " +
+            std::to_string(client_fd) + "\n");
     Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
@@ -94,9 +94,9 @@ Log::closeClient(Server& server, int client_fd)
     int server_fd = server.getServerSocket();
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
-    line = ("SERVER(\033[1;31;40m" + std::to_string(server_fd) +
-            "\033[0m) BYBY CLIENT(\033[1;31;40m" + std::to_string(client_fd)
-           + "\033[0m)\n");
+    line = ("SERVER(" + std::to_string(server_fd) +
+            ") BYBY CLIENT(" + std::to_string(client_fd)
+           + ")\n");
     Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
@@ -114,9 +114,9 @@ Log::getRequest(Server& server, int client_fd)
     std::string uri = server.getRequest(client_fd).getUri();
     std::string version = server.getRequest(client_fd).getVersion();
 
-    line = ("SERVER(\033[1;31;40m" + std::to_string(server_fd) +
-            "\033[0m) GOT REQUEST FROM: CLIENT(\033[1;31;40m" +
-            std::to_string(client_fd) + "\033[0m)" + " \"" + method + " " +
+    line = ("SERVER(" + std::to_string(server_fd) +
+            ") GOT REQUEST FROM: CLIENT(" +
+            std::to_string(client_fd) + ")" + " \"" + method + " " +
             uri + " "+ version + "\"\n");
     Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
