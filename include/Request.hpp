@@ -16,7 +16,7 @@ private:
     std::string _bodies;
     std::string _status_code;
     ReqInfo _info;
-    size_t _header_end_pos;
+    bool _is_left_buffer;
 
 public:
     /* Constructor */
@@ -37,7 +37,7 @@ public:
     std::string getTransferType();
     std::string getStatusCode();
     const ReqInfo& getReqInfo() const;
-    const size_t& getHeaderEndPos() const;
+    bool getIsLeftBuffer() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -48,8 +48,8 @@ public:
     void setBodies(const std::string& body);
     void setTransferType(const std::string& transfer_type);
     void setStatusCode(const std::string& code);
-    void setHeaderEndPos(const size_t& header_end_pos);
     void setReqInfo(const ReqInfo& info);
+    void setIsLeftBuffer(const bool& is_left_buffer);
 
     /* Util */
 
@@ -61,6 +61,9 @@ public:
     bool isBodyUnnecessary() const;
     bool isNormalBody() const;
     bool isChunkedBody() const;
+    bool isContentLeftInBuffer() const;
+
+    int getContentLength();
 
     // void initMembers(std::string req_message);
 
@@ -68,7 +71,7 @@ public:
     void parseRequestWithoutBody(std::string& buf);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
-    void parseNormalBodies(std::string& req_message);
+    void parseNormalBodies(char* buf);
     void parseChunkedBody(std::string &req_message);
 
     /* valid check */

@@ -58,7 +58,7 @@ public:
     const std::map<std::string, std::string> getServerConfig();
     const std::map<std::string, location_info>& getLocationConfig();
     int getServerSocket() const;
-    Request getRequest(int fd);
+    Request& getRequest(int fd);
     /* Setter */
     void setServerSocket();
     /* Exception */
@@ -74,14 +74,20 @@ public:
     void init();
     void run(int fd);
     void receiveRequest(int fd);
+    void receiveRequestWithoutBody(int fd);
+    void readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos);
+    void receiveRequestNormalBody(int fd);
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
 
 public:
-    class ParseRequestException : public std::exception
+    class PayloadTooLargeException : public std::exception
     {
+    private:
+        Request& _request;
     public:
+        PayloadTooLargeException(Request& request);
         virtual const char* what() const throw();
     };
 

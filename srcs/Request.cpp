@@ -90,10 +90,10 @@ Request::getReqInfo() const
     return (this->_info);
 }
 
-const size_t&
-Request::getHeaderEndPos() const
+bool
+Request::getIsLeftBuffer() const
 {
-    return (this->_header_end_pos);
+    return (this->_is_left_buffer);
 }
 
 /*============================================================================*/
@@ -118,7 +118,6 @@ Request::setVersion(const std::string& version)
     this->_version = version;
 }
 
-//TODO: insert를 하기 때문에 중복된 헤더가 키로 들어올 때 무시된다. 만약에 처음 삽입된 밸류에 문제가 있으면 그것이 그냥 작동하는 것..
 void
 Request::setHeaders(const std::string& key, const std::string& value)
 {
@@ -147,6 +146,12 @@ void
 Request::setReqInfo(const ReqInfo& info)
 {
     this->_info = info;
+}
+
+void
+Request::setIsLeftBuffer(const bool& is_left_buffer)
+{
+    this->_is_left_buffer = is_left_buffer;
 }
 
 /*============================================================================*/
@@ -213,6 +218,14 @@ Request::isChunkedBody() const
 {
     return ((this->getReqInfo() == ReqInfo::COMPLETE) ? false : !isNormalBody());
 }
+
+
+bool
+Request::isContentLeftInBuffer() const
+{
+    return (this->getIsLeftBuffer());
+}
+
 
 bool
 Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& ret)
@@ -318,9 +331,10 @@ Request::parseChunkedBody(std::string &req_message)
 }
 
 void
-Request::parseNormalBodies(std::string& req_message)
+Request::parseNormalBodies(char* buf)
 {
-    this->setBodies(req_message);
+    std::string normal_body(buf);
+    this->setBodies(normal_body);
 }
 
 void
@@ -336,11 +350,19 @@ Request::clear()
     this->setReqInfo(ReqInfo::READY);
 }
 
+int
+Request::getContentLength()
+{
+    location_info::iterator it = this->_headers.find("Content-Length");
+    if (it == this->_headers.end())
+        throw "Invalid NORMAL_BODY";
+        // throw (NoContentLengthException());
+    return (std::stoi(it->second));
+}
+
 /*============================================================================*/
 /*****************************  Valid Check  **********************************/
 /*============================================================================*/
-
-//TODO: return false 일 경우 this->setStatusCode("PROPER STATUS_CODE"); 처리를 해주어야 합니다.
 
 bool
 Request::isValidLine(std::vector<std::string>& request_line)
