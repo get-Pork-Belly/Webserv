@@ -5,9 +5,6 @@
 # include "types.hpp"
 # include <map>
 
-//TODO: 테스트용
-# include <iostream>
-
 class Request
 {
 private:
@@ -54,12 +51,13 @@ public:
     void setHeaderEndPos(const size_t& header_end_pos);
     void setReqInfo(const ReqInfo& info);
 
-    /* Exception */
-
     /* Util */
 
     void clear();
+
     void updateReqInfo();
+    bool updateStatusCodeAndReturn(const std::string& status_code, const bool& ret);
+
     bool isBodyUnnecessary() const;
     bool isNormalBody() const;
     bool isChunkedBody() const;
@@ -67,13 +65,11 @@ public:
     // void initMembers(std::string req_message);
 
     /* parser */
-    bool parseRequestWithoutBody(std::string& buf);
-
-    bool parseRequest(std::string& req_message);
+    void parseRequestWithoutBody(std::string& buf);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
-    bool parseBodies(std::string& req_message);
-    bool parseChunkedBody(std::string &req_message);
+    void parseNormalBodies(std::string& req_message);
+    void parseChunkedBody(std::string &req_message);
 
     /* valid check */
     bool isValidLine(std::vector<std::string>& request_line);
@@ -85,8 +81,20 @@ public:
     bool isValidHeaderFields(std::string& key);
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
-
     bool isValidBodies();
+
+    /* Exception */
+public:
+    class RequestFormatException : public std::exception
+    {
+    private:
+        std::string _msg;
+        Request& _req;
+    public:
+        RequestFormatException(Request& req, const std::string& status_code);
+        RequestFormatException(Request& req);
+        virtual const char* what() const throw();
+    };
 };
 
 #endif

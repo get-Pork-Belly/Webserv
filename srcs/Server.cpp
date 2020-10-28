@@ -151,6 +151,7 @@ std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
     {
         if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
         {
+            std::cout << "len:" << len <<std::endl;
             if ((header_end_pos = std::string(buf).find("\r\n\r\n")) != std::string::npos)
             {
                 if ((bytes = read(fd, buf, header_end_pos + 4)) < 0)
@@ -173,7 +174,7 @@ std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
                     if (req.getReqInfo() == ReqInfo::COMPLETE)
                     {
                         server_manager->fdSet(fd, FdSet::WRITE);
-                        this->_server_manager->fdClr(fd, FdSet::READ);
+                        // this->_server_manager->fdClr(fd, FdSet::READ);
                     }
                 }
             }
@@ -186,11 +187,13 @@ std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
         }
         else if (len == 0)
         {
+            std::cout << "==========================is in???" << std::endl;
             this->closeClientSocket(fd);
         }
         else
         {
             req.setStatusCode("400");
+            throw "No more read in READY";
             Log::closeClient(*this, fd);
             // throw (RecvErrorException());
         }
@@ -205,7 +208,7 @@ std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
         location_info::iterator it;
         it = headers.find("Content-Length");
         if (it == req.getHeaders().end())
-            throw "";
+            throw "Invalid NORMAL_BODY";
             // throw (NoContentLengthException());
         else
             content_length = std::stoi(it->second);
@@ -214,7 +217,7 @@ std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
 
         //TODO: 만약 일정 크기 이상의 바디가 들어오면 청크드로 다시 보내라는 등 메세지 띄워도 좋을듯
         if (size > 50000)
-            throw "";
+            throw "Too large body with NORMAL_BODY";
 
         //TODO: 동적할당 고려해보기
         char body_buf[size + 1];
@@ -224,7 +227,7 @@ std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
         if ((bytes = recv(fd, body_buf, size, 0)) < 0)
         {
              req.setStatusCode("400");
-             throw "";
+             throw "No more read in NORMAL_BODY";
              // throw (SocketReadException());
         }
         else if (bytes == 0)
@@ -232,7 +235,7 @@ std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
         else
         {
             req_message += body_buf;
-            req.parseBodies(req_message);
+            req.parseNormalBodies(req_message);
             this->_server_manager->fdSet(fd, FdSet::WRITE);
         }
     }
@@ -241,32 +244,28 @@ std::cout << "TYPE" << static_cast<int>(req.getReqInfo()) << std::endl;
         if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) < 0)
         {
             req.setStatusCode("400");
-            throw "";
+            throw "No more read in CHUNKED";
         }
         else if (bytes == 0)
             this->closeClientSocket(fd);
         else
         {
             req_message += buf;
-            if (req.parseChunkedBody(req_message) && req.getReqInfo() == ReqInfo::COMPLETE)
+            req.parseChunkedBody(req_message);
+            if (req.getReqInfo() == ReqInfo::COMPLETE)
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
-            else
-            {
-                req.setStatusCode("400");
-                throw "";
-            }
         }
     }
-    else if (req.getReqInfo() == ReqInfo::COMPLETE)
-    {
-        std::cout << "In Complete" << std::endl;
-        std::string method = req.getMethod();
-        this->_server_manager->fdClr(fd, FdSet::READ);
-        // if (!(method.compare("PUT") || method.compare("POST")))
-        // {
-        //     // recv(); 버퍼를 비우는 용도로~
-        // }
-    }
+    // else if (req.getReqInfo() == ReqInfo::COMPLETE)
+    // {
+    //     std::cout << "In Complete" << std::endl;
+    //     std::string method = req.getMethod();
+    //     this->_server_manager->fdClr(fd, FdSet::READ);
+    //     // if (!(method.compare("PUT") || method.compare("POST")))
+    //     // {
+    //     //     // recv(); 버퍼를 비우는 용도로~
+    //     // }
+    // }
 }
 
 std::string
@@ -407,6 +406,7 @@ Server::run(int fd)
                 if (!(sendResponse(response_message, fd)))
                     std::cerr<<"Error: sendResponse"<<std::endl;
                 this->_server_manager->fdClr(fd, FdSet::WRITE);
+                this->_requests[fd].clear();
             // }
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
@@ -452,12 +452,24 @@ Server::run(int fd)
                     Log::getRequest(*this, fd);
                 }
             }
+            catch(const Request::RequestFormatException& e)
+            {
+                this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+            }
             catch(const std::exception& e)
             {
                 // this->_server_manager->fdClr(fd, FdSet::READ);
                 this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
             }
+            catch(const char* e)
+            {
+                // this->_server_manager->fdClr(fd, FdSet::READ);
+                this->closeClientSocket(fd);
+                std::cerr << e << '\n';
+            }
+ 
  
         }
     }
