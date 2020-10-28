@@ -92,6 +92,11 @@ public:
         PayloadTooLargeException(Request& request);
         virtual const char* what() const throw();
     };
+    class ReadErrorException : public std::exception
+    {
+    public:
+        virtual const char* what() const throw();
+    };
 
 // public:
 //     class ResponseException : public std::exception

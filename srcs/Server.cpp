@@ -91,7 +91,13 @@ Server::PayloadTooLargeException::PayloadTooLargeException(Request& request)
 const char*
 Server::PayloadTooLargeException::what() const throw()
 {
-    return ("413 Payload Too Large");
+    return ("[CODE 413] Payload Too Large");
+}
+
+const char*
+Server::ReadErrorException::what() const throw()
+{
+    return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
 /*============================================================================*/
@@ -141,27 +147,16 @@ Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
     int bytes;
     Request& req = this->_requests[fd];
 
-    if ((bytes = read(fd, buf, header_end_pos + 4)) < 0)
-    {
-        req.setStatusCode("400");
-        throw "Empty buffer or closed connection";
-        // throw (SocketReadException());
-    }
-    else if (bytes == 0)
-    {
-        req.setStatusCode("502"); // "Bad GateWay"
-        throw "Client closed connection";
-        // throw (BadGateWayException());
-    }
-    else
+    if ((bytes = read(fd, buf, header_end_pos + 4)) > 0)
     {
         req.parseRequestWithoutBody(buf);
         if (req.getReqInfo() == ReqInfo::COMPLETE)
-        {
             this->_server_manager->fdSet(fd, FdSet::WRITE);
-            // this->_server_manager->fdClr(fd, FdSet::READ);
-        }
     }
+    else if (bytes == 0)
+        throw (Request::RequestFormatException(req, "400"));
+    else
+        throw (ReadErrorException());
 }
 
 void
@@ -183,23 +178,12 @@ Server::receiveRequestWithoutBody(int fd)
             this->readBufferUntilHeaders(fd, buf, header_end_pos);
         }
         else
-        {
-            // throw (RequestFormatException());
-            req.setStatusCode("400");
-            return ;
-        }
+            throw (Request::RequestFormatException(req, "400"));
     }
     else if (bytes == 0)
-    {
         this->closeClientSocket(fd);
-    }
     else
-    {
-        req.setStatusCode("400");
-        Log::closeClient(*this, fd);
-        throw "No more read in READY";
-        // throw (RecvErrorException());
-    }
+        throw (ReadErrorException());
 }
 
 void
@@ -223,11 +207,7 @@ Server::receiveRequestNormalBody(int fd)
     else if (bytes == 0)
         this->closeClientSocket(fd);
     else
-    {
-        req.setStatusCode("400");
-        throw "No more read in NORMAL_BODY";
-        // this->_server_manager->fdSet(fd, FdSet::WRITE);
-    }
+        throw (ReadErrorException());
 }
 
 void
@@ -247,7 +227,7 @@ Server::clearRequestBuffer(int fd)
     else if (bytes == 0)
         this->closeClientSocket(fd);
     else
-        throw ("Error when clear buffer or read empty buffer");
+        throw (ReadErrorException());
 }
 
 void
@@ -266,10 +246,7 @@ Server::receiveRequestChunkedBody(int fd)
     else if (bytes == 0)
         this->closeClientSocket(fd);
     else
-    {
-        req.setStatusCode("400");
-        throw "No more read in CHUNKED";
-    }
+        throw (ReadErrorException());
 }
 
 void
@@ -436,6 +413,7 @@ Server::run(int fd)
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
                 }
+                std::cout << this->_requests[fd] << std::endl;
             }
             //TODO: Exception Class 만들고 ERROR ReqInfo 세팅하기.
             catch(const Request::RequestFormatException& e)
@@ -449,6 +427,11 @@ Server::run(int fd)
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
             }
+            catch(const ReadErrorException& e)
+            {
+                this->closeClientSocket(fd);
+                std::cerr << e.what() << '\n';
+            }
             catch(const std::exception& e)
             {
                 // this->_server_manager->fdClr(fd, FdSet::READ);
@@ -461,8 +444,6 @@ Server::run(int fd)
                 this->closeClientSocket(fd);
                 std::cerr << e << '\n';
             }
- 
- 
         }
     }
 }
