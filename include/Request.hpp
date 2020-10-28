@@ -19,7 +19,7 @@ private:
     std::string _bodies;
     std::string _status_code;
     ReqInfo _info;
-    bool _is_left_buffer;
+    bool _is_buffer_left;
 
 public:
     /* Constructor */
@@ -40,7 +40,7 @@ public:
     std::string getTransferType();
     std::string getStatusCode();
     const ReqInfo& getReqInfo() const;
-    bool getIsLeftBuffer() const;
+    bool getIsBufferLeft() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -52,7 +52,7 @@ public:
     void setTransferType(const std::string& transfer_type);
     void setStatusCode(const std::string& code);
     void setReqInfo(const ReqInfo& info);
-    void setIsLeftBuffer(const bool& is_left_buffer);
+    void setIsBufferLeft(const bool& is_left_buffer);
 
     /* Util */
 
@@ -99,7 +99,7 @@ public:
     public:
         RequestFormatException(Request& req, const std::string& status_code);
         RequestFormatException(Request& req);
-        virtual const char* what() const throw();
+        virtual std::string s_what() const throw();
     };
 };
 

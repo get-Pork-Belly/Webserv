@@ -172,9 +172,9 @@ Server::receiveRequestWithoutBody(int fd)
         if ((header_end_pos = std::string(buf).find("\r\n\r\n")) != std::string::npos)
         {
             if (static_cast<size_t>(bytes) == header_end_pos + 4)
-                req.setIsLeftBuffer(false);
+                req.setIsBufferLeft(false);
             else
-                req.setIsLeftBuffer(true);
+                req.setIsBufferLeft(true);
             this->readBufferUntilHeaders(fd, buf, header_end_pos);
         }
         else
@@ -258,11 +258,11 @@ Server::receiveRequest(int fd)
     {
     case ReqInfo::READY:
         this->receiveRequestWithoutBody(fd);
-        break;
+        break ;
 
     case ReqInfo::NORMAL_BODY:
         this->receiveRequestNormalBody(fd);
-        break;
+        break ;
 
     case ReqInfo::CHUNKED_BODY:
         this->receiveRequestChunkedBody(fd);
@@ -418,7 +418,11 @@ Server::run(int fd)
             //TODO: Exception Class 만들고 ERROR ReqInfo 세팅하기.
             catch(const Request::RequestFormatException& e)
             {
-                std::cout<< "=====================>"<< this->_requests[fd].isContentLeftInBuffer()<< std::endl;
+                std::cout << "========================= In RequestFormatException ========================" << std::endl;
+                std::cout << e.s_what() << std::endl;
+                
+                std::cout << "Before: " << static_cast<int>(this->_requests[fd].getReqInfo()) << std::endl;
+                
                 if (this->_requests[fd].isContentLeftInBuffer())
                     this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
                 else
@@ -426,6 +430,9 @@ Server::run(int fd)
                     this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
+
+                std::cout << "After: " << static_cast<int>(this->_requests[fd].getReqInfo()) << std::endl;
+
             }
             catch(const ReadErrorException& e)
             {

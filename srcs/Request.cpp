@@ -16,7 +16,8 @@ Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _bodies(other._bodies), 
-_status_code(other._status_code), _info(other._info) {}
+_status_code(other._status_code), _info(other._info),
+_is_buffer_left(false) {}
 
 Request&
 Request::operator=(const Request& other)
@@ -29,6 +30,7 @@ Request::operator=(const Request& other)
     this->_bodies = other._bodies;
     this->_status_code = other._status_code;
     this->_info = other._info;
+    this->_is_buffer_left = other._is_buffer_left;
     return (*this);
 }
 
@@ -91,9 +93,9 @@ Request::getReqInfo() const
 }
 
 bool
-Request::getIsLeftBuffer() const
+Request::getIsBufferLeft() const
 {
-    return (this->_is_left_buffer);
+    return (this->_is_buffer_left);
 }
 
 /*============================================================================*/
@@ -149,9 +151,9 @@ Request::setReqInfo(const ReqInfo& info)
 }
 
 void
-Request::setIsLeftBuffer(const bool& is_left_buffer)
+Request::setIsBufferLeft(const bool& is_left_buffer)
 {
-    this->_is_left_buffer = is_left_buffer;
+    this->_is_buffer_left = is_left_buffer;
 }
 
 /*============================================================================*/
@@ -167,10 +169,14 @@ Request::RequestFormatException::RequestFormatException(Request& req, const std:
 Request::RequestFormatException::RequestFormatException(Request& req)
 : _msg("RequestFormatException: Invalid Request Format: "), _req(req) {}
 
-const char*
-Request::RequestFormatException::what() const throw()
+std::string
+Request::RequestFormatException::s_what() const throw()
 {
-    return ((this->_msg + this->_req.getStatusCode()).c_str());
+    std::string tmp;
+    tmp += this->_msg;
+    tmp += this->_req.getStatusCode();
+    std::cout<<"in reqformat except: "<<tmp<<std::endl;
+    return (tmp);
 }
 
 /*============================================================================*/
@@ -239,7 +245,7 @@ Request::isChunkedBody() const
 bool
 Request::isContentLeftInBuffer() const
 {
-    return (this->getIsLeftBuffer());
+    return (this->getIsBufferLeft());
 }
 
 
@@ -367,6 +373,7 @@ Request::clear()
     this->_headers = {{"default", "default"}};
     this->_status_code = "";
     this->_bodies = "";
+    this->_is_buffer_left = false;
     this->setReqInfo(ReqInfo::READY);
 }
 
