@@ -125,7 +125,6 @@ UrlParser::parseUrl(const std::string& url)
         this->setPath("/");
         this->setPaths();
         this->print();
-        return;
     }
     else
     {
@@ -138,13 +137,11 @@ UrlParser::parseUrl(const std::string& url)
 std::string
 UrlParser::findScheme()
 {
-    std::string scheme;
     size_t found = this->_url.find("://", this->_index);
     if (found == std::string::npos)
         return ("");
-    scheme = this->_url.substr(this->_index, found);
-    this->_index += (found + 3);
-    return (scheme);
+    this->setIndex(found + 3);
+    return (this->_url.substr(this->_index, found));
 }
 
 std::string
@@ -163,11 +160,10 @@ UrlParser::findHostAndPort()
     {
         host_port = this->_url.substr(this->_index);
         this->setIndex(found);
-        return (host_port);
+        return host_port;
     }
-    host_port = this->_url.substr(this->_index, found - this->_index);
     this->setIndex(found + 1);
-    return (host_port);
+    return (this->_url.substr(this->_index, found - this->_index));
 }
 
 std::string
