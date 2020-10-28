@@ -75,6 +75,26 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     }
 }
 
+void
+ServerGenerator::setDefaultRouteOfServer(std::map<std::string, location_info>& locations,
+                            server_info& server_config)
+{
+    location_info info;
+
+    if (locations.size() == 0)
+    {
+        this->initLocationConfig(info, server_config);
+        locations["/"] = info;
+    }
+    else
+    {
+        if (locations.find("/") != locations.end())
+            return ;
+        this->initLocationConfig(info, server_config);
+        locations["/"] = info;
+    }
+}
+
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
@@ -83,17 +103,18 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
     
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
-    http_config = parseHttpBlock();
+    http_config = this->parseHttpBlock();
 
     while (it != ite)
     {
         if ( *it == "server {")
         {
             server_info server_config;
-            initServerConfig(server_config, http_config);
+            this->initServerConfig(server_config, http_config);
             it++;
             std::map<std::string, location_info> locations;
-            parseServerBlock(it, server_config, locations);
+            this->parseServerBlock(it, server_config, locations);
+            this->setDefaultRouteOfServer(locations, server_config);
             // testServerConfig(server_config);
             // testLocationConfig(locations);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
@@ -111,7 +132,7 @@ ServerGenerator::parseHttpBlock()
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
 
-    initHttpConfig(http_config);
+    this->initHttpConfig(http_config);
     while (it != ite)
     {
         if (*it == "http {")
@@ -139,14 +160,13 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
 {
     std::vector<std::string>	directives;
 
-    while (it != _configfile_lines.end())
+    while (it != this->_configfile_lines.end())
     {
         directives = ft::split(*it, " ");
         if (directives[0] == "location")
         {
-            location_info location_config = parseLocationBlock(it, server_config);
-            std::string temp = location_config["route"];
-            locations[temp] = location_config;
+            location_info location_config = this->parseLocationBlock(it, server_config);
+            locations[location_config["route"]] = location_config;
             continue ;
         }
         if (directives[0] == "}")
@@ -165,8 +185,8 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
     std::vector<std::string> directives;
     location_info location_config;
 
-    initLocationConfig(location_config, server_config);
-    while (it != _configfile_lines.end())
+    this->initLocationConfig(location_config, server_config);
+    while (it != this->_configfile_lines.end())
     {
         directives = ft::split(*it, " ");
         if (directives[0] == "location")

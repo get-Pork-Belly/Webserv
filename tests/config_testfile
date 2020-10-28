@@ -4,14 +4,6 @@ http {
     server {
         server_name first_server;
         listen       8080;
-        location / {
-            index  index.html index.htm;
-        }
-        location /one/two {
-            root  /user/iwoo;
-            index  html;
-            limit_except PUT
-        }
     }
     server {
         server_name second_server;
