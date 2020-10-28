@@ -12,7 +12,7 @@ int main()
     std::string file = "/path1/path2/file";
 
     UrlParser parser;
-    std::cout << "----------------- Url -------------" << std::endl;
+    std::cout << "----------------- Full Url -------------" << std::endl;
     std::cout << "url: " << url << std::endl;
     parser.parseUrl(url);
     parser.clear();

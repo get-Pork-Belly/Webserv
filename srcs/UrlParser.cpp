@@ -137,11 +137,13 @@ UrlParser::parseUrl(const std::string& url)
 std::string
 UrlParser::findScheme()
 {
+    std::string scheme;
     size_t found = this->_url.find("://", this->_index);
     if (found == std::string::npos)
         return ("");
+    scheme = this->_url.substr(this->_index, found);
     this->setIndex(found + 3);
-    return (this->_url.substr(this->_index, found));
+    return (scheme);
 }
 
 std::string
