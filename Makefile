@@ -6,8 +6,7 @@ RM = rm -rf
 DEBUG = -D DEBUG=1
 STDOUT = -D STDOUT=1
 
-# MAIN_FILES = logger_test Log utils ServerManager ServerGenerator Server Response Request
-MAIN_FILES = logger_test Log utils ServerManager ServerGenerator Server Response Request
+MAIN_FILES = url_parser_test UrlParser  utils
 
 SRCS_PATH = $(MAIN_FILES)
 VPATH := .:srcs:tests
