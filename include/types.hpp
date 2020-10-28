@@ -46,7 +46,7 @@ enum class FdSet
     ALL,
     READ,
     WRITE,
-    EXCEPT, 
+    EXCEPT,
 };
 
 enum class FdType
@@ -56,6 +56,15 @@ enum class FdType
     RESOURCE,
     PIPE,
     CLOSED,
+};
+
+enum class ReqInfo
+{
+    READY,
+    COMPLETE,
+    NORMAL_BODY,
+    CHUNKED_BODY,
+    MUST_CLEAR,
 };
 
 #endif

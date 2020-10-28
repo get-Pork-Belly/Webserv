@@ -15,7 +15,7 @@ Server::Server(ServerManager* server_manager, server_info& server_config, std::m
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(""), _port(""),
 _status_code(0), _request_uri_limit_size(0), _request_header_limit_size(0), 
-_limit_client_body_size(0), _default_error_page(""), 
+_limit_client_body_size(BUFFER_SIZE), _default_error_page(""), 
 _location_config(location_config)
 {
     try
@@ -63,7 +63,7 @@ Server::getLocationConfig()
     return (this->_location_config);
 }
 
-Request
+Request&
 Server::getRequest(int fd)
 {
     return (this->_requests[fd]);
@@ -81,6 +81,24 @@ Server::getRequest(int fd)
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
+
+Server::PayloadTooLargeException::PayloadTooLargeException(Request& request) 
+: _request(request)
+{
+    this->_request.setStatusCode("413");
+}
+
+const char*
+Server::PayloadTooLargeException::what() const throw()
+{
+    return ("[CODE 413] Payload Too Large");
+}
+
+const char*
+Server::ReadErrorException::what() const throw()
+{
+    return ("[CODE 900] Read empty buffer or occured reading error");
+}
 
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
@@ -123,56 +141,140 @@ Server::init()
     this->_server_manager->updateFdMax(this->_server_socket);
 }
 
-Request
-Server::receiveRequest(ServerManager* server_manager, int fd)
+void
+Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
 {
-    Request req;
     int bytes;
-    int len;
-    std::string req_message;
-    char buf[BUFFER_SIZE + 1];
+    Request& req = this->_requests[fd];
 
-    bytes = -42;
-    memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-
-    // TODO: receive의 구조 바꾸기
-    // 처음에는 Header까지만 읽은 다음에 URI, Chunked 등의 미리 알아둬야 할 정보가 있다면 세팅을 하고
-    // 나머지 데이터를 읽는 방향으로 수정하자.
-
-    if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
+    if ((bytes = read(fd, buf, header_end_pos + 4)) > 0)
     {
-        if ((bytes = read(fd, buf, BUFFER_SIZE)) < 0)
-        {
-            req.setStatusCode("400");
-            return (req);
-        }
-        buf[bytes] = 0;
-        req_message += buf;
-        server_manager->fdSet(fd, FdSet::WRITE);
-        req.parseRequest(req_message);
+        req.parseRequestWithoutBody(buf);
+        if (req.getReqInfo() == ReqInfo::COMPLETE)
+            this->_server_manager->fdSet(fd, FdSet::WRITE);
     }
-    else if (len == 0)
-    {
-        std::cout<<"len: 0"<<std::endl;
-        server_manager->fdClr(fd, FdSet::READ);
-        close(fd);
-        this->_server_manager->setClosedFdOnFdTable(fd);
-        this->_server_manager->updateFdMax(fd);
-        Log::closeClient(*this, fd);
-    }
+    else if (bytes == 0)
+        throw (Request::RequestFormatException(req, "400"));
     else
+        throw (ReadErrorException());
+}
+
+void
+Server::receiveRequestWithoutBody(int fd)
+{
+    int bytes;
+    char buf[BUFFER_SIZE + 1];
+    size_t header_end_pos = 0;
+    Request& req = this->_requests[fd];
+
+    if ((bytes = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
-        std::cout<<"len: -1"<<std::endl;
-        req.setStatusCode("400");
-        server_manager->fdClr(fd, FdSet::READ);
-        close(fd);
-        this->_server_manager->setClosedFdOnFdTable(fd);
-        this->_server_manager->updateFdMax(fd);
-        Log::closeClient(*this, fd);
+        if ((header_end_pos = std::string(buf).find("\r\n\r\n")) != std::string::npos)
+        {
+            if (static_cast<size_t>(bytes) == header_end_pos + 4)
+                req.setIsBufferLeft(false);
+            else
+                req.setIsBufferLeft(true);
+            this->readBufferUntilHeaders(fd, buf, header_end_pos);
+        }
+        else
+            throw (Request::RequestFormatException(req, "400"));
     }
-    // if (bytes >= 0)
-    //     req.parseRequest(req_message);
-    return (req);
+    else if (bytes == 0)
+        this->closeClientSocket(fd);
+    else
+        throw (ReadErrorException());
+}
+
+void
+Server::receiveRequestNormalBody(int fd)
+{
+    int bytes;
+    Request& req = this->_requests[fd];
+
+    int content_length = req.getContentLength();
+    if (content_length > this->_limit_client_body_size)
+        throw (PayloadTooLargeException(req));
+
+    char buf[BUFFER_SIZE + 1];
+    ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+
+    if ((bytes = recv(fd, buf, content_length, 0)) > 0)
+    {
+        req.parseNormalBodies(buf);
+        this->_server_manager->fdSet(fd, FdSet::WRITE);
+    }
+    else if (bytes == 0)
+        this->closeClientSocket(fd);
+    else
+        throw (ReadErrorException());
+}
+
+void
+Server::clearRequestBuffer(int fd)
+{
+    int bytes;
+    char buf[BUFFER_SIZE + 1];
+    Request& req = this->_requests[fd];
+
+    if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
+    {
+        if (bytes == BUFFER_SIZE)
+            return ;
+        req.setReqInfo(ReqInfo::COMPLETE);
+        this->_server_manager->fdSet(fd, FdSet::WRITE);
+    }
+    else if (bytes == 0)
+        this->closeClientSocket(fd);
+    else
+        throw (ReadErrorException());
+}
+
+void
+Server::receiveRequestChunkedBody(int fd)
+{
+    int bytes;
+    char buf[BUFFER_SIZE + 1];
+    Request& req = this->_requests[fd];
+
+    if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
+    {
+        req.parseChunkedBody(buf);
+        if (req.getReqInfo() == ReqInfo::COMPLETE)
+            this->_server_manager->fdSet(fd, FdSet::WRITE);
+    }
+    else if (bytes == 0)
+        this->closeClientSocket(fd);
+    else
+        throw (ReadErrorException());
+}
+
+void
+Server::receiveRequest(int fd)
+{
+    ReqInfo req_info = this->_requests[fd].getReqInfo();
+
+    switch (req_info)
+    {
+    case ReqInfo::READY:
+        this->receiveRequestWithoutBody(fd);
+        break ;
+
+    case ReqInfo::NORMAL_BODY:
+        this->receiveRequestNormalBody(fd);
+        break ;
+
+    case ReqInfo::CHUNKED_BODY:
+        this->receiveRequestChunkedBody(fd);
+        break ;
+
+    case ReqInfo::MUST_CLEAR:
+        this->clearRequestBuffer(fd);
+        break ;
+
+    default:
+        break ;
+    }
 }
 
 std::string
@@ -188,23 +290,6 @@ Server::makeResponseMessage(Request& request)
     // headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
     return (status_line + headers + body);
-    // std::string ret;
-    // std::string status_line =  "\033[1;31;40mStatus Line\033[0m\n" + request.getRequestMethod() + " " + request.getRequestUri() + request.getRequestVersion();
-    // ret = (status_line + "\n");
-    // std::cout << "\033[1;31;40mHEADERS\033[0m" << std::endl;
-    // std::string blue =  "\033[1;34;40m";
-    // std::string yellow =  "\033[1;33;40m";
-    // std::string reset = "\033[0m";
-    // std::string headers;
-    // for (auto& m : request.getRequestHeaders())
-    // {
-    //     headers += (blue + "key: " + reset + m.first );
-    //     headers += ("\n" + yellow + "value: " + reset + m.second + "\n");
-    // }
-    // ret += headers;
-    // std::string response_body = "\n\033[1;34;40mBody\033[0m\n" + request.getRequestBodies() + "\n";
-    // ret += response_body;
-    // return ret;
 }
 
 bool
@@ -305,58 +390,73 @@ Server::run(int fd)
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
-            // if (isClientSocket(fd))
-            // {
-                std::string response_message;
-                response_message = this->makeResponseMessage(this->_requests[fd]);
-                // TODO: sendResponse error handling
-                if (!(sendResponse(response_message, fd)))
-                    std::cerr<<"Error: sendResponse"<<std::endl;
-                this->_server_manager->fdClr(fd, FdSet::WRITE);
-            // }
+            std::string response_message;
+            response_message = this->makeResponseMessage(this->_requests[fd]);
+            // TODO: sendResponse error handling
+            if (!(sendResponse(response_message, fd)))
+                std::cerr<<"Error: sendResponse"<<std::endl;
+            this->_server_manager->fdClr(fd, FdSet::WRITE);
+            this->_requests[fd].clear();
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
-            // isResource, isCGIPipe, isClient
-            if (this->isStaticResource(fd))
+            try
             {
-                // char test_buf[4096];
-                // ft::memset(static_cast<void *>(test_buf), 0, sizeof(test_buf));
-                // read(fd, test_buf, 4096);
-                // std::cout<<"========== test  buf ========="<<std::endl;
-                // std::cout<<test_buf<<std::endl;
-                // // std::cout<<"TEST Success!!"<<std::endl;
-                // close(fd);
-                // this->_server_manager->setClosedFdOnFdTable(fd);
-                // this->_server_manager->updateFdMax(fd);
-                // this->_server_manager->fdClr(fd, FdSet::READ);
+                if (this->isCGIPipe(fd))
+                {
+                }
+                else if (this->isStaticResource(fd))
+                {
+                }
+                else if (this->isClientSocket(fd))
+                {
+                    this->receiveRequest(fd);
+                    Log::getRequest(*this, fd);
+                }
             }
-            else if (this->isCGIPipe(fd))
+            catch(const Request::RequestFormatException& e)
             {
+                if (this->_requests[fd].isContentLeftInBuffer())
+                    this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
+                else
+                {
+                    this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
+                    this->_server_manager->fdSet(fd, FdSet::WRITE);
+                }
             }
-            else if (this->isClientSocket(fd))
+            catch(const ReadErrorException& e)
             {
-                Request request(this->receiveRequest(this->_server_manager, fd));
-                _requests[fd] = request;
-                // 
-                // Request의 body 이전까지만 읽는다. 그리고 URI를 체크한다. 체크는 메서드 체크를 1차적으로 하고, URI를 체크한다.
-                // 만약 요청이 static_resource를 요구했다면, 
-                // fd순회를 반복하여 Request를 마저 읽는다. 
-                // static_resource를 open한 다음, read_fdset에 등록하고 fd 순회를 계속한다.
-                // 만약 요청이 CGI를 요구했다면(판단은 URI의 확장자로!)
-                // fd순회를 반복하여 Request를 마저 읽는다. 
-                // 다 읽으면 read_CLR(fd)하고, pipe를 설치한 다음에, read_fdset에 등록하고 fd 순회를 계속한다.
-                // 만약 요청에 대해서 별도의 body를 구성할 필요가 없다면, 걍 Response를 완성시킨 다음 write_fdset에 client_socket을 등록한다.
-
-
-                // int tmp_fd = open("Makefile", O_RDONLY, 0644);
-                // this->_server_manager->setResourceOnFdTable(tmp_fd, fd);
-                // this->_server_manager->updateFdMax(tmp_fd);
-                // this->_server_manager->fdSet(tmp_fd, FdSet::READ);
-                // std::cout<<"tmp_fd: "<<tmp_fd<<std::endl;
-                // std::cout<<"Max fd: "<<this->_server_manager->getFdMax()<<std::endl;
-                Log::getRequest(*this, fd);
+                this->closeClientSocket(fd);
+                std::cerr << e.what() << '\n';
+            }
+            catch(const std::exception& e)
+            {
+                this->closeClientSocket(fd);
+                std::cerr << e.what() << '\n';
+            }
+            catch(const char* e)
+            {
+                this->closeClientSocket(fd);
+                std::cerr << e << '\n';
             }
         }
     }
+}
+
+bool
+Server::closeClientSocket(int fd)
+{
+    int ret;
+    Log::closeClient(*this, fd);
+
+    std::cout << "In Close" << std::endl;
+
+    this->_server_manager->fdClr(fd, FdSet::READ);
+    this->_server_manager->setClosedFdOnFdTable(fd);
+    this->_server_manager->updateFdMax(fd);
+    this->_requests[fd].clear();
+    Log::closeClient(*this, fd);
+    if ((ret = close(fd)) < 0)
+        return (false);
+    return (true);
 }

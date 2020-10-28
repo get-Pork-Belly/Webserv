@@ -16,7 +16,7 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-const int BUFFER_SIZE = 9000;
+const int BUFFER_SIZE = 8192;
 
 class ServerManager;
 class Request;
@@ -58,11 +58,12 @@ public:
     const std::map<std::string, std::string> getServerConfig();
     const std::map<std::string, location_info>& getLocationConfig();
     int getServerSocket() const;
-    Request getRequest(int fd);
+    Request& getRequest(int fd);
     /* Setter */
     void setServerSocket();
     /* Exception */
     /* Util */
+    bool closeClientSocket(int fd);
     bool isFdManagedByServer(int fd) const;
     bool isServerSocket(int fd) const;
     bool isClientSocket(int fd) const;
@@ -72,10 +73,37 @@ public:
     /* Server function */
     void init();
     void run(int fd);
-    Request receiveRequest(ServerManager* server_manager, int fd);
+    void receiveRequest(int fd);
+    void receiveRequestWithoutBody(int fd);
+    void readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos);
+    void receiveRequestNormalBody(int fd);
+    void receiveRequestChunkedBody(int fd);
+    void clearRequestBuffer(int fd);
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
+
+public:
+    class PayloadTooLargeException : public std::exception
+    {
+    private:
+        Request& _request;
+    public:
+        PayloadTooLargeException(Request& request);
+        virtual const char* what() const throw();
+    };
+    class ReadErrorException : public std::exception
+    {
+    public:
+        virtual const char* what() const throw();
+    };
+
+// public:
+//     class ResponseException : public std::exception
+//     {
+//     public:
+//         virtual const char* what() const throw();
+//     };
 };
 
 #endif
