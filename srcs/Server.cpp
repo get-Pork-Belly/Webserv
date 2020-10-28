@@ -15,7 +15,7 @@ Server::Server(ServerManager* server_manager, server_info& server_config, std::m
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(""), _port(""),
 _status_code(0), _request_uri_limit_size(0), _request_header_limit_size(0), 
-_limit_client_body_size(0), _default_error_page(""), 
+_limit_client_body_size(BUFFER_SIZE), _default_error_page(""), 
 _location_config(location_config)
 {
     try

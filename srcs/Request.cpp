@@ -215,7 +215,7 @@ Request::updateReqInfo()
 bool
 Request::isBodyUnnecessary() const
 {
-    std::string method = this->getMethod();
+    const std::string& method = this->getMethod();
     if (method.compare("PUT") || method.compare("POST"))
         return (false);
     return (true);
@@ -227,9 +227,8 @@ Request::isNormalBody() const
     if (this->getReqInfo() == ReqInfo::COMPLETE)
         return (false);
 
-    std::map<std::string, std::string> headers = this->getHeaders();
-    location_info::iterator it;
-    it = headers.find("Transfer-Encoding");
+    const std::map<std::string, std::string>& headers = this->getHeaders();
+    const location_info::const_iterator it = headers.find("Transfer-Encoding");
     if (it != headers.end() && (it->second.find("chunked") != std::string::npos))
         return (false);
     return (true);
