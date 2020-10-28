@@ -139,7 +139,6 @@ void
 Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
 {
     int bytes;
-    std::string req_message;
     Request& req = this->_requests[fd];
 
     if ((bytes = read(fd, buf, header_end_pos + 4)) < 0)
@@ -156,9 +155,7 @@ Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
     }
     else
     {
-        req_message += buf;
-        req.parseRequestWithoutBody(req_message);
-        req.updateReqInfo();
+        req.parseRequestWithoutBody(buf);
         if (req.getReqInfo() == ReqInfo::COMPLETE)
         {
             this->_server_manager->fdSet(fd, FdSet::WRITE);
@@ -170,16 +167,16 @@ Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
 void
 Server::receiveRequestWithoutBody(int fd)
 {
-    int len;
+    int bytes;
     char buf[BUFFER_SIZE + 1];
     size_t header_end_pos = 0;
     Request& req = this->_requests[fd];
 
-    if ((len = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
+    if ((bytes = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
         if ((header_end_pos = std::string(buf).find("\r\n\r\n")) != std::string::npos)
         {
-            if (static_cast<size_t>(len) == header_end_pos + 4)
+            if (static_cast<size_t>(bytes) == header_end_pos + 4)
                 req.setIsLeftBuffer(false);
             else
                 req.setIsLeftBuffer(true);
@@ -192,7 +189,7 @@ Server::receiveRequestWithoutBody(int fd)
             return ;
         }
     }
-    else if (len == 0)
+    else if (bytes == 0)
     {
         this->closeClientSocket(fd);
     }
@@ -215,12 +212,12 @@ Server::receiveRequestNormalBody(int fd)
     if (content_length > this->_limit_client_body_size)
         throw (PayloadTooLargeException(req));
 
-    char body_buf[BUFFER_SIZE];
-    ft::memset(reinterpret_cast<void *>(body_buf), 0, BUFFER_SIZE + 1);
+    char buf[BUFFER_SIZE + 1];
+    ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
-    if ((bytes = recv(fd, body_buf, content_length, 0)) > 0)
+    if ((bytes = recv(fd, buf, content_length, 0)) > 0)
     {
-        req.parseNormalBodies(body_buf);
+        req.parseNormalBodies(buf);
         this->_server_manager->fdSet(fd, FdSet::WRITE);
     }
     else if (bytes == 0)
@@ -234,50 +231,72 @@ Server::receiveRequestNormalBody(int fd)
 }
 
 void
-Server::receiveRequest(int fd)
+Server::clearRequestBuffer(int fd)
 {
     int bytes;
     char buf[BUFFER_SIZE + 1];
-    std::string req_message;
     Request& req = this->_requests[fd];
-    // ServerManager* server_manager = this->_server_manager;
 
-    bytes = -42;
-    ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-    if (req.getReqInfo() == ReqInfo::READY)
-        this->receiveRequestWithoutBody(fd);
-    else if (req.getReqInfo() == ReqInfo::NORMAL_BODY)
-        this->receiveRequestNormalBody(fd);
-    else if (req.getReqInfo() == ReqInfo::CHUNKED_BODY)
+    if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
     {
-        if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) < 0)
-        {
-            req.setStatusCode("400");
-            throw "No more read in CHUNKED";
-        }
-        else if (bytes == 0)
-            this->closeClientSocket(fd);
-        else
-        {
-            req_message += buf;
-            req.parseChunkedBody(req_message);
-            if (req.getReqInfo() == ReqInfo::COMPLETE)
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-        }
+        if (bytes == BUFFER_SIZE)
+            return ;
+        req.setReqInfo(ReqInfo::COMPLETE);
+        this->_server_manager->fdSet(fd, FdSet::WRITE);
     }
-    else if (req.getReqInfo() == ReqInfo::MUST_CLEAR)
+    else if (bytes == 0)
+        this->closeClientSocket(fd);
+    else
+        throw ("Error when clear buffer or read empty buffer");
+}
+
+void
+Server::receiveRequestChunkedBody(int fd)
+{
+    int bytes;
+    char buf[BUFFER_SIZE + 1];
+    Request& req = this->_requests[fd];
+
+    if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
     {
-        if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
-        {
-            if (bytes == BUFFER_SIZE)
-                return ;
-            req.setReqInfo(ReqInfo::COMPLETE);
+        req.parseChunkedBody(buf);
+        if (req.getReqInfo() == ReqInfo::COMPLETE)
             this->_server_manager->fdSet(fd, FdSet::WRITE);
-        }
-        else if (bytes == 0)
-            this->closeClientSocket(fd);
-        else
-            throw ("Error when clear buffer or read empty buffer");
+    }
+    else if (bytes == 0)
+        this->closeClientSocket(fd);
+    else
+    {
+        req.setStatusCode("400");
+        throw "No more read in CHUNKED";
+    }
+}
+
+void
+Server::receiveRequest(int fd)
+{
+    ReqInfo req_info = this->_requests[fd].getReqInfo();
+
+    switch (req_info)
+    {
+    case ReqInfo::READY:
+        this->receiveRequestWithoutBody(fd);
+        break;
+
+    case ReqInfo::NORMAL_BODY:
+        this->receiveRequestNormalBody(fd);
+        break;
+
+    case ReqInfo::CHUNKED_BODY:
+        this->receiveRequestChunkedBody(fd);
+        break ;
+
+    case ReqInfo::MUST_CLEAR:
+        this->clearRequestBuffer(fd);
+        break ;
+
+    default:
+        break ;
     }
 }
 

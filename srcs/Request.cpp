@@ -235,9 +235,10 @@ Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& r
 }
 
 void
-Request::parseRequestWithoutBody(std::string& req_message)
+Request::parseRequestWithoutBody(char* buf)
 {
     std::string line;
+    std::string req_message(buf);
 
     if (ft::substr(line, req_message, "\r\n") == false)
         throw (RequestFormatException(*this, "400"));
@@ -253,6 +254,7 @@ Request::parseRequestWithoutBody(std::string& req_message)
         if (parseHeaders(line) == false)
             throw (RequestFormatException(*this));
     }
+    this->updateReqInfo();
 }
 
 bool
@@ -294,10 +296,11 @@ Request::parseHeaders(std::string& req_message)
 }
 
 void
-Request::parseChunkedBody(std::string &req_message)
+Request::parseChunkedBody(char* buf)
 {
     int line_len;
     std::string line;
+    std::string req_message(buf);
 
     if (req_message.find("\r\n") == std::string::npos)
     {
@@ -335,6 +338,7 @@ Request::parseNormalBodies(char* buf)
 {
     std::string normal_body(buf);
     this->setBodies(normal_body);
+    this->setReqInfo(ReqInfo::COMPLETE);
 }
 
 void

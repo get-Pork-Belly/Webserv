@@ -68,11 +68,11 @@ public:
     // void initMembers(std::string req_message);
 
     /* parser */
-    void parseRequestWithoutBody(std::string& buf);
+    void parseRequestWithoutBody(char* buf);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
     void parseNormalBodies(char* buf);
-    void parseChunkedBody(std::string &req_message);
+    void parseChunkedBody(char* buf);
 
     /* valid check */
     bool isValidLine(std::vector<std::string>& request_line);
