@@ -68,7 +68,7 @@ public:
          server_info&,
          std::map<std::string, location_info>&) = &ServerGenerator::parseServerBlock;
 
-    void setDefaultRouteToServer(std::map<std::string,
+    void setDefaultRouteOfServer(std::map<std::string,
             location_info>& locations, server_info& server_config);
 };
 
