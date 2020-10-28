@@ -67,6 +67,9 @@ public:
          std::vector<std::string>::iterator&,
          server_info&,
          std::map<std::string, location_info>&) = &ServerGenerator::parseServerBlock;
+
+    void defaultRoute(std::map<std::string,
+            location_info>& locations, server_info& server_config);
 };
 
 void testLocationConfig(std::map<std::string, location_info>& test);

@@ -75,6 +75,26 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     }
 }
 
+void
+ServerGenerator::defaultRoute(std::map<std::string, location_info>& locations,
+                            server_info& server_config)
+{
+    location_info info;
+
+    if (locations.size() == 0)
+    {
+        initLocationConfig(info, server_config);
+        locations["/"] = info;
+    }
+    else
+    {
+        if (locations.find("/") != locations.end())
+            return ;
+        initLocationConfig(info, server_config);
+        locations["/"] = info;
+    }
+}
+
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
@@ -94,6 +114,7 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             it++;
             std::map<std::string, location_info> locations;
             parseServerBlock(it, server_config, locations);
+            defaultRoute(locations, server_config);
             // testServerConfig(server_config);
             // testLocationConfig(locations);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
@@ -145,8 +166,7 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
         if (directives[0] == "location")
         {
             location_info location_config = parseLocationBlock(it, server_config);
-            std::string temp = location_config["route"];
-            locations[temp] = location_config;
+            locations[location_config["route"]] = location_config;
             continue ;
         }
         if (directives[0] == "}")
