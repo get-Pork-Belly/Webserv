@@ -4,7 +4,7 @@ CC = clang++
 CFLAGS = -Wall -Wextra -Werror -std=c++11 -fsanitize=address -g
 RM = rm -rf
 DEBUG = -D DEBUG=1
-STDOUT = -D STDOUT=0
+STDOUT = -D STDOUT=1
 
 # MAIN_FILES = logger_test Log utils ServerManager ServerGenerator Server Response Request
 MAIN_FILES = logger_test Log utils ServerManager ServerGenerator Server Response Request
@@ -32,12 +32,12 @@ RESET = \033[0m
 all: $(NAME)
 
 ${NAME}: ${OBJS}
-	@mkdir log
 	@echo "$(GREEN)Making START$(RESET)"
 	@${CC} ${CFLAGS} ${INCLUDES} ${OBJS} -o ${NAME}
 	@echo "$(GREEN)DONE"
 
 $(OBJDIR)/%.o : %.cpp
+	@mkdir -p $(LOGDIR)
 	@mkdir -p $(OBJDIR)
 	@${CC} ${CFLAGS} ${INCLUDES} ${DEBUG} ${STDOUT} -c $< -o $@
 

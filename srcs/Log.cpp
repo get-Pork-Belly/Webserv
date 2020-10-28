@@ -10,11 +10,11 @@
 
 int
 Log::access_fd = open("./log/access_log",
-        O_CREAT | O_APPEND | O_WRONLY, 0644);
+        O_CREAT | O_TRUNC | O_WRONLY, 0644);
 
 int
 Log::error_fd = open("./log/error_log",
-        O_CREAT | O_APPEND | O_WRONLY, 0644);
+        O_CREAT | O_TRUNC | O_WRONLY, 0644);
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
