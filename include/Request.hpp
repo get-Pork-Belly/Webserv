@@ -5,6 +5,9 @@
 # include "types.hpp"
 # include <map>
 
+//NOTE: test용으로 ostream include함.
+#include <iostream>
+
 class Request
 {
 private:
@@ -99,6 +102,8 @@ public:
         virtual const char* what() const throw();
     };
 };
+
+std::ostream& operator<<(std::ostream& out, Request& object);
 
 #endif
 

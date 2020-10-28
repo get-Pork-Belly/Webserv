@@ -177,6 +177,22 @@ Request::RequestFormatException::what() const throw()
 /*********************************  Util  *************************************/
 /*============================================================================*/
 
+std::ostream& operator<< (std::ostream& out, Request& object)
+{
+    out << "============================= result =============================\n";
+    out << object.getMethod() << "\n";
+    out << object.getUri() << "\n";
+    out << object.getVersion() << "\n";
+
+    for (auto& kv : object.getHeaders())
+    {
+        out << kv.first << ": ";
+        out << kv.second << "\n";
+    }
+    out << "============================= end =============================" << "\n";
+    return (out);
+}
+
 void
 Request::updateReqInfo()
 {
