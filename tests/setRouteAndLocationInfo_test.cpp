@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-bool checkAndSetLocation(const std::string &uri)
+bool setRouteAndLocationInfo(const std::string &uri)
 {
 
     std::map<std::string, std::string> one = { {"root", "/user/iwoo"}, {"index", "html;"}, {"limit_except", "PUT"} };
@@ -59,31 +59,31 @@ int main()
 
     std::cout<<"==================="<<std::endl;
     std::cout <<"Case: " << uri1 <<std::endl;
-    ret = checkAndSetLocation(uri1);
+    ret = setRouteAndLocationInfo(uri1);
     std::cout<<"--> Result1: " << ret << std::endl;
 
     std::cout<<"==================="<<std::endl;
     std::cout <<"Case: " << uri2 << std::endl;
-    ret = checkAndSetLocation(uri2);
+    ret = setRouteAndLocationInfo(uri2);
     std::cout<<"--> Result2: " << ret << std::endl;
 
     std::cout<<"==================="<<std::endl;
     std::cout <<"Case: " << uri3 << std::endl;
-    ret = checkAndSetLocation(uri3);
+    ret = setRouteAndLocationInfo(uri3);
     std::cout <<"--> Result3: " << ret << std::endl;
 
     std::cout<<"==================="<<std::endl;
     std::cout <<"Case: " << uri4 << std::endl;
-    ret = checkAndSetLocation(uri4);
+    ret = setRouteAndLocationInfo(uri4);
     std::cout <<"--> Result4: " << ret << std::endl;
 
     std::cout<<"==================="<<std::endl;
     std::cout <<"Case: " << uri5 << std::endl;
-    ret = checkAndSetLocation(uri5);
+    ret = setRouteAndLocationInfo(uri5);
     std::cout <<"--> Result5: " << ret << std::endl;
 
     std::cout<<"==================="<<std::endl;
     std::cout <<"Case: " << uri6 << std::endl;
-    ret = checkAndSetLocation(uri6);
+    ret = setRouteAndLocationInfo(uri6);
     std::cout <<"--> Result6: " << ret << std::endl;
 }
