@@ -83,6 +83,7 @@ public:
     bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
     void findResourceAbsPath(int fd);
+    void openStaticResource(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception

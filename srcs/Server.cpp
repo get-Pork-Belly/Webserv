@@ -359,7 +359,24 @@ Server::isCGIPipe(int fd) const
     if (fd_table[fd].first == FdType::PIPE)
         return true;
     return false;
-} 
+}
+
+void
+Server::openStaticResource(int fd)
+{
+    int resource_fd;
+    const std::string& path = this->_responses[fd].getResourceAbsPath();
+
+    if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
+    {
+        fcntl(resource_fd, F_SETFL, O_NONBLOCK);
+        this->_server_manager->fdSet(resource_fd, FdSet::READ);
+        this->_server_manager->setResourceOnFdTable(resource_fd, fd);
+        this->_server_manager->updateFdMax(resource_fd);
+    }
+    else
+        throw "File cannot open";
+}
 
 void
 Server::run(int fd)
@@ -415,6 +432,7 @@ Server::run(int fd)
                     {
                         this->findResourceAbsPath(fd);
                         // ResType res = checkResourceType(fd);
+                        this->openStaticResource(fd);
                         // preprocessing with swith of res;
                     }
                     Log::getRequest(*this, fd);
