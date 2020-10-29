@@ -2,6 +2,7 @@
 #include "utils.hpp"
 #include "ServerManager.hpp"
 #include "Log.hpp"
+#include "UriParser.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -151,11 +152,7 @@ Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
     Request& req = this->_requests[fd];
 
     if ((bytes = read(fd, buf, header_end_pos + 4)) > 0)
-    {
         req.parseRequestWithoutBody(buf);
-        if (req.getReqInfo() == ReqInfo::COMPLETE)
-            this->_server_manager->fdSet(fd, FdSet::WRITE);
-    }
     else if (bytes == 0)
         throw (Request::RequestFormatException(req, "400"));
     else
@@ -414,6 +411,12 @@ Server::run(int fd)
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
+                    if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
+                    {
+                        this->findResourceAbsPath(fd);
+                        // ResType res = checkResourceType(fd);
+                        // preprocessing with swith of res;
+                    }
                     Log::getRequest(*this, fd);
                 }
             }
@@ -462,4 +465,21 @@ Server::closeClientSocket(int fd)
     if ((ret = close(fd)) < 0)
         return (false);
     return (true);
+}
+
+void
+Server::findResourceAbsPath(int fd)
+{
+    UriParser parser;
+    parser.parseUri(this->_requests[fd].getUri()); // scheme, host, port, path
+    const std::string& path = parser.getPath(); // path
+
+    Response& response = this->_responses[fd];
+    response.setRouteAndLocationInfo(path, this); // Response객체에 route주소와 location_info가 저장됨
+    std::string root = response.getLocationInfo().at("root");
+    if (response.getRoute() != "/")
+        root.pop_back();
+    std::string file_path = path.substr(response.getRoute().length());
+    response.setResourceAbsPath(root + file_path);
+    std::cout<<response.getResourceAbsPath()<<std::endl;
 }

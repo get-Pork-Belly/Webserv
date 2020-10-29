@@ -16,6 +16,8 @@ private:
     std::string _message_body;
     std::map<std::string, std::string> _status_code_table;
     location_info _location_info;
+    std::string _resource_abs_path;
+    std::string _route;
 
 public:
     /* Constructor */
@@ -31,18 +33,21 @@ public:
     /* Getter */
     std::string getStatusCode() const;
     std::string getStatusMessage(const std::string& code);
+    const std::string& getRoute() const;
     // std::string getHeaders() const;
     // std::string getTransferType() const;
     // std::string getClients() const;
     const location_info& getLocationInfo() const;
+    const std::string& getResourceAbsPath() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
+    void setResourceAbsPath(const std::string& path);
     // void setMessageBody();
     /* Exception */
     /* Util */
     // bool isLocationUri(const std::string& uri, Server* server);
-    bool checkAndSetLocation(const std::string& uri, Server* server);
+    bool setRouteAndLocationInfo(const std::string& uri, Server* server);
     bool isLimitExceptInLocation();
     bool isAllowedMethod(const std::string& method);
 

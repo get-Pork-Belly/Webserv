@@ -155,14 +155,13 @@ UriParser::parseUri(const std::string& uri)
     {
         this->setPath("/");
         this->setPaths();
-        this->print();
     }
     else
     {
         this->setPath(this->findPath());
         this->setPaths();
-        this->print();
     }
+    // this->_path.insert(this->_path.begin(), '/');
 }
 
 std::string
@@ -187,7 +186,8 @@ UriParser::findHostAndPort()
 
     if (this->_uri[this->_index] == '/')
     {
-        this->setIndex(this->_index + 1);
+        // this->setIndex(this->_index + 1); // NOTE
+        this->setIndex(this->_index); // NOTE
         return ("");
     }
     found = this->_uri.find("/", this->_index);
@@ -196,7 +196,8 @@ UriParser::findHostAndPort()
         this->setIndex(found);
         return (this->_uri.substr(temp_index));
     }
-    this->setIndex(found + 1);
+    // this->setIndex(found + 1); // NOTE
+    this->setIndex(found); // NOTE
     return (this->_uri.substr(temp_index, found - temp_index));
 }
 

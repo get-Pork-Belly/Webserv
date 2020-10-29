@@ -205,7 +205,7 @@ Request::updateReqInfo()
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
         setReqInfo(ReqInfo::READY);
     else if (this->isBodyUnnecessary())
-        setReqInfo(ReqInfo::COMPLETE);
+        setReqInfo(ReqInfo::MUST_CLEAR);
     else if (this->isNormalBody())
         setReqInfo(ReqInfo::NORMAL_BODY);
     else if (this->isChunkedBody())
