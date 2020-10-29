@@ -49,6 +49,19 @@ UrlParser::getPort() const
 {
     return (this->_port);
 }
+
+const std::string&
+UrlParser::getPath() const
+{
+    return (this->_path);
+}
+
+const std::vector<std::string>&
+UrlParser::getPaths() const
+{
+    return (this->_paths);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -209,10 +222,10 @@ UrlParser::clear()
 void
 UrlParser::print()
 {
-    std::cout << "scheme: " << this->_scheme << std::endl;
-    std::cout << "host: " << this->_host << std::endl;
-    std::cout << "port: " << this->_port << std::endl;
-    std::cout << "path: " << this->_path << std::endl;
-    for (auto& s : this->_paths)
+    std::cout << "scheme: " << this->getScheme() << std::endl;
+    std::cout << "host: " << this->getHost() << std::endl;
+    std::cout << "port: " << this->getPort() << std::endl;
+    std::cout << "path: " << this->getPath() << std::endl;
+    for (auto& s : this->getPaths())
         std::cout << "paths: " << s << std::endl;
 }

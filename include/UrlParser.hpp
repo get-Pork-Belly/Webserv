@@ -36,6 +36,7 @@ public:
     const std::string& getHost() const;
     const std::string& getPort() const;
     const std::string& getPath() const;
+    const std::vector<std::string>& getPaths() const;
     /* Setter */
     void setIndex(int index);
     void setUrl(const std::string& url);
