@@ -14,7 +14,7 @@ private:
     UriParser(const UriParser& other);
     /* data */
     size_t _index;
-    std::string _Uri;
+    std::string _uri;
     std::string _scheme;
     std::string _host;
     std::string _port;
@@ -39,7 +39,7 @@ public:
     const std::vector<std::string>& getPaths() const;
     /* Setter */
     void setIndex(int index);
-    void setUri(const std::string& Uri);
+    void setUri(const std::string& uri);
     void setScheme(const std::string& scheme);
     void setHost(const std::string& host);
     void setPort(const std::string& port);
@@ -48,7 +48,7 @@ public:
     void setPaths();
     /* Exception */
     /* Util */
-    void parseUri(const std::string& Uri);
+    void parseUri(const std::string& uri);
     std::string findScheme();
     std::string findPort();
     std::string findHostAndPort();

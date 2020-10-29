@@ -9,7 +9,7 @@
 /*============================================================================*/
 
 UriParser::UriParser()
-:_index(0), _Uri(""), _scheme(""), _host(""), _port(""), _path("") {}
+:_index(0), _uri(""), _scheme(""), _host(""), _port(""), _path("") {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -73,9 +73,9 @@ UriParser::setIndex(int index)
 }
 
 void
-UriParser::setUri(const std::string& Uri)
+UriParser::setUri(const std::string& uri)
 {
-    this->_Uri = Uri;
+    this->_uri = uri;
 }
 
 void
@@ -129,7 +129,7 @@ UriParser::setPaths()
     this->_paths = ft::split(this->_path, "/");
     for (; i < this->_paths.size() - 1; i++)
         this->_paths[i].append("/");
-    if (this->_Uri.back() == '/')
+    if (this->_uri.back() == '/')
         this->_paths[i].append("/");
 }
 
@@ -142,14 +142,14 @@ UriParser::setPaths()
 /*============================================================================*/
 
 void
-UriParser::parseUri(const std::string& Uri)
+UriParser::parseUri(const std::string& uri)
 {
-    this->setUri(Uri);
+    this->setUri(uri);
     this->setScheme(this->findScheme());
     const std::string& host_port = this->findHostAndPort();
     size_t index = this->getIndex();
     this->setHostAndPort(host_port);
-    if (index == std::string::npos || this->_Uri.size() == index)
+    if (index == std::string::npos || this->_uri.size() == index)
     {
         this->setPath("/");
         this->setPaths();
@@ -169,11 +169,11 @@ UriParser::findScheme()
     std::string scheme;
     size_t temp_index = this->getIndex();
 
-    size_t found = this->_Uri.find("://", this->_index);
+    size_t found = this->_uri.find("://", this->_index);
     if (found == std::string::npos)
         return ("");
     this->setIndex(found + 3);
-    return (this->_Uri.substr(temp_index, found));
+    return (this->_uri.substr(temp_index, found));
 }
 
 std::string
@@ -183,35 +183,35 @@ UriParser::findHostAndPort()
     std::string host_port;
     size_t temp_index = this->getIndex();
 
-    if (this->_Uri[this->_index] == '/')
+    if (this->_uri[this->_index] == '/')
     {
         this->setIndex(this->_index + 1);
         return ("");
     }
-    found = this->_Uri.find("/", this->_index);
+    found = this->_uri.find("/", this->_index);
     if (found == std::string::npos)
     {
         this->setIndex(found);
-        return (this->_Uri.substr(temp_index));
+        return (this->_uri.substr(temp_index));
     }
     this->setIndex(found + 1);
-    return (this->_Uri.substr(temp_index, found - temp_index));
+    return (this->_uri.substr(temp_index, found - temp_index));
 }
 
 std::string
 UriParser::findPath()
 {
-    if (this->_Uri.length() == 1 && this->_Uri[0] == '/')
+    if (this->_uri.length() == 1 && this->_uri[0] == '/')
         return ("/");
     else
-        return (this->_Uri.substr(this->_index, this->_Uri.length() - this->_index));
+        return (this->_uri.substr(this->_index, this->_uri.length() - this->_index));
 }
 
 void
 UriParser::clear()
 {
     this->setIndex(0);
-    this->_Uri.clear();
+    this->_uri.clear();
     this->_scheme.clear();
     this->_host.clear();
     this->_port.clear();
