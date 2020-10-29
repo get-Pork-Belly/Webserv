@@ -67,6 +67,18 @@ Response::getLocationInfo() const
     return (this->_location_info);
 }
 
+const std::string&
+Response::getRoute() const
+{
+    return (this->_route);
+}
+
+const std::string&
+Response::getResourceAbsPath() const
+{
+    return (this->_resource_abs_path);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -77,6 +89,11 @@ Response::setStatusCode(const std::string& status_code)
     this->_status_code = status_code;
 }
 
+void
+Response::setResourceAbsPath(const std::string& path)
+{
+    this->_resource_abs_path = path;
+}
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -169,30 +186,34 @@ bool
 Response::checkAndSetLocation(const std::string& uri, Server* server)
 {
     std::map<std::string, location_info> location_config = server->getLocationConfig();
-    std::string router;
+    std::string route;
 
-    if (uri[0] != '/')
-        return (false);
     if (uri.length() == 1)
     {
         if (location_config.find("/") != location_config.end())
         {
+            this->_route = uri;
             this->_location_info = location_config["/"];
             return (true);
         }
         return (false);
     }
-    size_t index = uri[uri.length() - 1] == '/' ? uri.length() : uri.length() + 1;
+    size_t index = (uri[uri.length() - 1] == '/') ? uri.length() : uri.length() + 1;
     while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
     {
-        router = uri.substr(0, index);
-        if (location_config.find(router) != location_config.end())
+        route = uri.substr(0, index);
+        if (location_config.find(route) != location_config.end())
         {
-            this->_location_info = location_config[router];
+            this->_route = route;
+            this->_location_info = location_config[route];
             return (true);
         }
         if (index == 0)
+        {
+            this->_route = "/";
+            this->_location_info = location_config["/"];
             break ;
+        }
     }
     return (false);
 }

@@ -2,6 +2,7 @@
 #include "utils.hpp"
 #include "ServerManager.hpp"
 #include "Log.hpp"
+#include "UriParser.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -414,6 +415,16 @@ Server::run(int fd)
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
+                    this->findResourceAbsPath(fd);
+                    // location 
+                    // abs root
+                    // {
+                    //     this->_responses[fd].checkAndSetLocation(); // location
+                    //     response._abs_path  //location이 없었다.
+                    // }
+                    // cgi ? file ?
+                    // response에 enum값? 이든뭐든 하여튼 하나로 cgi, file
+                    // file open / cgi pipe open
                     Log::getRequest(*this, fd);
                 }
             }
@@ -462,4 +473,21 @@ Server::closeClientSocket(int fd)
     if ((ret = close(fd)) < 0)
         return (false);
     return (true);
+}
+
+void
+Server::findResourceAbsPath(int fd)
+{
+    UriParser parser;
+    parser.parseUri(this->_requests[fd].getUri()); // scheme, host, port, path
+    const std::string& path = parser.getPath(); // path
+
+    Response& response = this->_responses[fd];
+    response.checkAndSetLocation(path, this); // Response객체에 route주소와 location_info가 저장됨
+    std::string root = response.getLocationInfo().at("root");
+    if (response.getRoute() != "/")
+        root.pop_back();
+    std::string file_path = path.substr(response.getRoute().length());
+    response.setResourceAbsPath(root + file_path);
+    std::cout<<response.getResourceAbsPath()<<std::endl;
 }
