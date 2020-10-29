@@ -84,10 +84,6 @@ public:
     bool isClientOfServer(int fd) const;
 
 public:
-public:
-public:
-public:
-public:
     class PayloadTooLargeException : public std::exception
     {
     private:
