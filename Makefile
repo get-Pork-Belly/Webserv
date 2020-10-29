@@ -6,7 +6,7 @@ RM = rm -rf
 DEBUG = -D DEBUG=1
 STDOUT = -D STDOUT=1
 
-MAIN_FILES = url_parser_test UrlParser  utils
+MAIN_FILES = uri_parser_test UriParser  utils
 
 SRCS_PATH = $(MAIN_FILES)
 VPATH := .:srcs:tests

@@ -1,4 +1,4 @@
-#include "UrlParser.hpp"
+#include "UriParser.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -8,14 +8,14 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-UrlParser::UrlParser()
-:_index(0), _url(""), _scheme(""), _host(""), _port(""), _path("") {}
+UriParser::UriParser()
+:_index(0), _Uri(""), _scheme(""), _host(""), _port(""), _path("") {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
 /*============================================================================*/
 
-UrlParser::~UrlParser()
+UriParser::~UriParser()
 { }
 
 /*============================================================================*/
@@ -27,37 +27,37 @@ UrlParser::~UrlParser()
 /*============================================================================*/
 
 int
-UrlParser::getIndex() const
+UriParser::getIndex() const
 {
     return (this->_index);
 }
 
 const std::string&
-UrlParser::getScheme() const
+UriParser::getScheme() const
 {
     return (this->_scheme);
 }
 
 const std::string&
-UrlParser::getHost() const
+UriParser::getHost() const
 {
     return (this->_host);
 }
 
 const std::string&
-UrlParser::getPort() const
+UriParser::getPort() const
 {
     return (this->_port);
 }
 
 const std::string&
-UrlParser::getPath() const
+UriParser::getPath() const
 {
     return (this->_path);
 }
 
 const std::vector<std::string>&
-UrlParser::getPaths() const
+UriParser::getPaths() const
 {
     return (this->_paths);
 }
@@ -67,43 +67,43 @@ UrlParser::getPaths() const
 /*============================================================================*/
 
 void
-UrlParser::setIndex(int index)
+UriParser::setIndex(int index)
 {
     this->_index = index;
 }
 
 void
-UrlParser::setUrl(const std::string& url)
+UriParser::setUri(const std::string& Uri)
 {
-    this->_url = url;
+    this->_Uri = Uri;
 }
 
 void
-UrlParser::setScheme(const std::string& scheme)
+UriParser::setScheme(const std::string& scheme)
 {
     this->_scheme = scheme;
 }
 
 void
-UrlParser::setHost(const std::string& host)
+UriParser::setHost(const std::string& host)
 {
     this->_host= host;
 }
 
 void
-UrlParser::setPort(const std::string& port)
+UriParser::setPort(const std::string& port)
 {
     this->_port = port;
 }
 
 void
-UrlParser::setPath(const std::string& path)
+UriParser::setPath(const std::string& path)
 {
     this->_path = path;
 }
 
 void
-UrlParser::setHostAndPort(const std::string& host_port)
+UriParser::setHostAndPort(const std::string& host_port)
 {
     size_t found = host_port.find(":");
     if (found == std::string::npos)
@@ -118,7 +118,7 @@ UrlParser::setHostAndPort(const std::string& host_port)
 }
 
 void
-UrlParser::setPaths()
+UriParser::setPaths()
 {
     size_t i = 0;
     if (this->_path == "/")
@@ -129,7 +129,7 @@ UrlParser::setPaths()
     this->_paths = ft::split(this->_path, "/");
     for (; i < this->_paths.size() - 1; i++)
         this->_paths[i].append("/");
-    if (this->_url.back() == '/')
+    if (this->_Uri.back() == '/')
         this->_paths[i].append("/");
 }
 
@@ -142,14 +142,14 @@ UrlParser::setPaths()
 /*============================================================================*/
 
 void
-UrlParser::parseUrl(const std::string& url)
+UriParser::parseUri(const std::string& Uri)
 {
-    this->setUrl(url);
+    this->setUri(Uri);
     this->setScheme(this->findScheme());
     const std::string& host_port = this->findHostAndPort();
     size_t index = this->getIndex();
     this->setHostAndPort(host_port);
-    if (index == std::string::npos || this->_url.size() == index)
+    if (index == std::string::npos || this->_Uri.size() == index)
     {
         this->setPath("/");
         this->setPaths();
@@ -164,54 +164,54 @@ UrlParser::parseUrl(const std::string& url)
 }
 
 std::string
-UrlParser::findScheme()
+UriParser::findScheme()
 {
     std::string scheme;
     size_t temp_index = this->getIndex();
 
-    size_t found = this->_url.find("://", this->_index);
+    size_t found = this->_Uri.find("://", this->_index);
     if (found == std::string::npos)
         return ("");
     this->setIndex(found + 3);
-    return (this->_url.substr(temp_index, found));
+    return (this->_Uri.substr(temp_index, found));
 }
 
 std::string
-UrlParser::findHostAndPort()
+UriParser::findHostAndPort()
 {
     size_t found;
     std::string host_port;
     size_t temp_index = this->getIndex();
 
-    if (this->_url[this->_index] == '/')
+    if (this->_Uri[this->_index] == '/')
     {
         this->setIndex(this->_index + 1);
         return ("");
     }
-    found = this->_url.find("/", this->_index);
+    found = this->_Uri.find("/", this->_index);
     if (found == std::string::npos)
     {
         this->setIndex(found);
-        return (this->_url.substr(temp_index));
+        return (this->_Uri.substr(temp_index));
     }
     this->setIndex(found + 1);
-    return (this->_url.substr(temp_index, found - temp_index));
+    return (this->_Uri.substr(temp_index, found - temp_index));
 }
 
 std::string
-UrlParser::findPath()
+UriParser::findPath()
 {
-    if (this->_url.length() == 1 && this->_url[0] == '/')
+    if (this->_Uri.length() == 1 && this->_Uri[0] == '/')
         return ("/");
     else
-        return (this->_url.substr(this->_index, this->_url.length() - this->_index));
+        return (this->_Uri.substr(this->_index, this->_Uri.length() - this->_index));
 }
 
 void
-UrlParser::clear()
+UriParser::clear()
 {
     this->setIndex(0);
-    this->_url.clear();
+    this->_Uri.clear();
     this->_scheme.clear();
     this->_host.clear();
     this->_port.clear();
@@ -220,7 +220,7 @@ UrlParser::clear()
 }
 
 void
-UrlParser::print()
+UriParser::print()
 {
     std::cout << "scheme: " << this->getScheme() << std::endl;
     std::cout << "host: " << this->getHost() << std::endl;

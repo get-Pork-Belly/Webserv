@@ -1,5 +1,5 @@
-#ifndef URLPARSER_HPP
-# define URLPARSER_HPP
+#ifndef UriParser_HPP
+# define UriParser_HPP
 
 # include <iostream>
 # include <iostream>
@@ -7,14 +7,14 @@
 # include <map>
 # include "utils.hpp"
 
-class UrlParser
+class UriParser
 {
 private:
-    UrlParser& operator=(const UrlParser& rhs);
-    UrlParser(const UrlParser& other);
+    UriParser& operator=(const UriParser& rhs);
+    UriParser(const UriParser& other);
     /* data */
     size_t _index;
-    std::string _url;
+    std::string _Uri;
     std::string _scheme;
     std::string _host;
     std::string _port;
@@ -23,10 +23,10 @@ private:
         
 public:
     /* Constructor */
-    UrlParser();
+    UriParser();
 
     /* Destructor */
-    virtual ~UrlParser();
+    virtual ~UriParser();
 
     /* Overload */
 
@@ -39,7 +39,7 @@ public:
     const std::vector<std::string>& getPaths() const;
     /* Setter */
     void setIndex(int index);
-    void setUrl(const std::string& url);
+    void setUri(const std::string& Uri);
     void setScheme(const std::string& scheme);
     void setHost(const std::string& host);
     void setPort(const std::string& port);
@@ -48,7 +48,7 @@ public:
     void setPaths();
     /* Exception */
     /* Util */
-    void parseUrl(const std::string& url);
+    void parseUri(const std::string& Uri);
     std::string findScheme();
     std::string findPort();
     std::string findHostAndPort();
