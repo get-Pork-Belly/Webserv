@@ -48,12 +48,12 @@ public:
     void setPaths();
     /* Exception */
     /* Util */
+    void init();
     void parseUri(const std::string& uri);
     std::string findScheme();
     std::string findPort();
     std::string findHostAndPort();
     std::string findPath();
-    void clear();
     void print();
 };
 
