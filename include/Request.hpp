@@ -37,7 +37,6 @@ public:
     std::map<std::string, std::string> getHeaders() const;
     std::string getProtocol();
     std::string getBodies();
-    std::string getTransferType();
     std::string getStatusCode();
     const ReqInfo& getReqInfo() const;
     bool getIsBufferLeft() const;
@@ -49,7 +48,6 @@ public:
     void setHeaders(const std::string& key, const std::string& value);
     void setProtocol(const std::string& protocol);
     void setBodies(const std::string& body);
-    void setTransferType(const std::string& transfer_type);
     void setStatusCode(const std::string& code);
     void setReqInfo(const ReqInfo& info);
     void setIsBufferLeft(const bool& is_left_buffer);
@@ -87,7 +85,6 @@ public:
     bool isValidHeaderFields(std::string& key);
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
-    bool isValidBodies();
 
     /* Exception */
 public:

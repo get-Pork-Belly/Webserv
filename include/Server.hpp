@@ -56,8 +56,8 @@ public:
     //TODO: 구현
     // Request getRequest();
     const std::map<std::string, std::string> getServerConfig();
-    const std::map<std::string, location_info>& getLocationConfig();
     int getServerSocket() const;
+    const std::map<std::string, location_info>& getLocationConfig();
     Request& getRequest(int fd);
     /* Setter */
     void setServerSocket();
@@ -66,6 +66,7 @@ public:
     bool closeClientSocket(int fd);
     bool isFdManagedByServer(int fd) const;
     bool isServerSocket(int fd) const;
+    bool isClientOfServer(int fd) const;
     bool isClientSocket(int fd) const;
     bool isStaticResource(int fd) const;
     bool isCGIPipe(int fd) const;
@@ -81,7 +82,6 @@ public:
     void clearRequestBuffer(int fd);
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
-    bool isClientOfServer(int fd) const;
 
 public:
     class PayloadTooLargeException : public std::exception
