@@ -35,7 +35,6 @@ private:
     std::string _server_name;
     std::string _host;
     std::string _port;
-    int _status_code;
     int _request_uri_limit_size;
     int _request_header_limit_size;
     int _limit_client_body_size;
@@ -43,6 +42,7 @@ private:
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
+    std::vector<Response> _responses;
 
 public:
     /* Constructor */
@@ -56,8 +56,8 @@ public:
     //TODO: 구현
     // Request getRequest();
     const std::map<std::string, std::string> getServerConfig();
-    int getServerSocket() const;
     const std::map<std::string, location_info>& getLocationConfig();
+    int getServerSocket() const;
     Request& getRequest(int fd);
     /* Setter */
     void setServerSocket();
@@ -66,7 +66,6 @@ public:
     bool closeClientSocket(int fd);
     bool isFdManagedByServer(int fd) const;
     bool isServerSocket(int fd) const;
-    bool isClientOfServer(int fd) const;
     bool isClientSocket(int fd) const;
     bool isStaticResource(int fd) const;
     bool isCGIPipe(int fd) const;
@@ -82,7 +81,12 @@ public:
     void clearRequestBuffer(int fd);
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
+    bool isClientOfServer(int fd) const;
 
+public:
+public:
+public:
+public:
 public:
     class PayloadTooLargeException : public std::exception
     {

@@ -14,7 +14,7 @@
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(""), _port(""),
-_status_code(0), _request_uri_limit_size(0), _request_header_limit_size(0), 
+_request_uri_limit_size(0), _request_header_limit_size(0), 
 _limit_client_body_size(BUFFER_SIZE), _default_error_page(""), 
 _location_config(location_config)
 {
@@ -56,6 +56,8 @@ Server::getServerSocket() const
 {
     return (this->_server_socket);
 }
+
+
 
 const std::map<std::string, location_info>&
 Server::getLocationConfig()
@@ -117,6 +119,7 @@ Server::init()
             this->_port = conf.second;
     }
     this->_requests = std::vector<Request>(1024);
+    this->_responses = std::vector<Response>(1024);
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
