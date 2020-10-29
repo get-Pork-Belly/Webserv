@@ -164,8 +164,9 @@ UrlParser::findHostAndPort()
         this->setIndex(found);
         return host_port;
     }
+    host_port = this->_url.substr(this->_index, found - this->_index);
     this->setIndex(found + 1);
-    return (this->_url.substr(this->_index, found - this->_index));
+    return (host_port);
 }
 
 std::string

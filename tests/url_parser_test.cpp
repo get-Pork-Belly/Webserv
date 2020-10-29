@@ -4,7 +4,7 @@
 
 int main()
 {
-    std::string url = "http://www.naver.com/path1/path2/file";
+    std::string url = "http://www.naver.com:8080/path1/path2/file";
     std::string noHost= "/path1/path2/file";
     std::string onlyhost= "www.naver.com";
     std::string noPaths= "/";
@@ -29,11 +29,16 @@ int main()
     parser.parseUrl(noPaths);
     parser.clear();
     std::cout << "----------------- folder -------------" << std::endl;
-    std::cout << "url: " << noPaths<< std::endl;
+    std::cout << "url: " << folder << std::endl;
     parser.parseUrl(folder);
     parser.clear();
     std::cout << "----------------- file -------------" << std::endl;
-    std::cout << "url: " << noPaths<< std::endl;
+    std::cout << "url: " << file << std::endl;
     parser.parseUrl(file);
+    parser.clear();
+
+    std::cout << "----------------- exmpty -------------" << std::endl;
+    std::cout << "url: " << "" << std::endl;
+    parser.parseUrl("");
     parser.clear();
 }
