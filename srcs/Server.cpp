@@ -152,11 +152,7 @@ Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
     Request& req = this->_requests[fd];
 
     if ((bytes = read(fd, buf, header_end_pos + 4)) > 0)
-    {
         req.parseRequestWithoutBody(buf);
-        if (req.getReqInfo() == ReqInfo::COMPLETE)
-            this->_server_manager->fdSet(fd, FdSet::WRITE);
-    }
     else if (bytes == 0)
         throw (Request::RequestFormatException(req, "400"));
     else
@@ -415,16 +411,12 @@ Server::run(int fd)
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
-                    this->findResourceAbsPath(fd);
-                    // location 
-                    // abs root
-                    // {
-                    //     this->_responses[fd].checkAndSetLocation(); // location
-                    //     response._abs_path  //location이 없었다.
-                    // }
-                    // cgi ? file ?
-                    // response에 enum값? 이든뭐든 하여튼 하나로 cgi, file
-                    // file open / cgi pipe open
+                    if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
+                    {
+                        this->findResourceAbsPath(fd);
+                        // ResType res = checkResourceType(fd);
+                        // preprocessing with swith of res;
+                    }
                     Log::getRequest(*this, fd);
                 }
             }
@@ -483,7 +475,7 @@ Server::findResourceAbsPath(int fd)
     const std::string& path = parser.getPath(); // path
 
     Response& response = this->_responses[fd];
-    response.checkAndSetLocation(path, this); // Response객체에 route주소와 location_info가 저장됨
+    response.setRouteAndLocationInfo(path, this); // Response객체에 route주소와 location_info가 저장됨
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
