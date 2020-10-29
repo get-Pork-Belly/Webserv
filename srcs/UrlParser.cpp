@@ -104,6 +104,22 @@ UrlParser::setHostAndPort(const std::string& host_port)
     this->setPort(splited[1]);
 }
 
+void
+UrlParser::setPaths()
+{
+    size_t i = 0;
+    if (this->_path == "/")
+    {
+        this->_paths.push_back("/");
+        return ;
+    }
+    this->_paths = ft::split(this->_path, "/");
+    for (; i < this->_paths.size() - 1; i++)
+        this->_paths[i].append("/");
+    if (this->_url.back() == '/')
+        this->_paths[i].append("/");
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -138,12 +154,13 @@ std::string
 UrlParser::findScheme()
 {
     std::string scheme;
+    size_t temp_index = this->getIndex();
+
     size_t found = this->_url.find("://", this->_index);
     if (found == std::string::npos)
         return ("");
-    scheme = this->_url.substr(this->_index, found);
     this->setIndex(found + 3);
-    return (scheme);
+    return (this->_url.substr(temp_index, found));
 }
 
 std::string
@@ -151,28 +168,26 @@ UrlParser::findHostAndPort()
 {
     size_t found;
     std::string host_port;
+    size_t temp_index = this->getIndex();
 
-    if (this->_url[this->_index] == '/') // host가 없고 바로 path가 시작되는 경우
+    if (this->_url[this->_index] == '/')
     {
         this->setIndex(this->_index + 1);
         return ("");
     }
     found = this->_url.find("/", this->_index);
-    if (found == std::string::npos) // 만약 패스가 전혀 없다면
+    if (found == std::string::npos)
     {
-        host_port = this->_url.substr(this->_index);
         this->setIndex(found);
-        return host_port;
+        return (this->_url.substr(temp_index));
     }
-    host_port = this->_url.substr(this->_index, found - this->_index);
     this->setIndex(found + 1);
-    return (host_port);
+    return (this->_url.substr(temp_index, found - temp_index));
 }
 
 std::string
 UrlParser::findPath()
 {
-    // 이 함수에 들어 왔다는 건 이전에 / 가 반드시 있다는 것.
     if (this->_url.length() == 1 && this->_url[0] == '/')
         return ("/");
     else
@@ -180,27 +195,10 @@ UrlParser::findPath()
 }
 
 void
-UrlParser::setPaths()
-{
-    size_t i = 0;
-    if (this->_path == "/")
-    {
-        this->_paths.push_back("/");
-        return ;
-    }
-    this->_paths = ft::split(this->_path, "/");
-    for (; i < this->_paths.size() - 1; i++)
-        this->_paths[i].append("/");
-    if (this->_url.back() == '/') // 마지막 패스가 파일인지 폴더인지 확인
-        this->_paths[i].append("/");
-}
-
-void
 UrlParser::clear()
 {
     this->setIndex(0);
     this->_url.clear();
-    this->_scheme.clear();
     this->_scheme.clear();
     this->_host.clear();
     this->_port.clear();
