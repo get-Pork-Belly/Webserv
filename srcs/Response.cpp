@@ -177,7 +177,7 @@ Response::applyAndCheckRequest(Request& request, Server* server)
     this->setStatusCode(request.getStatusCode());
     if (this->setRouteAndLocationInfo(request.getUri(), server))
     {
-        if (isLimitExceptInLocation() && isAllowedMethod(request.getMethod()) == false)
+        if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
             this->setStatusCode("405");
     }
 }
