@@ -82,7 +82,9 @@ public:
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
+    bool isFileUri(Request& request);
     void findResourceAbsPath(int fd);
+    ResType checkResourceType(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception

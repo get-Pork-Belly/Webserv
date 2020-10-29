@@ -361,6 +361,12 @@ Server::isCGIPipe(int fd) const
     return false;
 } 
 
+bool
+Server::isFileUri(Request& request)
+{
+    return (request.getUri().back() != '/');
+}
+
 void
 Server::run(int fd)
 {
@@ -414,7 +420,8 @@ Server::run(int fd)
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                     {
                         this->findResourceAbsPath(fd);
-                        // ResType res = checkResourceType(fd);
+                        ResType res = this->checkResourceType(fd);
+                        std::cout<<"ResType: "<<(int)res<<std::endl;
                         // preprocessing with swith of res;
                     }
                     Log::getRequest(*this, fd);
@@ -482,4 +489,38 @@ Server::findResourceAbsPath(int fd)
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
     std::cout<<response.getResourceAbsPath()<<std::endl;
+}
+
+ResType
+Server::checkResourceType(int fd)
+{
+    // 1. file or folder
+    //   - 
+    // 맨 마지막 값이 '/' 면 폴더, 아니면 파일
+    // 2. 만약 파일이면
+    //   일반파일, cgi
+    // 3. 폴더
+    //   index 옵션 확인. 만약 있다면 파일로 처리
+    //   위에서 걸리지 않았다면 이 때 autoindex 처리
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    
+    if (isFileUri(this->_requests[fd]))
+    {
+        location_info::const_iterator it = location_info.find("cgi");
+        if (it == location_info.end())
+            return (ResType::STATIC_RESOURCE);
+        size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
+        if (dot == std::string::npos)
+            return (ResType::STATIC_RESOURCE);
+        std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
+        const std::string& cgi = it->second;
+        if (cgi.find(extension) == std::string::npos)
+            return (ResType::STATIC_RESOURCE);
+        return (ResType::CGI);
+    }   
+    else
+    {
+        std::cout<<"This is folder!!!!!"<<std::endl;
+    }
+    return (ResType::ERROR_CODE);
 }
