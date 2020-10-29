@@ -47,7 +47,7 @@ public:
     /* Exception */
     /* Util */
     // bool isLocationUri(const std::string& uri, Server* server);
-    bool checkAndSetLocation(const std::string& uri, Server* server);
+    bool setRouteAndLocationInfo(const std::string& uri, Server* server);
     bool isLimitExceptInLocation();
     bool isAllowedMethod(const std::string& method);
 

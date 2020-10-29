@@ -175,7 +175,7 @@ void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
     this->setStatusCode(request.getStatusCode());
-    if (checkAndSetLocation(request.getUri(), server))
+    if (this->setRouteAndLocationInfo(request.getUri(), server))
     {
         if (isLimitExceptInLocation() && isAllowedMethod(request.getMethod()) == false)
             this->setStatusCode("405");
@@ -183,7 +183,7 @@ Response::applyAndCheckRequest(Request& request, Server* server)
 }
 
 bool
-Response::checkAndSetLocation(const std::string& uri, Server* server)
+Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
