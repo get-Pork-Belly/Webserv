@@ -41,11 +41,12 @@ public:
     // std::string getClients() const;
     const location_info& getLocationInfo() const;
     const std::string& getResourceAbsPath() const;
-    struct stat getFileInfo() const;
+    const struct stat& getFileInfo() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
     void setResourceAbsPath(const std::string& path);
+    void setFileInfo(const struct stat& file_info);
     // void setMessageBody();
     /* Exception */
     /* Util */
