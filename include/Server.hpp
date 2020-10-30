@@ -105,9 +105,8 @@ public:
     private:
         Response& _response;
         int _error;
-        char* _str_error;
     public:
-        OpenResourceErrorException(Response& response, int error, char* str_error);
+        OpenResourceErrorException(Response& response, int error);
         std::string s_what() const throw();
     };
 

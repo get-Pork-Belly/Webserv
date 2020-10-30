@@ -101,11 +101,13 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
-Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error, char* str_error)
-: _response(response), _error(error), _str_error(str_error)
+Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error)
+: _response(response), _error(error)
 {
     if (this->_error == EACCES)
         this->_response.setStatusCode("403");
+    else if (this->_error == ENOMEM)
+        this->_response.setStatusCode("500");
     else
         this->_response.setStatusCode("404");
 }
@@ -119,8 +121,7 @@ Server::OpenResourceErrorException::s_what() const throw()
     msg += "[CODE ";
     msg += code;
     msg += "] ";
-    (code.compare("404") == 0) ? msg += "Not Found: " : msg +="Forbidden: ";
-    msg += this->_str_error;
+    msg += strerror(this->_error);
     return (msg);
 }
 
@@ -387,7 +388,7 @@ Server::openStaticResource(int fd)
 {
     int resource_fd;
     const std::string& path = this->_responses[fd].getResourceAbsPath();
-    struct stat tmp = this->_responses[fd].getFileInfo();
+    struct stat tmp;
 
     if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
     {
@@ -396,10 +397,11 @@ Server::openStaticResource(int fd)
         this->_server_manager->setResourceOnFdTable(resource_fd, fd);
         this->_server_manager->updateFdMax(resource_fd);
         if ((fstat(resource_fd, &tmp)) == -1)
-            throw strerror(errno);
+            throw OpenResourceErrorException(this->_responses[fd], errno);
+        this->_responses[fd].setFileInfo(tmp);
     }
     else
-        throw OpenResourceErrorException(this->_responses[fd], errno, strerror(errno));
+        throw OpenResourceErrorException(this->_responses[fd], errno);
 }
 
 void
