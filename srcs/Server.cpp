@@ -120,24 +120,20 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
-Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req, const std::string& status_code)
-: _req(req) 
+Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req, const std::string& status_code, int error_num)
+: _req(req), _error(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error)))
 {
     req.setStatusCode(status_code);
 }
 
-std::string
-Server::CannotOpenDirectoryException::s_what() const throw()
+const char*
+Server::CannotOpenDirectoryException::what() const throw()
 {
-    std::string msg;
-    msg += "CannotOpenDirectoryException: ";
-    msg += strerror(errno);
-    msg += "\n";
-    return (msg);
+    return (this->_msg.c_str());
 }
 
 Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error)
-: _response(response), _error(error)
+: _response(response), _error(error), _msg("OpenResourceErrorException: " + std::string(strerror(this->_error)))
 {
     if (this->_error == EACCES)
         this->_response.setStatusCode("403");
@@ -147,17 +143,10 @@ Server::OpenResourceErrorException::OpenResourceErrorException(Response& respons
         this->_response.setStatusCode("404");
 }
 
-std::string
-Server::OpenResourceErrorException::s_what() const throw()
+const char*
+Server::OpenResourceErrorException::what() const throw()
 {
-    std::string msg;
-    const std::string& code = this->_response.getStatusCode();
-
-    msg += "[CODE ";
-    msg += code;
-    msg += "] ";
-    msg += strerror(this->_error);
-    return (msg);
+    return (this->_msg.c_str());
 }
 
 /*============================================================================*/
@@ -556,7 +545,7 @@ Server::run(int fd)
             }
             catch(const CannotOpenDirectoryException& e)
             {
-                std::cerr << e.s_what() << '\n';
+                std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
             }
             catch(const Request::RequestFormatException& e)
@@ -568,16 +557,6 @@ Server::run(int fd)
                     this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
-            }
-            catch(const ReadErrorException& e)
-            {
-                this->closeClientSocket(fd);
-                std::cerr << e.what() << '\n';
-            }
-            catch(const OpenResourceErrorException& e)
-            {
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-                std::cerr << e.s_what() << '\n';
             }
             catch(const std::exception& e)
             {
@@ -662,9 +641,9 @@ Server::checkResourceType(int fd)
         if (errno == ENOTDIR)
             response.setResourceType(ResType::STATIC_RESOURCE);
         else if (errno == EACCES)
-            throw (CannotOpenDirectoryException(this->_requests[fd], "403"));
+            throw (CannotOpenDirectoryException(this->_requests[fd], "403", errno));
         else if (errno == ENOENT)
-            throw (CannotOpenDirectoryException(this->_requests[fd], "404"));
+            throw (CannotOpenDirectoryException(this->_requests[fd], "404", errno));
     }
     else
     {

@@ -118,20 +118,24 @@ public:
     {
     private:
         Request& _req;
+        int _error;
+        std::string _msg;
     public:
-        CannotOpenDirectoryException(Request& req, const std::string& status_code);
+        CannotOpenDirectoryException(Request& req, const std::string& status_code, int error_num);
         CannotOpenDirectoryException(Request& req);
-        virtual std::string s_what() const throw();
+        virtual const char* what() const throw();
     };
     class OpenResourceErrorException : public std::exception
     {
     private:
         Response& _response;
         int _error;
+        std::string _msg;
     public:
         OpenResourceErrorException(Response& response, int error);
-        std::string s_what() const throw();
+        virtual const char* what() const throw();
     };
+
 
 // public:
 //     class ResponseException : public std::exception
