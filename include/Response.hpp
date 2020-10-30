@@ -1,6 +1,7 @@
 #ifndef RESPONSE_HPP
 # define RESPONSE_HPP
 
+# include <dirent.h>
 # include "Request.hpp"
 # include "types.hpp"
 
@@ -18,6 +19,7 @@ private:
     location_info _location_info;
     std::string _resource_abs_path;
     std::string _route;
+    struct dirent* _dirctory_entry;
 
 public:
     /* Constructor */
@@ -43,6 +45,7 @@ public:
     /* Setter */
     void setStatusCode(const std::string& status_code);
     void setResourceAbsPath(const std::string& path);
+    void setDirectoryEntry();
     // void setMessageBody();
     /* Exception */
     /* Util */

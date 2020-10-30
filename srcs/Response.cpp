@@ -94,6 +94,16 @@ Response::setResourceAbsPath(const std::string& path)
 {
     this->_resource_abs_path = path;
 }
+
+void
+Response::setDirectoryEntry()
+{
+    // open할 폴더경로를 찾아야함. ->AbsPath
+    // absPath : /folder/folder/
+    DIR* dir_ptr = nullptr;
+
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
