@@ -421,7 +421,7 @@ Server::openStaticResource(int fd)
 }
 
 bool
-Server::isFileUri(Request& request)
+Server::isFileUri(const Request& request) const
 {
     return (request.getUri().back() != '/');
 }
