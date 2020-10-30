@@ -58,8 +58,6 @@ Server::getServerSocket() const
     return (this->_server_socket);
 }
 
-
-
 const std::map<std::string, location_info>&
 Server::getLocationConfig()
 {
@@ -101,6 +99,30 @@ const char*
 Server::ReadErrorException::what() const throw()
 {
     return ("[CODE 900] Read empty buffer or occured reading error");
+}
+
+Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error)
+: _response(response), _error(error)
+{
+    if (this->_error == EACCES)
+        this->_response.setStatusCode("403");
+    else if (this->_error == ENOMEM)
+        this->_response.setStatusCode("500");
+    else
+        this->_response.setStatusCode("404");
+}
+
+std::string
+Server::OpenResourceErrorException::s_what() const throw()
+{
+    std::string msg;
+    const std::string& code = this->_response.getStatusCode();
+
+    msg += "[CODE ";
+    msg += code;
+    msg += "] ";
+    msg += strerror(this->_error);
+    return (msg);
 }
 
 /*============================================================================*/
@@ -366,6 +388,7 @@ Server::openStaticResource(int fd)
 {
     int resource_fd;
     const std::string& path = this->_responses[fd].getResourceAbsPath();
+    struct stat tmp;
 
     if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
     {
@@ -373,9 +396,12 @@ Server::openStaticResource(int fd)
         this->_server_manager->fdSet(resource_fd, FdSet::READ);
         this->_server_manager->setResourceOnFdTable(resource_fd, fd);
         this->_server_manager->updateFdMax(resource_fd);
+        if ((fstat(resource_fd, &tmp)) == -1)
+            throw OpenResourceErrorException(this->_responses[fd], errno);
+        this->_responses[fd].setFileInfo(tmp);
     }
     else
-        throw "File cannot open";
+        throw OpenResourceErrorException(this->_responses[fd], errno);
 }
 
 void
@@ -452,6 +478,11 @@ Server::run(int fd)
             {
                 this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
+            }
+            catch(const OpenResourceErrorException& e)
+            {
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+                std::cerr << e.s_what() << '\n';
             }
             catch(const std::exception& e)
             {

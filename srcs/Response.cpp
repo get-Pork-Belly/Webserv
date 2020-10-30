@@ -10,9 +10,10 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code(""), _transfer_type(""), _clients(""), _message_body("") 
+: _status_code(""), _transfer_type(""), _clients(""), _message_body("")
 {
     this->_headers = { {"", ""} };
+    ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
 }
 
@@ -79,6 +80,12 @@ Response::getResourceAbsPath() const
     return (this->_resource_abs_path);
 }
 
+const struct stat&
+Response::getFileInfo() const
+{
+    return (this->_file_info);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -94,6 +101,13 @@ Response::setResourceAbsPath(const std::string& path)
 {
     this->_resource_abs_path = path;
 }
+
+void
+Response::setFileInfo(const struct stat& file_info)
+{
+    this->_file_info = file_info;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/

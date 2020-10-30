@@ -12,6 +12,7 @@
 # include <algorithm>
 # include <vector>
 # include <fcntl.h>
+# include <errno.h>
 # include "types.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
@@ -98,6 +99,15 @@ public:
     {
     public:
         virtual const char* what() const throw();
+    };
+    class OpenResourceErrorException : public std::exception
+    {
+    private:
+        Response& _response;
+        int _error;
+    public:
+        OpenResourceErrorException(Response& response, int error);
+        std::string s_what() const throw();
     };
 
 // public:
