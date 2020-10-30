@@ -109,14 +109,14 @@ Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req,
     req.setStatusCode(status_code);
 }
 
-const char*
-Server::CannotOpenDirectoryException::what() const throw()
+std::string
+Server::CannotOpenDirectoryException::s_what() const throw()
 {
     std::string msg;
     msg += "CannotOpenDirectoryException: ";
     msg += strerror(errno);
     msg += "\n";
-    return (msg.c_str());
+    return (msg);
 }
 
 /*============================================================================*/
@@ -419,6 +419,7 @@ Server::run(int fd)
                 std::cerr<<"Error: sendResponse"<<std::endl;
             this->_server_manager->fdClr(fd, FdSet::WRITE);
             this->_requests[fd].clear();
+            this->_responses[fd].init();
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
@@ -443,9 +444,9 @@ Server::run(int fd)
                     Log::getRequest(*this, fd);
                 }
             }
-            catch(const Request::CannotOpenDirectoryException& e)
+            catch(const CannotOpenDirectoryException& e)
             {
-                std::cerr << e.what() << '\n';
+                std::cerr << e.s_what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
             }
             catch(const Request::RequestFormatException& e)
@@ -553,9 +554,7 @@ Server::checkResourceType(int fd)
     }
     else // 폴더인 경우 일단 폴더에 뭐가 있는지 반드시 찾아봐야 한다
     {
-        // 폴더의 엔트리를 찾아서 만약 index.html이 있다면 True
-        // checkFolderEntry()
-        this->_responses[fd].setDirectoryEntry();
+        this->_responses[fd].setDirectoryEntry(dir_ptr);
         if (this->isIndexFileExist())
             return (ResType::INDEX_HTML);
         else

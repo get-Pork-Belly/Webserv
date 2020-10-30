@@ -109,7 +109,7 @@ public:
     public:
         CannotOpenDirectoryException(Request& req, const std::string& status_code);
         CannotOpenDirectoryException(Request& req);
-        virtual const char* what() const throw();
+        virtual std::string s_what() const throw();
     };
 
 // public:
