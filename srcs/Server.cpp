@@ -383,6 +383,20 @@ Server::isFileUri(Request& request)
     return (request.getUri().back() != '/');
 }
 
+bool
+Server::isIndexFileExist(int fd)
+{
+    const std::string& dir_entry = this->_responses[fd].getDirectoryEntry();
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
+    for (std::string& index : indexs)
+    {
+        if (dir_entry.find(index) != std::string::npos)
+            return (true);
+    }
+    return (false);
+}
+
 void
 Server::run(int fd)
 {
@@ -513,6 +527,8 @@ Server::findResourceAbsPath(int fd)
     std::cout<<response.getResourceAbsPath()<<std::endl;
 }
 
+
+
 ResType
 Server::checkResourceType(int fd)
 {
@@ -555,18 +571,18 @@ Server::checkResourceType(int fd)
     else // 폴더인 경우 일단 폴더에 뭐가 있는지 반드시 찾아봐야 한다
     {
         this->_responses[fd].setDirectoryEntry(dir_ptr);
-        if (this->isIndexFileExist())
+        if (this->isIndexFileExist(fd))
             return (ResType::INDEX_HTML);
         else
         {
             // AUtoindex 옵션을 검사한다.
-            if (this->isAutoIndexOn())
-                return (ResType::AUTO_INDEX);
-            else
-            {
-                this->_responses[fd].setStatusCode("403");
-                return (ResType::ERROR_CODE);
-            }
+            // if (this->isAutoIndexOn())
+            //     return (ResType::AUTO_INDEX);
+            // else
+            // {
+            //     this->_responses[fd].setStatusCode("403");
+            //     return (ResType::ERROR_CODE);
+            // }
         }
         
     }

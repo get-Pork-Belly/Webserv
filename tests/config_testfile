@@ -20,6 +20,7 @@ http {
             root  /user/iwoo;
             index  html;
             limit_except PUT POST GET
+            index index.html index.htm index.abc;
         }
     }
 }

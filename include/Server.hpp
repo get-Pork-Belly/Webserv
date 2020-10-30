@@ -84,6 +84,7 @@ public:
     bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
     bool isFileUri(Request& request);
+    bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
     ResType checkResourceType(int fd);
 
