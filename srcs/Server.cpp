@@ -121,23 +121,17 @@ Server::ReadErrorException::what() const throw()
 }
 
 Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req, const std::string& status_code, int error_num)
-: _req(req), _error(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error)))
+: _req(req), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
 {
     req.setStatusCode(status_code);
 }
 
-const char*
-Server::CannotOpenDirectoryException::what() const throw()
-{
-    return (this->_msg.c_str());
-}
-
 Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error)
-: _response(response), _error(error), _msg("OpenResourceErrorException: " + std::string(strerror(this->_error)))
+: _response(response), _error_num(error), _msg("OpenResourceErrorException: " + std::string(strerror(this->_error_num)))
 {
-    if (this->_error == EACCES)
+    if (this->_error_num == EACCES)
         this->_response.setStatusCode("403");
-    else if (this->_error == ENOMEM)
+    else if (this->_error_num == ENOMEM)
         this->_response.setStatusCode("500");
     else
         this->_response.setStatusCode("404");
