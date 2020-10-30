@@ -63,7 +63,9 @@ public:
     Request& getRequest(int fd);
     /* Setter */
     void setServerSocket();
+
     /* Exception */
+
     /* Util */
     bool closeClientSocket(int fd);
     bool isFdManagedByServer(int fd) const;
@@ -92,6 +94,10 @@ public:
     void checkResourceType(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
+
+    /* Server run function */
+    void acceptClient();
+    
 
 public:
     class PayloadTooLargeException : public std::exception

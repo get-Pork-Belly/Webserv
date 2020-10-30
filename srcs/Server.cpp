@@ -469,30 +469,37 @@ Server::isAutoIndexOn(int fd)
 }
 
 void
-Server::run(int fd)
+Server::acceptClient()
 {
-    int client_len;
     int client_socket;
+    int client_len;
     struct sockaddr_in client_address;
 
-    if (isServerSocket(fd))
+    if ((client_socket = accept(this->getServerSocket(),
+        reinterpret_cast<struct sockaddr *>(&client_address),
+        reinterpret_cast<socklen_t *>(&client_len))) != -1)
     {
-        client_len = sizeof(client_address);
-        if ((client_socket = accept(this->getServerSocket(),
-            reinterpret_cast<struct sockaddr *>(&client_address),
-            reinterpret_cast<socklen_t *>(&client_len))) != -1)
-        {
-            if (client_socket > this->_server_manager->getFdMax())
-                this->_server_manager->setFdMax(client_socket);
-            this->_server_manager->fdSet(client_socket, FdSet::READ);
-            fcntl(client_socket, F_SETFL, O_NONBLOCK);
-            this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
-            this->_server_manager->updateFdMax(client_socket);
-            Log::newClient(*this, client_socket);
-        }
-        else
-            std::cerr<<"Accept error"<<std::endl;
+        if (client_socket > this->_server_manager->getFdMax())
+            this->_server_manager->setFdMax(client_socket);
+        this->_server_manager->fdSet(client_socket, FdSet::READ);
+        fcntl(client_socket, F_SETFL, O_NONBLOCK);
+        this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
+        this->_server_manager->updateFdMax(client_socket);
+        Log::newClient(*this, client_socket);
     }
+    else
+        std::cerr<<"Accept error"<<std::endl;
+}
+
+void
+Server::run(int fd)
+{
+    // int client_len;
+    // int client_socket;
+    // struct sockaddr_in client_address;
+
+    if (isServerSocket(fd))
+        this->acceptClient();
     else
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
