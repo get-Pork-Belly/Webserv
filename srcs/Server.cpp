@@ -91,7 +91,10 @@ Server::setResourceAbsPathAsIndex(int fd)
     for (std::string& index : indexs)
     {
         if (dir_entry.find(index) != std::string::npos)
+        {
+            response.setResourceType(ResType::STATIC_RESOURCE);
             response.setResourceAbsPath(path + index);
+        }
     }
 }
 
@@ -518,35 +521,28 @@ Server::run(int fd)
                     this->receiveRequest(fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                     {
+                        //processingResponseBody()
                         this->findResourceAbsPath(fd);
                         this->checkResourceType(fd);
-                        // 1.index -> static // fileAbsPath -> 
-
+                        if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
+                            this->setResourceAbsPathAsIndex(fd);
                         ResType res_type = this->_responses[fd].getResourceType();
                         switch (res_type)
                         {
-                        case ResType::INDEX_HTML:
-                            this->setResourceAbsPathAsIndex(fd);
-                            break ;
                         case ResType::AUTO_INDEX:
-                            
+                            std::cout << "auto index" << std::endl;
                             break ;
                         case ResType::STATIC_RESOURCE:
+                            std::cout << "static file path" << std::endl;
                             this->openStaticResource(fd);
                             break ;
                         case ResType::CGI:
-                            
+                            std::cout << "cgi" << std::endl;
                             break ;
                         default:
-                            
+                            std::cout << "Whatwhahahahha" << std::endl;
                             break ;
                         }
-
-                        // 2. autoindex
-                        // 3. static -> open
-                        // 4. cgi
-                        this->openStaticResource(fd);
-                        // preprocessing with swith of res;
                     }
                     Log::getRequest(*this, fd);
                 }
