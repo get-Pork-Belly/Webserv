@@ -51,7 +51,7 @@ Request::getMethod() const
 }
 
 const std::string&
-Request::getUri()
+Request::getUri() const
 {
     return (this->_uri);
 }

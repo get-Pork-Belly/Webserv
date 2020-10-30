@@ -5,6 +5,7 @@
 # include <string>
 # include <map>
 # include <vector>
+# include <errno.h>
 # include <sys/socket.h>
 # include <sys/types.h>
 # include <sys/time.h>
@@ -83,7 +84,12 @@ public:
     std::string makeResponseMessage(Request& request);
     bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
+    bool isFileUri(const Request& request) const;
+    bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
+    bool isAutoIndexOn(int fd);
+    bool isCgiUri(int fd);
+    ResType checkResourceType(int fd);
     void openStaticResource(int fd);
 
 public:
@@ -99,6 +105,16 @@ public:
     {
     public:
         virtual const char* what() const throw();
+    };
+public:
+    class CannotOpenDirectoryException : public std::exception
+    {
+    private:
+        Request& _req;
+    public:
+        CannotOpenDirectoryException(Request& req, const std::string& status_code);
+        CannotOpenDirectoryException(Request& req);
+        virtual std::string s_what() const throw();
     };
     class OpenResourceErrorException : public std::exception
     {

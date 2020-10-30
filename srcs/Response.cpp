@@ -80,6 +80,12 @@ Response::getResourceAbsPath() const
     return (this->_resource_abs_path);
 }
 
+const std::string&
+Response::getDirectoryEntry() const
+{
+    return (this->_directory_entry);
+}
+
 const struct stat&
 Response::getFileInfo() const
 {
@@ -100,6 +106,17 @@ void
 Response::setResourceAbsPath(const std::string& path)
 {
     this->_resource_abs_path = path;
+}
+
+void
+Response::setDirectoryEntry(DIR* dir_ptr)
+{
+    struct dirent* entry = NULL;
+    while ((entry = readdir(dir_ptr)) != NULL)
+    {
+        this->_directory_entry += entry->d_name;
+        this->_directory_entry += " ";
+    }
 }
 
 void
@@ -124,6 +141,11 @@ Response::init()
     this->_transfer_type = "";
     this->_clients = "";
     this->_message_body = "";
+    this->_status_code = "";
+    this->_location_info = { {"", ""} };
+    this->_resource_abs_path = "";
+    this->_route = "";
+    this->_directory_entry = "";
 }
 
 void

@@ -67,4 +67,13 @@ enum class ReqInfo
     MUST_CLEAR,
 };
 
+enum class ResType
+{
+    STATIC_RESOURCE,
+    CGI,
+    AUTO_INDEX,
+    INDEX_HTML,
+    ERROR_CODE
+};
+
 #endif

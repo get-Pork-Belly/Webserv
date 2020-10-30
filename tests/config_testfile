@@ -6,13 +6,9 @@ http {
         listen       8080;
 
         location /folder {
-            root /111/;
-        }
-        location /folder/folder {
-            root /222/111/;
-        }
-        location /folder/folder/folder {
-            root /333/222/111/;
+            cgi .bin .cgi .bla;
+            autoindex off;
+            root /goinfre/iwoo/;
         }
     }
     server {
@@ -25,8 +21,7 @@ http {
             root  /user/iwoo;
             index  html;
             limit_except PUT POST GET
+            index index.html index.htm index.abc;
         }
     }
 }
-
-GET /second HTTP:1.0

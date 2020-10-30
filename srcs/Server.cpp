@@ -101,6 +101,22 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
+Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req, const std::string& status_code)
+: _req(req) 
+{
+    req.setStatusCode(status_code);
+}
+
+std::string
+Server::CannotOpenDirectoryException::s_what() const throw()
+{
+    std::string msg;
+    msg += "CannotOpenDirectoryException: ";
+    msg += strerror(errno);
+    msg += "\n";
+    return (msg);
+}
+
 Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error)
 : _response(response), _error(error)
 {
@@ -404,6 +420,35 @@ Server::openStaticResource(int fd)
         throw OpenResourceErrorException(this->_responses[fd], errno);
 }
 
+bool
+Server::isFileUri(const Request& request) const
+{
+    return (request.getUri().back() != '/');
+}
+
+bool
+Server::isIndexFileExist(int fd)
+{
+    const std::string& dir_entry = this->_responses[fd].getDirectoryEntry();
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
+    for (std::string& index : indexs)
+    {
+        if (dir_entry.find(index) != std::string::npos)
+            return (true);
+    }
+    return (false);
+}
+
+bool
+Server::isAutoIndexOn(int fd)
+{
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    if (location_info.at("autoindex") == "on")
+        return (true);
+    return (false);
+}
+
 void
 Server::run(int fd)
 {
@@ -440,6 +485,7 @@ Server::run(int fd)
                 std::cerr<<"Error: sendResponse"<<std::endl;
             this->_server_manager->fdClr(fd, FdSet::WRITE);
             this->_requests[fd].clear();
+            this->_responses[fd].init();
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
@@ -457,12 +503,18 @@ Server::run(int fd)
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                     {
                         this->findResourceAbsPath(fd);
-                        // ResType res = checkResourceType(fd);
-                        this->openStaticResource(fd);
+                        ResType res = this->checkResourceType(fd);
+                        std::cout<<"ResType: "<<(int)res<<std::endl;
+                        // this->openStaticResource(fd);
                         // preprocessing with swith of res;
                     }
                     Log::getRequest(*this, fd);
                 }
+            }
+            catch(const CannotOpenDirectoryException& e)
+            {
+                std::cerr << e.s_what() << '\n';
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
             }
             catch(const Request::RequestFormatException& e)
             {
@@ -531,4 +583,52 @@ Server::findResourceAbsPath(int fd)
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
     std::cout<<response.getResourceAbsPath()<<std::endl;
+}
+
+bool
+Server::isCgiUri(int fd)
+{
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
+
+    location_info::const_iterator it = location_info.find("cgi");
+    if (it == location_info.end())
+        return (false);
+    size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
+    if (dot == std::string::npos)
+        return (false);
+    std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
+    const std::string& cgi = it->second;
+    if (cgi.find(extension) == std::string::npos)
+        return (false);
+    return (true);
+}
+
+ResType
+Server::checkResourceType(int fd)
+{
+    if (this->isCgiUri(fd))
+        return (ResType::CGI);
+        
+    DIR* dir_ptr;
+    if ((dir_ptr = opendir(this->_responses[fd].getResourceAbsPath().c_str())) == NULL)
+    {
+        if (errno == ENOTDIR)
+            return (ResType::STATIC_RESOURCE);
+        else if (errno == EACCES)
+            throw (CannotOpenDirectoryException(this->_requests[fd], "403"));
+        else if (errno == ENOENT)
+            throw (CannotOpenDirectoryException(this->_requests[fd], "404"));
+    }
+    else
+    {
+        this->_responses[fd].setDirectoryEntry(dir_ptr);
+        closedir(dir_ptr);
+        if (this->isIndexFileExist(fd))
+            return (ResType::INDEX_HTML);
+        if (this->isAutoIndexOn(fd))
+            return (ResType::AUTO_INDEX);
+        else
+            this->_responses[fd].setStatusCode("403");
+    }
+    return (ResType::ERROR_CODE);
 }
