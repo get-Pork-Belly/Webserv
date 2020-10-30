@@ -3,6 +3,7 @@
 
 # include "Request.hpp"
 # include "types.hpp"
+# include <sys/stat.h>
 
 class Server;
 
@@ -18,6 +19,7 @@ private:
     location_info _location_info;
     std::string _resource_abs_path;
     std::string _route;
+    struct stat _file_info;
 
 public:
     /* Constructor */
@@ -39,6 +41,7 @@ public:
     // std::string getClients() const;
     const location_info& getLocationInfo() const;
     const std::string& getResourceAbsPath() const;
+    struct stat getFileInfo() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);

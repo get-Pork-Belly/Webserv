@@ -10,7 +10,7 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code(""), _transfer_type(""), _clients(""), _message_body("") 
+: _status_code(""), _transfer_type(""), _clients(""), _message_body("")
 {
     this->_headers = { {"", ""} };
     this->initStatusCodeTable();
@@ -77,6 +77,12 @@ const std::string&
 Response::getResourceAbsPath() const
 {
     return (this->_resource_abs_path);
+}
+
+struct stat
+Response::getFileInfo() const
+{
+    return (this->_file_info);
 }
 
 /*============================================================================*/
