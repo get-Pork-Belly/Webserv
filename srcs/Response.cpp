@@ -79,6 +79,12 @@ Response::getResourceAbsPath() const
     return (this->_resource_abs_path);
 }
 
+const std::string&
+Response::getDirectoryEntry() const
+{
+    return (this->_directory_entry);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -96,12 +102,14 @@ Response::setResourceAbsPath(const std::string& path)
 }
 
 void
-Response::setDirectoryEntry()
+Response::setDirectoryEntry(DIR* dir_ptr)
 {
-    // open할 폴더경로를 찾아야함. ->AbsPath
-    // absPath : /folder/folder/
-    DIR* dir_ptr = nullptr;
-
+    struct dirent* entry = NULL;
+    while ((entry = readdir(dir_ptr)) != NULL)
+    {
+        this->_directory_entry += entry->d_name;
+        this->_directory_entry += " ";
+    }
 }
 
 /*============================================================================*/
@@ -120,6 +128,11 @@ Response::init()
     this->_transfer_type = "";
     this->_clients = "";
     this->_message_body = "";
+    this->_status_code = "";
+    this->_location_info = { {"", ""} };
+    this->_resource_abs_path = "";
+    this->_route = "";
+    this->_directory_entry = "";
 }
 
 void

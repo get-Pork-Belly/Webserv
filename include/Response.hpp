@@ -19,7 +19,7 @@ private:
     location_info _location_info;
     std::string _resource_abs_path;
     std::string _route;
-    struct dirent* _dirctory_entry;
+    std::string _directory_entry;
 
 public:
     /* Constructor */
@@ -41,11 +41,12 @@ public:
     // std::string getClients() const;
     const location_info& getLocationInfo() const;
     const std::string& getResourceAbsPath() const;
+    const std::string& getDirectoryEntry() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
     void setResourceAbsPath(const std::string& path);
-    void setDirectoryEntry();
+    void setDirectoryEntry(DIR* dir_ptr);
     // void setMessageBody();
     /* Exception */
     /* Util */
