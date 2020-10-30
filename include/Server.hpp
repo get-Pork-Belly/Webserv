@@ -5,6 +5,7 @@
 # include <string>
 # include <map>
 # include <vector>
+# include <errno.h>
 # include <sys/socket.h>
 # include <sys/types.h>
 # include <sys/time.h>
@@ -98,6 +99,16 @@ public:
     class ReadErrorException : public std::exception
     {
     public:
+        virtual const char* what() const throw();
+    };
+public:
+    class CannotOpenDirectoryException : public std::exception
+    {
+    private:
+        Request& _req;
+    public:
+        CannotOpenDirectoryException(Request& req, const std::string& status_code);
+        CannotOpenDirectoryException(Request& req);
         virtual const char* what() const throw();
     };
 

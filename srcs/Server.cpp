@@ -103,6 +103,22 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
+Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req, const std::string& status_code)
+: _req(req) 
+{
+    req.setStatusCode(status_code);
+}
+
+const char*
+Server::CannotOpenDirectoryException::what() const throw()
+{
+    std::string msg;
+    msg += "CannotOpenDirectoryException: ";
+    msg += strerror(errno);
+    msg += "\n";
+    return (msg.c_str());
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
@@ -427,6 +443,11 @@ Server::run(int fd)
                     Log::getRequest(*this, fd);
                 }
             }
+            catch(const Request::CannotOpenDirectoryException& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+            }
             catch(const Request::RequestFormatException& e)
             {
                 if (this->_requests[fd].isContentLeftInBuffer())
@@ -500,27 +521,55 @@ Server::checkResourceType(int fd)
     // 2. 만약 파일이면
     //   일반파일, cgi
     // 3. 폴더
-    //   index 옵션 확인. 만약 있다면 파일로 처리
-    //   위에서 걸리지 않았다면 이 때 autoindex 처리
+    //   location_info를 확인하여 index 옵션 확인해서 해당하는 파일이 있는지 검사.
+    //      만약 있다면 index로 처리
+    //           없다면 autoindex 확인. 
+    //                  off면 "403" error_code
+    //                  on이면 autoindex 처리
     const location_info& location_info = this->_responses[fd].getLocationInfo();
     
-    if (isFileUri(this->_requests[fd]))
+    DIR* dir_ptr;
+
+    if ((dir_ptr = opendir(this->_responses[fd].getResourceAbsPath().c_str())) == NULL)
     {
-        location_info::const_iterator it = location_info.find("cgi");
-        if (it == location_info.end())
-            return (ResType::STATIC_RESOURCE);
-        size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
-        if (dot == std::string::npos)
-            return (ResType::STATIC_RESOURCE);
-        std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
-        const std::string& cgi = it->second;
-        if (cgi.find(extension) == std::string::npos)
-            return (ResType::STATIC_RESOURCE);
-        return (ResType::CGI);
-    }   
-    else
+        if (errno == ENOTDIR) // 폴더가 아님
+        {
+            location_info::const_iterator it = location_info.find("cgi");
+            if (it == location_info.end())
+                return (ResType::STATIC_RESOURCE);
+            size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
+            if (dot == std::string::npos)
+                return (ResType::STATIC_RESOURCE);
+            std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
+            const std::string& cgi = it->second;
+            if (cgi.find(extension) == std::string::npos)
+                return (ResType::STATIC_RESOURCE);
+            return (ResType::CGI);
+        }
+        else if (errno == EACCES)
+            throw CannotOpenDirectoryException(this->_requests[fd], "403");
+        else if (errno == ENOENT)
+            throw CannotOpenDirectoryException(this->_requests[fd], "404");
+    }
+    else // 폴더인 경우 일단 폴더에 뭐가 있는지 반드시 찾아봐야 한다
     {
-        std::cout<<"This is folder!!!!!"<<std::endl;
+        // 폴더의 엔트리를 찾아서 만약 index.html이 있다면 True
+        // checkFolderEntry()
+        this->_responses[fd].setDirectoryEntry();
+        if (this->isIndexFileExist())
+            return (ResType::INDEX_HTML);
+        else
+        {
+            // AUtoindex 옵션을 검사한다.
+            if (this->isAutoIndexOn())
+                return (ResType::AUTO_INDEX);
+            else
+            {
+                this->_responses[fd].setStatusCode("403");
+                return (ResType::ERROR_CODE);
+            }
+        }
+        
     }
     return (ResType::ERROR_CODE);
 }
