@@ -622,6 +622,7 @@ Server::checkResourceType(int fd)
     else
     {
         this->_responses[fd].setDirectoryEntry(dir_ptr);
+        closedir(dir_ptr);
         if (this->isIndexFileExist(fd))
             return (ResType::INDEX_HTML);
         if (this->isAutoIndexOn(fd))
