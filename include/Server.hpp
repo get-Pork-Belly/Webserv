@@ -89,8 +89,9 @@ public:
     void findResourceAbsPath(int fd);
     bool isAutoIndexOn(int fd);
     bool isCgiUri(int fd);
-    ResType checkResourceType(int fd);
+    void checkResourceType(int fd);
     void openStaticResource(int fd);
+    void setResourceAbsPathAsIndex(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception

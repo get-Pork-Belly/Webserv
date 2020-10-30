@@ -79,6 +79,22 @@ Server::getRequest(int fd)
 //     this->_server_socket = server_socket;
 // }
 
+void
+Server::setResourceAbsPathAsIndex(int fd)
+{
+    Response& response = this->_responses[fd];
+    const std::string& dir_entry = response.getDirectoryEntry();
+    const location_info& location_info = response.getLocationInfo();
+    std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
+
+    const std::string& path = response.getResourceAbsPath();
+    for (std::string& index : indexs)
+    {
+        if (dir_entry.find(index) != std::string::npos)
+            response.setResourceAbsPath(path + index);
+    }
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -503,9 +519,33 @@ Server::run(int fd)
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                     {
                         this->findResourceAbsPath(fd);
-                        ResType res = this->checkResourceType(fd);
-                        std::cout<<"ResType: "<<(int)res<<std::endl;
-                        // this->openStaticResource(fd);
+                        this->checkResourceType(fd);
+                        // 1.index -> static // fileAbsPath -> 
+
+                        ResType res_type = this->_responses[fd].getResourceType();
+                        switch (res_type)
+                        {
+                        case ResType::INDEX_HTML:
+                            this->setResourceAbsPathAsIndex(fd);
+                            break ;
+                        case ResType::AUTO_INDEX:
+                            
+                            break ;
+                        case ResType::STATIC_RESOURCE:
+                            this->openStaticResource(fd);
+                            break ;
+                        case ResType::CGI:
+                            
+                            break ;
+                        default:
+                            
+                            break ;
+                        }
+
+                        // 2. autoindex
+                        // 3. static -> open
+                        // 4. cgi
+                        this->openStaticResource(fd);
                         // preprocessing with swith of res;
                     }
                     Log::getRequest(*this, fd);
@@ -603,17 +643,21 @@ Server::isCgiUri(int fd)
     return (true);
 }
 
-ResType
+void
 Server::checkResourceType(int fd)
 {
+    Response& response = this->_responses[fd];
     if (this->isCgiUri(fd))
-        return (ResType::CGI);
+    {
+        response.setResourceType(ResType::CGI);
+        return ;
+    }
         
     DIR* dir_ptr;
-    if ((dir_ptr = opendir(this->_responses[fd].getResourceAbsPath().c_str())) == NULL)
+    if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) == NULL)
     {
         if (errno == ENOTDIR)
-            return (ResType::STATIC_RESOURCE);
+            response.setResourceType(ResType::STATIC_RESOURCE);
         else if (errno == EACCES)
             throw (CannotOpenDirectoryException(this->_requests[fd], "403"));
         else if (errno == ENOENT)
@@ -621,14 +665,19 @@ Server::checkResourceType(int fd)
     }
     else
     {
-        this->_responses[fd].setDirectoryEntry(dir_ptr);
+        response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
         if (this->isIndexFileExist(fd))
-            return (ResType::INDEX_HTML);
-        if (this->isAutoIndexOn(fd))
-            return (ResType::AUTO_INDEX);
+            response.setResourceType(ResType::INDEX_HTML);
         else
-            this->_responses[fd].setStatusCode("403");
+        {
+            if (this->isAutoIndexOn(fd))
+                response.setResourceType(ResType::AUTO_INDEX);
+            else
+            {
+                response.setStatusCode("403");
+                response.setResourceType(ResType::ERROR_CODE);
+            }
+        }
     }
-    return (ResType::ERROR_CODE);
 }
