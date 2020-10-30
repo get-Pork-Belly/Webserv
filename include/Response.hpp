@@ -4,6 +4,7 @@
 # include <dirent.h>
 # include "Request.hpp"
 # include "types.hpp"
+# include <sys/stat.h>
 
 class Server;
 
@@ -20,6 +21,7 @@ private:
     std::string _resource_abs_path;
     std::string _route;
     std::string _directory_entry;
+    struct stat _file_info;
 
 public:
     /* Constructor */
@@ -42,11 +44,13 @@ public:
     const location_info& getLocationInfo() const;
     const std::string& getResourceAbsPath() const;
     const std::string& getDirectoryEntry() const;
+    const struct stat& getFileInfo() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
     void setResourceAbsPath(const std::string& path);
     void setDirectoryEntry(DIR* dir_ptr);
+    void setFileInfo(const struct stat& file_info);
     // void setMessageBody();
     /* Exception */
     /* Util */

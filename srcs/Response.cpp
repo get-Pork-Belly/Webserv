@@ -10,9 +10,10 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code(""), _transfer_type(""), _clients(""), _message_body("") 
+: _status_code(""), _transfer_type(""), _clients(""), _message_body("")
 {
     this->_headers = { {"", ""} };
+    ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
 }
 
@@ -85,6 +86,12 @@ Response::getDirectoryEntry() const
     return (this->_directory_entry);
 }
 
+const struct stat&
+Response::getFileInfo() const
+{
+    return (this->_file_info);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -110,6 +117,12 @@ Response::setDirectoryEntry(DIR* dir_ptr)
         this->_directory_entry += entry->d_name;
         this->_directory_entry += " ";
     }
+}
+
+void
+Response::setFileInfo(const struct stat& file_info)
+{
+    this->_file_info = file_info;
 }
 
 /*============================================================================*/

@@ -1,6 +1,6 @@
 http { 
     include mime.types;
-    root /555/444/;
+    root /Users/yohlee/Webserv/tests/;
     server {
         server_name first_server;
         listen       8080;

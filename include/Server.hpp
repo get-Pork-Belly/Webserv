@@ -13,6 +13,7 @@
 # include <algorithm>
 # include <vector>
 # include <fcntl.h>
+# include <errno.h>
 # include "types.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
@@ -89,6 +90,7 @@ public:
     bool isAutoIndexOn(int fd);
     bool isCgiUri(int fd);
     ResType checkResourceType(int fd);
+    void openStaticResource(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception
@@ -113,6 +115,15 @@ public:
         CannotOpenDirectoryException(Request& req, const std::string& status_code);
         CannotOpenDirectoryException(Request& req);
         virtual std::string s_what() const throw();
+    };
+    class OpenResourceErrorException : public std::exception
+    {
+    private:
+        Response& _response;
+        int _error;
+    public:
+        OpenResourceErrorException(Response& response, int error);
+        std::string s_what() const throw();
     };
 
 // public:
