@@ -397,6 +397,15 @@ Server::isIndexFileExist(int fd)
     return (false);
 }
 
+bool
+Server::isAutoIndexOn(int fd)
+{
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    if (location_info.at("autoindex") == "on")
+        return (true);
+    return (false);
+}
+
 void
 Server::run(int fd)
 {
@@ -527,64 +536,49 @@ Server::findResourceAbsPath(int fd)
     std::cout<<response.getResourceAbsPath()<<std::endl;
 }
 
+bool
+Server::isCgiUri(int fd)
+{
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
 
+    location_info::const_iterator it = location_info.find("cgi");
+    if (it == location_info.end())
+        return (false);
+    size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
+    if (dot == std::string::npos)
+        return (false);
+    std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
+    const std::string& cgi = it->second;
+    if (cgi.find(extension) == std::string::npos)
+        return (false);
+    return (true);
+}
 
 ResType
 Server::checkResourceType(int fd)
 {
-    // 1. file or folder
-    //   - 
-    // 맨 마지막 값이 '/' 면 폴더, 아니면 파일
-    // 2. 만약 파일이면
-    //   일반파일, cgi
-    // 3. 폴더
-    //   location_info를 확인하여 index 옵션 확인해서 해당하는 파일이 있는지 검사.
-    //      만약 있다면 index로 처리
-    //           없다면 autoindex 확인. 
-    //                  off면 "403" error_code
-    //                  on이면 autoindex 처리
-    const location_info& location_info = this->_responses[fd].getLocationInfo();
-    
+    if (this->isCgiUri(fd))
+        return (ResType::CGI);
+        
     DIR* dir_ptr;
-
     if ((dir_ptr = opendir(this->_responses[fd].getResourceAbsPath().c_str())) == NULL)
     {
-        if (errno == ENOTDIR) // 폴더가 아님
-        {
-            location_info::const_iterator it = location_info.find("cgi");
-            if (it == location_info.end())
-                return (ResType::STATIC_RESOURCE);
-            size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
-            if (dot == std::string::npos)
-                return (ResType::STATIC_RESOURCE);
-            std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
-            const std::string& cgi = it->second;
-            if (cgi.find(extension) == std::string::npos)
-                return (ResType::STATIC_RESOURCE);
-            return (ResType::CGI);
-        }
+        if (errno == ENOTDIR)
+            return (ResType::STATIC_RESOURCE);
         else if (errno == EACCES)
-            throw CannotOpenDirectoryException(this->_requests[fd], "403");
+            throw (CannotOpenDirectoryException(this->_requests[fd], "403"));
         else if (errno == ENOENT)
-            throw CannotOpenDirectoryException(this->_requests[fd], "404");
+            throw (CannotOpenDirectoryException(this->_requests[fd], "404"));
     }
-    else // 폴더인 경우 일단 폴더에 뭐가 있는지 반드시 찾아봐야 한다
+    else
     {
         this->_responses[fd].setDirectoryEntry(dir_ptr);
         if (this->isIndexFileExist(fd))
             return (ResType::INDEX_HTML);
+        if (this->isAutoIndexOn(fd))
+            return (ResType::AUTO_INDEX);
         else
-        {
-            // AUtoindex 옵션을 검사한다.
-            // if (this->isAutoIndexOn())
-            //     return (ResType::AUTO_INDEX);
-            // else
-            // {
-            //     this->_responses[fd].setStatusCode("403");
-            //     return (ResType::ERROR_CODE);
-            // }
-        }
-        
+            this->_responses[fd].setStatusCode("403");
     }
     return (ResType::ERROR_CODE);
 }

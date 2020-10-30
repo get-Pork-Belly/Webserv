@@ -86,6 +86,8 @@ public:
     bool isFileUri(Request& request);
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
+    bool isAutoIndexOn(int fd);
+    bool isCgiUri(int fd);
     ResType checkResourceType(int fd);
 
 public:
