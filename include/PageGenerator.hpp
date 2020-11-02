@@ -18,9 +18,7 @@ public:
     /* Exception */
     /* Util */
     static void makeErrorPage(Response& res);
-    static void makeAutoIndex(const std::string& dir_ent,
-                            const std::string& abs_path,
-                            std::string& body);
+    static void makeAutoIndex(Response& res);
 };
 
 #endif
