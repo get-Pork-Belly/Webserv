@@ -525,7 +525,7 @@ Server::run(int fd)
                     {
                         //processingResponseBody()
                         this->findResourceAbsPath(fd);
-                        this->checkResourceType(fd);
+                        this->checkAndSetResourceType(fd);
                         if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
                             this->setResourceAbsPathAsIndex(fd);
                         ResType res_type = this->_responses[fd].getResourceType();
@@ -632,7 +632,7 @@ Server::isCgiUri(int fd)
 }
 
 void
-Server::checkResourceType(int fd)
+Server::checkAndSetResourceType(int fd)
 {
     Response& response = this->_responses[fd];
     if (this->isCgiUri(fd))

@@ -91,7 +91,7 @@ public:
     void findResourceAbsPath(int fd);
     bool isAutoIndexOn(int fd);
     bool isCgiUri(int fd);
-    void checkResourceType(int fd);
+    void checkAndSetResourceType(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
 
