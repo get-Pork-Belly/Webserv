@@ -7,7 +7,8 @@ DEBUG = -D DEBUG=1
 STDOUT = -D STDOUT=1
 
 # MAIN_FILES = setRouteAndLocationInfo_test
-MAIN_FILES = logger_test Log utils ServerManager ServerGenerator Server Response Request UriParser
+MAIN_FILES = PageGenerator_test PageGenerator Log utils ServerManager ServerGenerator Server Response Request UriParser
+# MAIN_FILES = PageGenerator_test PageGenerator
 
 SRCS_PATH = $(MAIN_FILES)
 VPATH := .:srcs:tests
