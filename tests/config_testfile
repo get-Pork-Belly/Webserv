@@ -7,8 +7,8 @@ http {
 
         location /folder {
             cgi .bin .cgi .bla;
-            autoindex on;
-            root /goinfre/iwoo/;
+            autoindex off;
+            root /goinfre/yohlee/;
         }
     }
     server {
