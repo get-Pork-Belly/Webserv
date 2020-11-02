@@ -10,7 +10,7 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code(""), _transfer_type(""), _clients(""), _message_body("")
+: _status_code("200"), _transfer_type(""), _clients(""), _message_body("")
 {
     this->_headers = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
