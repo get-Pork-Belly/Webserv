@@ -243,9 +243,8 @@ ServerManager::runServers()
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
-        if ((selected_fds = select(this->getFdMax() + 1,
-             &this->_copy_readfds, &this->_copy_writefds,
-             &this->_copy_exceptfds, &timeout)) == -1)
+        if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, 
+            &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
         {
             std::cerr<<"Error : select"<<std::endl;
             return (false);
@@ -263,7 +262,6 @@ ServerManager::runServers()
                 {
                     for (Server *server : this->_servers)
                     {
-                        // if (fd == server->getServerSocket() || server->isClientOfServer(fd))
                         if (fd == server->getServerSocket() || server->isFdManagedByServer(fd))
                             server->run(fd);
                     }
