@@ -92,6 +92,12 @@ Response::getFileInfo() const
     return (this->_file_info);
 }
 
+const ResType&
+Response::getResourceType() const
+{
+    return (this->_resource_type);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -123,6 +129,12 @@ void
 Response::setFileInfo(const struct stat& file_info)
 {
     this->_file_info = file_info;
+}
+
+void
+Response::setResourceType(const ResType& resource_type)
+{
+    this->_resource_type = resource_type;
 }
 
 /*============================================================================*/
@@ -207,6 +219,7 @@ Response::initStatusCodeTable()
     };
 }
 
+//TODO: Response에 상태코드 세팅하게 변경하기.
 void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {

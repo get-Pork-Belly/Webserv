@@ -74,14 +74,38 @@ Server::getRequest(int fd)
 /********************************  Setter  ************************************/
 /*============================================================================*/
 
-// void setServerSocket(int server_socket)
-// {
-//     this->_server_socket = server_socket;
-// }
+void
+Server::setResourceAbsPathAsIndex(int fd)
+{
+    Response& response = this->_responses[fd];
+    const std::string& dir_entry = response.getDirectoryEntry();
+    const location_info& location_info = response.getLocationInfo();
+    std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
+
+    const std::string& path = response.getResourceAbsPath();
+    for (std::string& index : indexs)
+    {
+        if (dir_entry.find(index) != std::string::npos)
+        {
+            response.setResourceType(ResType::STATIC_RESOURCE);
+            response.setResourceAbsPath(path + index);
+        }
+    }
+}
 
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
+
+Server::SendErrorCodeToClientException::SendErrorCodeToClientException()
+{
+}
+
+const char*
+Server::SendErrorCodeToClientException::what() const throw()
+{
+    return ("[SendErrorCodeToClientException] <-- overloaded");
+}
 
 Server::PayloadTooLargeException::PayloadTooLargeException(Request& request) 
 : _request(request)
@@ -101,44 +125,45 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
-Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req, const std::string& status_code)
-: _req(req) 
+Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num)
+: _res(res), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
 {
-    req.setStatusCode(status_code);
+    this->_res.setStatusCode(status_code);
 }
 
-std::string
-Server::CannotOpenDirectoryException::s_what() const throw()
+const char*
+Server::CannotOpenDirectoryException::what() const throw()
 {
-    std::string msg;
-    msg += "CannotOpenDirectoryException: ";
-    msg += strerror(errno);
-    msg += "\n";
-    return (msg);
+    return (this->_msg.c_str());
 }
 
-Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error)
-: _response(response), _error(error)
+Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error_num)
+: _response(response), _error_num(error_num), _msg("OpenResourceErrorException: " + std::string(strerror(this->_error_num)))
 {
-    if (this->_error == EACCES)
+    if (this->_error_num == EACCES)
         this->_response.setStatusCode("403");
-    else if (this->_error == ENOMEM)
+    else if (this->_error_num == ENOMEM)
         this->_response.setStatusCode("500");
     else
         this->_response.setStatusCode("404");
 }
 
-std::string
-Server::OpenResourceErrorException::s_what() const throw()
+const char*
+Server::OpenResourceErrorException::what() const throw()
 {
-    std::string msg;
-    const std::string& code = this->_response.getStatusCode();
+    return (this->_msg.c_str());
+}
 
-    msg += "[CODE ";
-    msg += code;
-    msg += "] ";
-    msg += strerror(this->_error);
-    return (msg);
+Server::IndexNoExistException::IndexNoExistException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("403");
+}
+
+const char*
+Server::IndexNoExistException::what() const throw()
+{
+    return ("[CODE 403] No index & Autoindex off");
 }
 
 /*============================================================================*/
@@ -450,30 +475,33 @@ Server::isAutoIndexOn(int fd)
 }
 
 void
-Server::run(int fd)
+Server::acceptClient()
 {
-    int client_len;
     int client_socket;
+    int client_len;
     struct sockaddr_in client_address;
 
-    if (isServerSocket(fd))
+    if ((client_socket = accept(this->getServerSocket(),
+        reinterpret_cast<struct sockaddr *>(&client_address),
+        reinterpret_cast<socklen_t *>(&client_len))) != -1)
     {
-        client_len = sizeof(client_address);
-        if ((client_socket = accept(this->getServerSocket(),
-            reinterpret_cast<struct sockaddr *>(&client_address),
-            reinterpret_cast<socklen_t *>(&client_len))) != -1)
-        {
-            if (client_socket > this->_server_manager->getFdMax())
-                this->_server_manager->setFdMax(client_socket);
-            this->_server_manager->fdSet(client_socket, FdSet::READ);
-            fcntl(client_socket, F_SETFL, O_NONBLOCK);
-            this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
-            this->_server_manager->updateFdMax(client_socket);
-            Log::newClient(*this, client_socket);
-        }
-        else
-            std::cerr<<"Accept error"<<std::endl;
+        if (client_socket > this->_server_manager->getFdMax())
+            this->_server_manager->setFdMax(client_socket);
+        this->_server_manager->fdSet(client_socket, FdSet::READ);
+        fcntl(client_socket, F_SETFL, O_NONBLOCK);
+        this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
+        this->_server_manager->updateFdMax(client_socket);
+        Log::newClient(*this, client_socket);
     }
+    else
+        std::cerr<<"Accept error"<<std::endl;
+}
+
+void
+Server::run(int fd)
+{
+    if (isServerSocket(fd))
+        this->acceptClient();
     else
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
@@ -502,18 +530,35 @@ Server::run(int fd)
                     this->receiveRequest(fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                     {
+                        //processingResponseBody()
                         this->findResourceAbsPath(fd);
-                        ResType res = this->checkResourceType(fd);
-                        std::cout<<"ResType: "<<(int)res<<std::endl;
-                        // this->openStaticResource(fd);
-                        // preprocessing with swith of res;
+                        this->checkAndSetResourceType(fd);
+                        if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
+                            this->setResourceAbsPathAsIndex(fd);
+                        ResType res_type = this->_responses[fd].getResourceType();
+                        switch (res_type)
+                        {
+                        case ResType::AUTO_INDEX:
+                            std::cout << "auto index" << std::endl;
+                            break ;
+                        case ResType::STATIC_RESOURCE:
+                            std::cout << "static file path" << std::endl;
+                            this->openStaticResource(fd);
+                            break ;
+                        case ResType::CGI:
+                            std::cout << "cgi" << std::endl;
+                            break ;
+                        default:
+                            std::cout << "Whatwhahahahha" << std::endl;
+                            break ;
+                        }
                     }
                     Log::getRequest(*this, fd);
                 }
             }
-            catch(const CannotOpenDirectoryException& e)
+            catch(const SendErrorCodeToClientException& e)
             {
-                std::cerr << e.s_what() << '\n';
+                std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
             }
             catch(const Request::RequestFormatException& e)
@@ -525,26 +570,12 @@ Server::run(int fd)
                     this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
-            }
-            catch(const ReadErrorException& e)
-            {
-                this->closeClientSocket(fd);
-                std::cerr << e.what() << '\n';
-            }
-            catch(const OpenResourceErrorException& e)
-            {
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-                std::cerr << e.s_what() << '\n';
+                //TODO: status code값이 세팅된 경우 response에 채워주기.
             }
             catch(const std::exception& e)
             {
                 this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
-            }
-            catch(const char* e)
-            {
-                this->closeClientSocket(fd);
-                std::cerr << e << '\n';
             }
         }
     }
@@ -572,11 +603,11 @@ void
 Server::findResourceAbsPath(int fd)
 {
     UriParser parser;
-    parser.parseUri(this->_requests[fd].getUri()); // scheme, host, port, path
-    const std::string& path = parser.getPath(); // path
+    parser.parseUri(this->_requests[fd].getUri());
+    const std::string& path = parser.getPath();
 
     Response& response = this->_responses[fd];
-    response.setRouteAndLocationInfo(path, this); // Response객체에 route주소와 location_info가 저장됨
+    response.setRouteAndLocationInfo(path, this);
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
@@ -603,32 +634,38 @@ Server::isCgiUri(int fd)
     return (true);
 }
 
-ResType
-Server::checkResourceType(int fd)
+void
+Server::checkAndSetResourceType(int fd)
 {
+    Response& response = this->_responses[fd];
     if (this->isCgiUri(fd))
-        return (ResType::CGI);
+    {
+        response.setResourceType(ResType::CGI);
+        return ;
+    }
         
     DIR* dir_ptr;
-    if ((dir_ptr = opendir(this->_responses[fd].getResourceAbsPath().c_str())) == NULL)
+    if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) == NULL)
     {
         if (errno == ENOTDIR)
-            return (ResType::STATIC_RESOURCE);
+            response.setResourceType(ResType::STATIC_RESOURCE);
         else if (errno == EACCES)
-            throw (CannotOpenDirectoryException(this->_requests[fd], "403"));
+            throw (CannotOpenDirectoryException(this->_responses[fd], "403", errno));
         else if (errno == ENOENT)
-            throw (CannotOpenDirectoryException(this->_requests[fd], "404"));
+            throw (CannotOpenDirectoryException(this->_responses[fd], "404", errno));
     }
     else
     {
-        this->_responses[fd].setDirectoryEntry(dir_ptr);
+        response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
         if (this->isIndexFileExist(fd))
-            return (ResType::INDEX_HTML);
-        if (this->isAutoIndexOn(fd))
-            return (ResType::AUTO_INDEX);
+            response.setResourceType(ResType::INDEX_HTML);
         else
-            this->_responses[fd].setStatusCode("403");
+        {
+            if (this->isAutoIndexOn(fd))
+                response.setResourceType(ResType::AUTO_INDEX);
+            else
+                throw (IndexNoExistException(this->_responses[fd]));
+        }
     }
-    return (ResType::ERROR_CODE);
 }
