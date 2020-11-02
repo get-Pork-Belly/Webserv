@@ -1,5 +1,6 @@
 #include "Response.hpp"
 #include "Server.hpp"
+#include "PageGenerator.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -10,7 +11,7 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code(""), _transfer_type(""), _clients(""), _message_body("")
+: _status_code("200"), _transfer_type(""), _clients(""), _body("")
 {
     this->_headers = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
@@ -20,7 +21,7 @@ Response::Response()
 Response::Response(const Response& other)
 : _status_code(other._status_code),  _headers(other._headers),
 _transfer_type(other._transfer_type), _clients(other._clients),
-_message_body(other._message_body), _status_code_table(other._status_code_table) {}
+_status_code_table(other._status_code_table), _body(other._body) {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -41,7 +42,7 @@ Response::operator=(const Response& rhs)
     this->_headers = rhs._headers;
     this->_transfer_type = rhs._transfer_type;
     this->_clients = rhs._clients;
-    this->_message_body = rhs._message_body;
+    this->_body= rhs._body;
     this->_status_code_table = rhs._status_code_table;
     return (*this);
 }
@@ -98,6 +99,12 @@ Response::getResourceType() const
     return (this->_resource_type);
 }
 
+const std::string&
+Response::getBody() const
+{
+    return (this->_body);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -137,6 +144,12 @@ Response::setResourceType(const ResType& resource_type)
     this->_resource_type = resource_type;
 }
 
+void
+Response::setBody(const std::string& body)
+{
+    this->_body = body;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -152,7 +165,7 @@ Response::init()
     this->_headers = { {"", ""} };
     this->_transfer_type = "";
     this->_clients = "";
-    this->_message_body = "";
+    this->_body = "";
     this->_status_code = "";
     this->_location_info = { {"", ""} };
     this->_resource_abs_path = "";
@@ -288,6 +301,24 @@ Response::makeStatusLine()
 
 //     headers += ft::getCurrentDateTime();
 // }
+
+// std::string
+void
+Response::makeBody(Request& request)
+{
+    // std::string body;
+    (void)request;
+    if ((this->getResourceType() == ResType::AUTO_INDEX) ||
+         this->getStatusCode().front() != '2')
+    {
+        (this->getResourceType() != ResType::AUTO_INDEX) ?
+            PageGenerator::makeErrorPage(*this) :
+            PageGenerator::makeAutoIndex(*this);
+    }
+    else // 일반적인 body
+    {
+    }
+}
 
 bool
 Response::isLimitExceptInLocation()
