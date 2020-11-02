@@ -219,6 +219,7 @@ Response::initStatusCodeTable()
     };
 }
 
+//TODO: Response에 상태코드 세팅하게 변경하기.
 void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
