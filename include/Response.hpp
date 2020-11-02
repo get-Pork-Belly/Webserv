@@ -2,9 +2,9 @@
 # define RESPONSE_HPP
 
 # include <dirent.h>
+# include <sys/stat.h>
 # include "Request.hpp"
 # include "types.hpp"
-# include <sys/stat.h>
 
 class Server;
 
@@ -15,7 +15,6 @@ private:
     std::map<std::string, std::string> _headers;
     std::string _transfer_type;
     std::string _clients;
-    std::string _message_body;
     std::map<std::string, std::string> _status_code_table;
     location_info _location_info;
     std::string _resource_abs_path;
@@ -23,6 +22,7 @@ private:
     std::string _directory_entry;
     struct stat _file_info;
     ResType _resource_type;
+    std::string _body;
 
 public:
     /* Constructor */
@@ -47,6 +47,7 @@ public:
     const std::string& getDirectoryEntry() const;
     const struct stat& getFileInfo() const;
     const ResType& getResourceType() const;
+    const std::string& getBody() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -54,6 +55,7 @@ public:
     void setDirectoryEntry(DIR* dir_ptr);
     void setFileInfo(const struct stat& file_info);
     void setResourceType(const ResType& resource_type);
+    void setBody(const std::string& body);
     // void setMessageBody();
     /* Exception */
     /* Util */
@@ -64,7 +66,7 @@ public:
 
     void init();
     void initStatusCodeTable();
-    // std::string makeBody(Request& request);
+    void  makeBody(Request& request);
     std::string makeHeaders(Request& request);
     std::string makeStatusLine();
 
