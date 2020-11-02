@@ -83,7 +83,7 @@ public:
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
     void clearRequestBuffer(int fd);
-    std::string makeResponseMessage(Request& request);
+    std::string makeResponseMessage(Request& request, int fd);
     bool sendResponse(std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
     bool isFileUri(const Request& request) const;

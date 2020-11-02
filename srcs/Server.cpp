@@ -341,9 +341,9 @@ Server::receiveRequest(int fd)
 }
 
 std::string
-Server::makeResponseMessage(Request& request)
+Server::makeResponseMessage(Request& request, int fd)
 {
-    Response response;
+    Response& response = this->_responses[fd];
     std::string status_line;
     std::string headers;
     std::string body;
