@@ -123,7 +123,13 @@ Server::ReadErrorException::what() const throw()
 Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req, const std::string& status_code, int error_num)
 : _req(req), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
 {
-    req.setStatusCode(status_code);
+    this->_req.setStatusCode(status_code);
+}
+
+const char*
+Server::CannotOpenDirectoryException::what() const throw()
+{
+    return (this->_msg.c_str());
 }
 
 Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error)
