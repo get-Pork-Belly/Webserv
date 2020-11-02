@@ -311,9 +311,9 @@ Response::makeBody(Request& request)
     if ((this->getResourceType() == ResType::AUTO_INDEX) ||
          this->getStatusCode().front() != '2')
     {
-        // (this->getResourceType() == ResType::AUTO_INDEX) ?
-        PageGenerator::makeErrorPage(*this);
-            // PageGenerator::makeAutoIndex(this->getDirectoryEntry(), body);
+        (this->getResourceType() != ResType::AUTO_INDEX) ?
+            PageGenerator::makeErrorPage(*this) :
+            PageGenerator::makeAutoIndex(*this);
     }
     else // 일반적인 body
     {
