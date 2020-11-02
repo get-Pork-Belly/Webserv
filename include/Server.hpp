@@ -114,7 +114,13 @@ public:
         virtual const char* what() const throw();
     };
 public:
-    class CannotOpenDirectoryException : public std::exception
+    class SendErrorCodeToClientException : public std::exception
+    {
+    public:
+        SendErrorCodeToClientException();
+        virtual const char* what() const throw();
+    };
+    class CannotOpenDirectoryException : public SendErrorCodeToClientException
     {
     private:
         Request& _req;
@@ -122,6 +128,14 @@ public:
         std::string _msg;
     public:
         CannotOpenDirectoryException(Request& req, const std::string& status_code, int error_num);
+        virtual const char* what() const throw();
+    };
+    class IndexNoExistException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        IndexNoExistException(Response& response);
         virtual const char* what() const throw();
     };
     class OpenResourceErrorException : public std::exception
@@ -134,22 +148,6 @@ public:
         OpenResourceErrorException(Response& response, int error_num);
         virtual const char* what() const throw();
     };
-    class IndexNoExistException : public std::exception
-    {
-    private:
-        Response& _response;
-    public:
-        IndexNoExistException(Response& response);
-        virtual const char* what() const throw();
-    };
-
-
-// public:
-//     class ResponseException : public std::exception
-//     {
-//     public:
-//         virtual const char* what() const throw();
-//     };
 };
 
 #endif

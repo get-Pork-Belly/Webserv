@@ -74,11 +74,6 @@ Server::getRequest(int fd)
 /********************************  Setter  ************************************/
 /*============================================================================*/
 
-// void setServerSocket(int server_socket)
-// {
-//     this->_server_socket = server_socket;
-// }
-
 void
 Server::setResourceAbsPathAsIndex(int fd)
 {
@@ -101,6 +96,16 @@ Server::setResourceAbsPathAsIndex(int fd)
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
+
+Server::SendErrorCodeToClientException::SendErrorCodeToClientException()
+{
+}
+
+const char*
+Server::SendErrorCodeToClientException::what() const throw()
+{
+    return ("[SendErrorCodeToClientException] <-- overloaded");
+}
 
 Server::PayloadTooLargeException::PayloadTooLargeException(Request& request) 
 : _request(request)
@@ -149,12 +154,14 @@ Server::OpenResourceErrorException::what() const throw()
     return (this->_msg.c_str());
 }
 
-Server::IndexNoExistException::IndexNoExistException(Response& response) : _response(response)
+Server::IndexNoExistException::IndexNoExistException(Response& response)
+: _response(response)
 {
     this->_response.setStatusCode("403");
 }
 
-const char* Server::IndexNoExistException::what() const throw()
+const char*
+Server::IndexNoExistException::what() const throw()
 {
     return ("[CODE 403] No index & Autoindex off");
 }
@@ -549,7 +556,7 @@ Server::run(int fd)
                     Log::getRequest(*this, fd);
                 }
             }
-            catch(const CannotOpenDirectoryException& e)
+            catch(const SendErrorCodeToClientException& e)
             {
                 std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
@@ -563,11 +570,7 @@ Server::run(int fd)
                     this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
-            }
-            catch(const IndexNoExistException& e)
-            {
-                std::cerr << e.what() << '\n';
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
+                //TODO: status code값이 세팅된 경우 response에 채워주기.
             }
             catch(const std::exception& e)
             {
@@ -600,11 +603,11 @@ void
 Server::findResourceAbsPath(int fd)
 {
     UriParser parser;
-    parser.parseUri(this->_requests[fd].getUri()); // scheme, host, port, path
-    const std::string& path = parser.getPath(); // path
+    parser.parseUri(this->_requests[fd].getUri());
+    const std::string& path = parser.getPath();
 
     Response& response = this->_responses[fd];
-    response.setRouteAndLocationInfo(path, this); // Response객체에 route주소와 location_info가 저장됨
+    response.setRouteAndLocationInfo(path, this);
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
@@ -663,10 +666,6 @@ Server::checkAndSetResourceType(int fd)
                 response.setResourceType(ResType::AUTO_INDEX);
             else
                 throw (IndexNoExistException(this->_responses[fd]));
-            // {
-            //     response.setStatusCode("403");
-            //     // response.setResourceType(ResType::ERROR_CODE);
-            // }
         }
     }
 }
