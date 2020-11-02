@@ -132,8 +132,8 @@ Server::CannotOpenDirectoryException::what() const throw()
     return (this->_msg.c_str());
 }
 
-Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error)
-: _response(response), _error_num(error), _msg("OpenResourceErrorException: " + std::string(strerror(this->_error_num)))
+Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error_num)
+: _response(response), _error_num(error_num), _msg("OpenResourceErrorException: " + std::string(strerror(this->_error_num)))
 {
     if (this->_error_num == EACCES)
         this->_response.setStatusCode("403");
@@ -147,6 +147,16 @@ const char*
 Server::OpenResourceErrorException::what() const throw()
 {
     return (this->_msg.c_str());
+}
+
+Server::IndexNoExistException::IndexNoExistException(Response& response) : _response(response)
+{
+    this->_response.setStatusCode("403");
+}
+
+const char* Server::IndexNoExistException::what() const throw()
+{
+    return ("[CODE 403] No index & Autoindex off");
 }
 
 /*============================================================================*/
@@ -483,10 +493,6 @@ Server::acceptClient()
 void
 Server::run(int fd)
 {
-    // int client_len;
-    // int client_socket;
-    // struct sockaddr_in client_address;
-
     if (isServerSocket(fd))
         this->acceptClient();
     else
@@ -558,15 +564,15 @@ Server::run(int fd)
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
             }
+            catch(const IndexNoExistException& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+            }
             catch(const std::exception& e)
             {
                 this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
-            }
-            catch(const char* e)
-            {
-                this->closeClientSocket(fd);
-                std::cerr << e << '\n';
             }
         }
     }
@@ -656,10 +662,11 @@ Server::checkResourceType(int fd)
             if (this->isAutoIndexOn(fd))
                 response.setResourceType(ResType::AUTO_INDEX);
             else
-            {
-                response.setStatusCode("403");
-                response.setResourceType(ResType::ERROR_CODE);
-            }
+                throw (IndexNoExistException(this->_responses[fd]));
+            // {
+            //     response.setStatusCode("403");
+            //     // response.setResourceType(ResType::ERROR_CODE);
+            // }
         }
     }
 }

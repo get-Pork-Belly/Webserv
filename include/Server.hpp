@@ -134,6 +134,14 @@ public:
         OpenResourceErrorException(Response& response, int error_num);
         virtual const char* what() const throw();
     };
+    class IndexNoExistException : public std::exception
+    {
+    private:
+        Response& _response;
+    public:
+        IndexNoExistException(Response& response);
+        virtual const char* what() const throw();
+    };
 
 
 // public:
