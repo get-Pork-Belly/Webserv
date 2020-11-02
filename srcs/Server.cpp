@@ -125,10 +125,10 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
-Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Request& req, const std::string& status_code, int error_num)
-: _req(req), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
+Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num)
+: _res(res), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
 {
-    this->_req.setStatusCode(status_code);
+    this->_res.setStatusCode(status_code);
 }
 
 const char*
@@ -650,9 +650,9 @@ Server::checkAndSetResourceType(int fd)
         if (errno == ENOTDIR)
             response.setResourceType(ResType::STATIC_RESOURCE);
         else if (errno == EACCES)
-            throw (CannotOpenDirectoryException(this->_requests[fd], "403", errno));
+            throw (CannotOpenDirectoryException(this->_responses[fd], "403", errno));
         else if (errno == ENOENT)
-            throw (CannotOpenDirectoryException(this->_requests[fd], "404", errno));
+            throw (CannotOpenDirectoryException(this->_responses[fd], "404", errno));
     }
     else
     {

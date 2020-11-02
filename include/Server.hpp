@@ -123,11 +123,11 @@ public:
     class CannotOpenDirectoryException : public SendErrorCodeToClientException
     {
     private:
-        Request& _req;
+        Response& _res;
         int _error_num;
         std::string _msg;
     public:
-        CannotOpenDirectoryException(Request& req, const std::string& status_code, int error_num);
+        CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num);
         virtual const char* what() const throw();
     };
     class IndexNoExistException : public SendErrorCodeToClientException
