@@ -547,7 +547,7 @@ Server::run(int fd)
                     this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
-                //TODO: status code값이 세팅된 경우 response에 채워주기.
+                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
             }
             catch(const std::exception& e)
             {
