@@ -529,30 +529,7 @@ Server::run(int fd)
                 {
                     this->receiveRequest(fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
-                    {
-                        //processingResponseBody()
-                        this->findResourceAbsPath(fd);
-                        this->checkAndSetResourceType(fd);
-                        if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
-                            this->setResourceAbsPathAsIndex(fd);
-                        ResType res_type = this->_responses[fd].getResourceType();
-                        switch (res_type)
-                        {
-                        case ResType::AUTO_INDEX:
-                            std::cout << "auto index" << std::endl;
-                            break ;
-                        case ResType::STATIC_RESOURCE:
-                            std::cout << "static file path" << std::endl;
-                            this->openStaticResource(fd);
-                            break ;
-                        case ResType::CGI:
-                            std::cout << "cgi" << std::endl;
-                            break ;
-                        default:
-                            std::cout << "Whatwhahahahha" << std::endl;
-                            break ;
-                        }
-                    }
+                        processResponseBody(fd);
                     Log::getRequest(*this, fd);
                 }
             }
@@ -668,4 +645,35 @@ Server::checkAndSetResourceType(int fd)
                 throw (IndexNoExistException(this->_responses[fd]));
         }
     }
+}
+
+void
+Server::preprocessResponseBody(int fd, ResType& res_type)
+{
+    switch (res_type)
+    {
+    case ResType::AUTO_INDEX:
+        std::cout << "auto index" << std::endl;
+        break ;
+    case ResType::STATIC_RESOURCE:
+        std::cout << "static file path" << std::endl;
+        this->openStaticResource(fd);
+        break ;
+    case ResType::CGI:
+        std::cout << "cgi" << std::endl;
+        break ;
+    default:
+        break ;
+    }
+}
+
+void
+Server::processResponseBody(int fd)
+{
+    this->findResourceAbsPath(fd);
+    this->checkAndSetResourceType(fd);
+    if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
+        this->setResourceAbsPathAsIndex(fd);
+    ResType res_type = this->_responses[fd].getResourceType();
+    preprocessResponseBody(fd, res_type);
 }

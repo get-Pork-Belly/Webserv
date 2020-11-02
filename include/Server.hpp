@@ -94,6 +94,8 @@ public:
     void checkAndSetResourceType(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
+    void processResponseBody(int fd);
+    void preprocessResponseBody(int fd, ResType& res_type);
 
     /* Server run function */
     void acceptClient();
