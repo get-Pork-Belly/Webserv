@@ -341,18 +341,24 @@ Server::receiveRequest(int fd)
 }
 
 std::string
-Server::makeResponseMessage(Request& request, int fd)
+Server::makeResponseMessage(int fd)
 {
+    Request& request = this->_requests[fd];
     Response& response = this->_responses[fd];
+    // FdType을 알아야하는 이유.
+    // FdType을 굳이 알 필요가 있나?
+    // FdType fd_type = this->_server_manager->getFdType(fd);
+
     std::string status_line;
     std::string headers;
-    std::string body;
 
     response.applyAndCheckRequest(request, this);
-    // body = response.makeBody(request);
+    response.makeBody(request);
+    std::cout << "---------- body --------------" << std::endl;
+    std::cout << response.getBody() << std::endl;
     // headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
-    return (status_line + headers + body);
+    return (status_line + headers);
 }
 
 bool
@@ -507,7 +513,9 @@ Server::run(int fd)
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
             std::string response_message;
-            response_message = this->makeResponseMessage(this->_requests[fd]);
+            //  fd의 type이 뭔지 알아야한다.
+            response_message = this->makeResponseMessage(fd);
+            // response_message = this->makeResponseMessage(this->_requests[fd], fd);
             // TODO: sendResponse error handling
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
