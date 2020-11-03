@@ -176,7 +176,6 @@ Request::RequestFormatException::s_what() const throw()
     std::string tmp;
     tmp += this->_msg;
     tmp += this->_req.getStatusCode();
-    std::cout<<"in reqformat except: "<<tmp<<std::endl;
     return (tmp);
 }
 

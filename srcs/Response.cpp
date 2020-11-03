@@ -312,24 +312,15 @@ Response::makeStatusLine()
 void
 Response::makeBody(Request& request)
 {
-    // std::string body;
     Log::trace("> makeBody");
-    std::cout<<request<<std::endl;
-    std::cout<<"=================="<<std::endl;
     (void)request;
     if ((this->getResourceType() == ResType::AUTO_INDEX) ||
          this->getStatusCode().front() != '2')
     {
         if (this->getResourceType() != ResType::AUTO_INDEX)
-        {
-            std::cout<<"Debug 1"<<std::endl;
             PageGenerator::makeErrorPage(*this);
-        }
         else
-        {
-            std::cout<<"Debug 2"<<std::endl;
             PageGenerator::makeAutoIndex(*this);
-        }
     }
     else // 일반적인 body
     {
