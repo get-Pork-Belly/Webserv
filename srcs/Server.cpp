@@ -211,6 +211,7 @@ Server::init()
 void
 Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
 {
+    Log::trace("> readBufferUntilHeaders");
     int bytes;
     Request& req = this->_requests[fd];
 
@@ -220,11 +221,13 @@ Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
         throw (Request::RequestFormatException(req, "400"));
     else
         throw (ReadErrorException());
+    Log::trace("< readBufferUntilHeaders");
 }
 
 void
 Server::receiveRequestWithoutBody(int fd)
 {
+    Log::trace("> receiveRequestWithoutBody");
     int bytes;
     char buf[BUFFER_SIZE + 1];
     size_t header_end_pos = 0;
@@ -251,6 +254,8 @@ Server::receiveRequestWithoutBody(int fd)
         this->closeClientSocket(fd);
     else
         throw (ReadErrorException());
+    std::cout<<"reqinfo: "<<(int)this->_requests[fd].getReqInfo()<<std::endl;
+    Log::trace("< receiveRequestWithoutBody");
 }
 
 void
@@ -319,8 +324,10 @@ Server::receiveRequestChunkedBody(int fd)
 void
 Server::receiveRequest(int fd)
 {
-    ReqInfo req_info = this->_requests[fd].getReqInfo();
+    Log::trace("> receiveRequest");
+    const ReqInfo& req_info = this->_requests[fd].getReqInfo();
 
+    std::cout<<"at the begin ReqInfo: "<<(int)req_info<<std::endl;
     switch (req_info)
     {
     case ReqInfo::READY:
@@ -342,21 +349,30 @@ Server::receiveRequest(int fd)
     default:
         break ;
     }
+    Log::trace("< receiveRequest");
 }
 
 std::string
-Server::makeResponseMessage(Request& request)
+Server::makeResponseMessage(int fd)
 {
-    Response response;
+    Request& request = this->_requests[fd];
+    Response& response = this->_responses[fd];
+    // FdType을 알아야하는 이유.
+    // FdType을 굳이 알 필요가 있나?
+    // FdType fd_type = this->_server_manager->getFdType(fd);
+
     std::string status_line;
     std::string headers;
-    std::string body;
 
+    std::cout<<"in makeResponseMessage: before applyandcheck status code:"<<response.getStatusCode()<<std::endl;
     response.applyAndCheckRequest(request, this);
-    // body = response.makeBody(request);
+    std::cout<<"in makeResponseMessage: after applyandcheck status code:"<<response.getStatusCode()<<std::endl;
+    response.makeBody(request);
+    std::cout << "---------- body --------------" << std::endl;
+    std::cout << response.getBody() << std::endl;
     // headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
-    return (status_line + headers + body);
+    return (status_line + headers);
 }
 
 bool
@@ -511,7 +527,9 @@ Server::run(int fd)
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
             std::string response_message;
-            response_message = this->makeResponseMessage(this->_requests[fd]);
+            //  fd의 type이 뭔지 알아야한다.
+            response_message = this->makeResponseMessage(fd);
+            // response_message = this->makeResponseMessage(this->_requests[fd], fd);
             // TODO: sendResponse error handling
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
@@ -535,11 +553,6 @@ Server::run(int fd)
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                         processResponseBody(fd);
                     Log::getRequest(*this, fd);
-                    std::cout<<"Server::run: fd:"<<fd<<std::endl;
-                    if (this->_server_manager->fdIsSet(fd, FdSet::READ))
-                    {
-                        std::cout<<"fd "<<fd<<" is set now"<<std::endl;
-                    }
                 }
             }
             catch(const SendErrorCodeToClientException& e)
@@ -549,7 +562,6 @@ Server::run(int fd)
             }
             catch(const Request::RequestFormatException& e)
             {
-                std::cout<<"RequestFormatException."<<std::endl;
                 if (this->_requests[fd].isContentLeftInBuffer())
                     this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
                 else
@@ -589,6 +601,7 @@ Server::closeClientSocket(int fd)
 void
 Server::findResourceAbsPath(int fd)
 {
+    Log::trace("> findResourceAbsPath");
     UriParser parser;
     parser.parseUri(this->_requests[fd].getUri());
     const std::string& path = parser.getPath();
@@ -600,7 +613,8 @@ Server::findResourceAbsPath(int fd)
         root.pop_back();
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
-    std::cout<<response.getResourceAbsPath()<<std::endl;
+    std::cout<<"in findresourceAbsPath: "<<response.getResourceAbsPath()<<std::endl;
+    Log::trace("< findResourceAbsPath");
 }
 
 bool
@@ -624,6 +638,8 @@ Server::isCgiUri(int fd)
 void
 Server::checkAndSetResourceType(int fd)
 {
+    Log::trace("> checkAndSetResourceType");
+
     Response& response = this->_responses[fd];
     if (this->isCgiUri(fd))
     {
@@ -650,11 +666,16 @@ Server::checkAndSetResourceType(int fd)
         else
         {
             if (this->isAutoIndexOn(fd))
+            {
                 response.setResourceType(ResType::AUTO_INDEX);
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+            }
             else
                 throw (IndexNoExistException(this->_responses[fd]));
         }
     }
+
+    Log::trace("< checkAndSetResourceType");
 }
 
 void
@@ -663,14 +684,15 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
     switch (res_type)
     {
     case ResType::AUTO_INDEX:
-        std::cout << "auto index" << std::endl;
+        std::cout << "Auto index page will be generated" << std::endl;
         break ;
     case ResType::STATIC_RESOURCE:
-        std::cout << "static file path" << std::endl;
+        std::cout << "Static resourc will be opened" << std::endl;
         this->openStaticResource(fd);
         break ;
     case ResType::CGI:
-        std::cout << "cgi" << std::endl;
+        std::cout << "CGIpipe will be opened" << std::endl;
+        //TODO: Cgi pipe
         break ;
     default:
         break ;
@@ -680,10 +702,14 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
 void
 Server::processResponseBody(int fd)
 {
+    Log::trace("> processResopnseBody");
+
     this->findResourceAbsPath(fd);
     this->checkAndSetResourceType(fd);
     if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
         this->setResourceAbsPathAsIndex(fd);
     ResType res_type = this->_responses[fd].getResourceType();
     preprocessResponseBody(fd, res_type);
+
+    Log::trace("< processResopnseBody");
 }

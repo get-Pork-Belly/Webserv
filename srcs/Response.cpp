@@ -1,5 +1,7 @@
 #include "Response.hpp"
 #include "Server.hpp"
+#include "PageGenerator.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -10,7 +12,7 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code(""), _transfer_type(""), _clients(""), _message_body("")
+: _status_code("200"), _transfer_type(""), _clients(""), _body("")
 {
     this->_headers = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
@@ -20,7 +22,7 @@ Response::Response()
 Response::Response(const Response& other)
 : _status_code(other._status_code),  _headers(other._headers),
 _transfer_type(other._transfer_type), _clients(other._clients),
-_message_body(other._message_body), _status_code_table(other._status_code_table) {}
+_status_code_table(other._status_code_table), _body(other._body) {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -41,7 +43,7 @@ Response::operator=(const Response& rhs)
     this->_headers = rhs._headers;
     this->_transfer_type = rhs._transfer_type;
     this->_clients = rhs._clients;
-    this->_message_body = rhs._message_body;
+    this->_body= rhs._body;
     this->_status_code_table = rhs._status_code_table;
     return (*this);
 }
@@ -98,6 +100,12 @@ Response::getResourceType() const
     return (this->_resource_type);
 }
 
+const std::string&
+Response::getBody() const
+{
+    return (this->_body);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -121,6 +129,8 @@ Response::setDirectoryEntry(DIR* dir_ptr)
     while ((entry = readdir(dir_ptr)) != NULL)
     {
         this->_directory_entry += entry->d_name;
+        if (entry->d_type == 4)
+            this->_directory_entry += "/";
         this->_directory_entry += " ";
     }
 }
@@ -135,6 +145,12 @@ void
 Response::setResourceType(const ResType& resource_type)
 {
     this->_resource_type = resource_type;
+}
+
+void
+Response::setBody(const std::string& body)
+{
+    this->_body = body;
 }
 
 /*============================================================================*/
@@ -152,7 +168,7 @@ Response::init()
     this->_headers = { {"", ""} };
     this->_transfer_type = "";
     this->_clients = "";
-    this->_message_body = "";
+    this->_body = "";
     this->_status_code = "";
     this->_location_info = { {"", ""} };
     this->_resource_abs_path = "";
@@ -223,17 +239,19 @@ Response::initStatusCodeTable()
 void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
-    this->setStatusCode(request.getStatusCode());
+    Log::trace("> applyAndCheckRequest");
     if (this->setRouteAndLocationInfo(request.getUri(), server))
     {
         if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
             this->setStatusCode("405");
     }
+    Log::trace("< applyAndCheckRequest");
 }
 
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
+    Log::trace("> setRouteAndLocationInfo");
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
 
@@ -264,12 +282,14 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
             break ;
         }
     }
+    Log::trace("< setRouteAndLocationInfo");
     return (false);
 }
 
 std::string
 Response::makeStatusLine()
 {
+    Log::trace("> makeStatusLine");
     std::string status_line;
 
     this->setStatusCode(std::string("400"));
@@ -278,6 +298,7 @@ Response::makeStatusLine()
     status_line += " ";
     status_line += this->getStatusMessage(this->getStatusCode());
     status_line += "\r\n";
+    Log::trace("< makeStatusLine");
     return (status_line);
 }
 
@@ -288,6 +309,22 @@ Response::makeStatusLine()
 
 //     headers += ft::getCurrentDateTime();
 // }
+
+// std::string
+void
+Response::makeBody(Request& request)
+{
+    Log::trace("> makeBody");
+    (void)request;
+    if (this->getResourceType() == ResType::AUTO_INDEX)
+        PageGenerator::makeAutoIndex(*this);
+    else if (this->getStatusCode().front() != '2')
+        PageGenerator::makeErrorPage(*this);
+    else // 일반적인 body
+    {
+    }
+    Log::trace("< makeBody");
+}
 
 bool
 Response::isLimitExceptInLocation()

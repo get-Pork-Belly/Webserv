@@ -140,3 +140,17 @@ Log::error(const std::string& error)
     Log::timeLog(fd);
     write(fd, error.c_str(), error.length());
 }
+
+void
+Log::trace(const std::string& trace)
+{
+    if (DEBUG != 2)
+        return ;
+
+    std::string line;
+    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
+
+    Log::timeLog(fd);
+    write(fd, trace.c_str(), trace.length());
+    write(fd, "\n", 1);
+}

@@ -62,6 +62,13 @@ ServerManager::getFdTable() const
     return (this->_fd_table);
 }
 
+FdType
+ServerManager::getFdType(int fd) const
+{
+    const std::pair<FdType, int>& pair = _fd_table.at(fd);
+    return (pair.first);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/

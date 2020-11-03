@@ -51,6 +51,7 @@ public:
     const char *getConfigFilePath() const;
     int getFdMax() const;
     const std::vector<std::pair<FdType, int> >& getFdTable() const;
+    FdType getFdType(int fd) const;
     /* Setter */
     void setFdMax(int fd);
     void setServerSocketOnFdTable(int fd);
