@@ -1,6 +1,6 @@
 http { 
     include mime.types;
-    root /Users/iwoo/Documents/Webserv
+    root /Users/iwoo/Documents/Webserv/
     server {
         server_name first_server;
         listen       8080;
@@ -8,7 +8,7 @@ http {
         location / {
             cgi .bin .cgi .bla;
             autoindex on;
-            root /Users/sanam/Desktop/Webserv;
+            root /Users/sanam/Desktop/Webserv/;
         }
     }
     server {

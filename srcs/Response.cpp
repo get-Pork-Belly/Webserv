@@ -129,6 +129,8 @@ Response::setDirectoryEntry(DIR* dir_ptr)
     while ((entry = readdir(dir_ptr)) != NULL)
     {
         this->_directory_entry += entry->d_name;
+        if (entry->d_type == 4)
+            this->_directory_entry += "/";
         this->_directory_entry += " ";
     }
 }
@@ -313,14 +315,10 @@ Response::makeBody(Request& request)
 {
     Log::trace("> makeBody");
     (void)request;
-    if ((this->getResourceType() == ResType::AUTO_INDEX) ||
-         this->getStatusCode().front() != '2')
-    {
-        if (this->getResourceType() != ResType::AUTO_INDEX)
-            PageGenerator::makeErrorPage(*this);
-        else
-            PageGenerator::makeAutoIndex(*this);
-    }
+    if (this->getResourceType() == ResType::AUTO_INDEX)
+        PageGenerator::makeAutoIndex(*this);
+    else if (this->getStatusCode().front() != '2')
+        PageGenerator::makeErrorPage(*this);
     else // 일반적인 body
     {
     }
