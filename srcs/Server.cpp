@@ -230,12 +230,16 @@ Server::receiveRequestWithoutBody(int fd)
     size_t header_end_pos = 0;
     Request& req = this->_requests[fd];
 
+    ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
     if ((bytes = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
         if ((header_end_pos = std::string(buf).find("\r\n\r\n")) != std::string::npos)
         {
             if (static_cast<size_t>(bytes) == header_end_pos + 4)
+            {
                 req.setIsBufferLeft(false);
+                req.setReqInfo(ReqInfo::COMPLETE);
+            }
             else
                 req.setIsBufferLeft(true);
             this->readBufferUntilHeaders(fd, buf, header_end_pos);
@@ -539,6 +543,11 @@ Server::run(int fd)
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                         processResponseBody(fd);
                     Log::getRequest(*this, fd);
+                    std::cout<<"Server::run: fd:"<<fd<<std::endl;
+                    if (this->_server_manager->fdIsSet(fd, FdSet::READ))
+                    {
+                        std::cout<<"fd "<<fd<<" is set now"<<std::endl;
+                    }
                 }
             }
             catch(const SendErrorCodeToClientException& e)
@@ -548,6 +557,7 @@ Server::run(int fd)
             }
             catch(const Request::RequestFormatException& e)
             {
+                std::cout<<"RequestFormatException."<<std::endl;
                 if (this->_requests[fd].isContentLeftInBuffer())
                     this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
                 else

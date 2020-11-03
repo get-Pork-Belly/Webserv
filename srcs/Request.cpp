@@ -202,6 +202,8 @@ std::ostream& operator<< (std::ostream& out, Request& object)
 void
 Request::updateReqInfo()
 {
+    if (this->getReqInfo() == ReqInfo::COMPLETE)
+        return ;
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
         setReqInfo(ReqInfo::READY);
     else if (this->isBodyUnnecessary())
@@ -216,7 +218,7 @@ bool
 Request::isBodyUnnecessary() const
 {
     const std::string& method = this->getMethod();
-    if (method.compare("PUT") || method.compare("POST"))
+    if (method.compare("PUT") == 0 || method.compare("POST") == 0)
         return (false);
     return (true);
 }
