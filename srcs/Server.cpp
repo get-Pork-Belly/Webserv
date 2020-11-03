@@ -637,27 +637,16 @@ Server::readStaticResource(int fd)
     {
         this->_responses[client_socket].appendBody(buf);
         if (bytes < BUFFER_SIZE)
-        {
-            closeFdAndSetClientOnWriteFdSet(fd);
-            // this->_server_manager->fdClr(fd, FdSet::READ);
-            // this->_server_manager->setClosedFdOnFdTable(fd);
-            // this->_server_manager->updateFdMax(fd);
-            // this->_server_manager->fdSet(client_socket, FdSet::WRITE);
-            // close(fd);
-        }
+            this->closeFdAndSetClientOnWriteFdSet(fd);
     }
     else if (bytes == 0)
     {
-        this->_server_manager->fdClr(fd, FdSet::READ);
-        this->_server_manager->setClosedFdOnFdTable(fd);
-        this->_server_manager->updateFdMax(fd);
-        this->_server_manager->fdSet(client_socket, FdSet::WRITE);
-        close(fd);
+        this->closeFdAndSetClientOnWriteFdSet(fd);
         throw (ReadErrorException());
     }
     else
     {
-        close(fd);
+        this->closeFdAndSetClientOnWriteFdSet(fd);
         throw (ReadErrorException());
     }
     // Log::trace("< readStaticResource");
