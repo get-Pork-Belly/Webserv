@@ -15,7 +15,7 @@ int main(int argc, char *argv[], char *envp[])
         return (EXIT_FAILURE);
     }
 
-    const char *default_path = "tests/sanam_testfile";
+    const char *default_path = "tests/config_testfile";
     const char *config_path = (argc == 1) ? default_path : argv[1];
     try
     {

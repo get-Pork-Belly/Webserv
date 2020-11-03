@@ -444,26 +444,6 @@ Server::isCGIPipe(int fd) const
     return false;
 }
 
-void
-Server::openStaticResource(int fd)
-{
-    int resource_fd;
-    const std::string& path = this->_responses[fd].getResourceAbsPath();
-    struct stat tmp;
-
-    if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
-    {
-        fcntl(resource_fd, F_SETFL, O_NONBLOCK);
-        this->_server_manager->fdSet(resource_fd, FdSet::READ);
-        this->_server_manager->setResourceOnFdTable(resource_fd, fd);
-        this->_server_manager->updateFdMax(resource_fd);
-        if ((fstat(resource_fd, &tmp)) == -1)
-            throw OpenResourceErrorException(this->_responses[fd], errno);
-        this->_responses[fd].setFileInfo(tmp);
-    }
-    else
-        throw OpenResourceErrorException(this->_responses[fd], errno);
-}
 
 bool
 Server::isFileUri(const Request& request) const
@@ -494,6 +474,24 @@ Server::isAutoIndexOn(int fd)
     return (false);
 }
 
+bool
+Server::isCgiUri(int fd)
+{
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
+
+    location_info::const_iterator it = location_info.find("cgi");
+    if (it == location_info.end())
+        return (false);
+    size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
+    if (dot == std::string::npos)
+        return (false);
+    std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
+    const std::string& cgi = it->second;
+    if (cgi.find(extension) == std::string::npos)
+        return (false);
+    return (true);
+}
+
 void
 Server::acceptClient()
 {
@@ -516,6 +514,7 @@ Server::acceptClient()
     else
         std::cerr<<"Accept error"<<std::endl;
 }
+
 
 void
 Server::run(int fd)
@@ -546,6 +545,7 @@ Server::run(int fd)
                 }
                 else if (this->isStaticResource(fd))
                 {
+                    this->readStaticResource(fd);
                 }
                 else if (this->isClientSocket(fd))
                 {
@@ -612,27 +612,68 @@ Server::findResourceAbsPath(int fd)
     if (response.getRoute() != "/")
         root.pop_back();
     std::string file_path = path.substr(response.getRoute().length());
-    response.setResourceAbsPath(root + file_path);
+    response.setResourceAbsPath(root + this->_responses[fd].getRoute() + file_path);
     std::cout<<"in findresourceAbsPath: "<<response.getResourceAbsPath()<<std::endl;
     Log::trace("< findResourceAbsPath");
 }
 
-bool
-Server::isCgiUri(int fd)
+void 
+Server::readStaticResource(int fd)
 {
-    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    // Log::trace("> readStaticResource");
+    char buf[BUFFER_SIZE + 1];
+    int bytes;
+    int client_socket = this->_server_manager->getFdTable()[fd].second;
 
-    location_info::const_iterator it = location_info.find("cgi");
-    if (it == location_info.end())
-        return (false);
-    size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
-    if (dot == std::string::npos)
-        return (false);
-    std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
-    const std::string& cgi = it->second;
-    if (cgi.find(extension) == std::string::npos)
-        return (false);
-    return (true);
+    ft::memset(buf, 0, BUFFER_SIZE + 1);
+    if ((bytes = read(fd, buf, BUFFER_SIZE)) > 0)
+    {
+        this->_responses[client_socket].appendBody(buf);
+        if (bytes < BUFFER_SIZE)
+        {
+            this->_server_manager->fdClr(fd, FdSet::READ);
+            this->_server_manager->setClosedFdOnFdTable(fd);
+            this->_server_manager->updateFdMax(fd);
+            this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+            close(fd);
+        }
+    }
+    else if (bytes == 0)
+    {
+        this->_server_manager->fdClr(fd, FdSet::READ);
+        this->_server_manager->setClosedFdOnFdTable(fd);
+        this->_server_manager->updateFdMax(fd);
+        this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+        close(fd);
+        throw (ReadErrorException());
+    }
+    else
+    {
+        close(fd);
+        throw (ReadErrorException());
+    }
+    // Log::trace("< readStaticResource");
+}
+
+void
+Server::openStaticResource(int fd)
+{
+    int resource_fd;
+    const std::string& path = this->_responses[fd].getResourceAbsPath();
+    struct stat tmp;
+
+    if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
+    {
+        fcntl(resource_fd, F_SETFL, O_NONBLOCK);
+        this->_server_manager->fdSet(resource_fd, FdSet::READ);
+        this->_server_manager->setResourceOnFdTable(resource_fd, fd);
+        this->_server_manager->updateFdMax(resource_fd);
+        if ((fstat(resource_fd, &tmp)) == -1)
+            throw OpenResourceErrorException(this->_responses[fd], errno);
+        this->_responses[fd].setFileInfo(tmp);
+    }
+    else
+        throw OpenResourceErrorException(this->_responses[fd], errno);
 }
 
 void
@@ -681,13 +722,14 @@ Server::checkAndSetResourceType(int fd)
 void
 Server::preprocessResponseBody(int fd, ResType& res_type)
 {
+    Log::trace("> preprocessResponseBody");
     switch (res_type)
     {
     case ResType::AUTO_INDEX:
         std::cout << "Auto index page will be generated" << std::endl;
         break ;
     case ResType::STATIC_RESOURCE:
-        std::cout << "Static resourc will be opened" << std::endl;
+        std::cout << "Static resource will be opened" << std::endl;
         this->openStaticResource(fd);
         break ;
     case ResType::CGI:
@@ -697,6 +739,7 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
     default:
         break ;
     }
+    Log::trace("< preprocessResponseBody");
 }
 
 void

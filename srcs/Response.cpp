@@ -164,12 +164,11 @@ Response::setBody(const std::string& body)
 void
 Response::init()
 {
-    this->_status_code = "";
+    this->_status_code = "200";
     this->_headers = { {"", ""} };
     this->_transfer_type = "";
     this->_clients = "";
     this->_body = "";
-    this->_status_code = "";
     this->_location_info = { {"", ""} };
     this->_resource_abs_path = "";
     this->_route = "";
@@ -338,3 +337,12 @@ Response::isAllowedMethod(const std::string& method)
     return (this->_location_info["limit_except"].find(method) != std::string::npos);
 }
 
+void
+Response::appendBody(char* buf)
+{
+    std::string tmp = this->getBody();
+    std::string tmp2(buf);
+
+    std::string ret = tmp + tmp2;
+    this->setBody(ret);
+}

@@ -18,7 +18,7 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-const int BUFFER_SIZE = 8192;
+const int BUFFER_SIZE = 200;
 
 class ServerManager;
 class Request;
@@ -96,6 +96,8 @@ public:
     void setResourceAbsPathAsIndex(int fd);
     void processResponseBody(int fd);
     void preprocessResponseBody(int fd, ResType& res_type);
+
+    void readStaticResource(int fd);
 
     /* Server run function */
     void acceptClient();
