@@ -97,16 +97,6 @@ Server::setResourceAbsPathAsIndex(int fd)
 /******************************  Exception  ***********************************/
 /*============================================================================*/
 
-Server::SendErrorCodeToClientException::SendErrorCodeToClientException()
-{
-}
-
-const char*
-Server::SendErrorCodeToClientException::what() const throw()
-{
-    return ("[SendErrorCodeToClientException] <-- overloaded");
-}
-
 Server::PayloadTooLargeException::PayloadTooLargeException(Request& request) 
 : _request(request)
 {
@@ -506,6 +496,11 @@ Server::acceptClient()
         if (client_socket > this->_server_manager->getFdMax())
             this->_server_manager->setFdMax(client_socket);
         this->_server_manager->fdSet(client_socket, FdSet::READ);
+
+        //TODO: Client IP address 저장하기
+        // this->_requests[client_socket].setIpAddr(addr)
+        // this->setFdTableClientAddr(client_address.sin_addr.s_addr = ft::hToNL(INADDR_ANY));
+
         fcntl(client_socket, F_SETFL, O_NONBLOCK);
         this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
         this->_server_manager->updateFdMax(client_socket);
@@ -541,7 +536,7 @@ Server::run(int fd)
             {
                 if (this->isCGIPipe(fd))
                 {
-                    this->executeCgiAndReadCgiPipe(fd)
+                    // this->executeCgiAndReadCgiPipe(fd);
                     this->_server_manager->fdClr(fd, FdSet::READ);
                 }
                 else if (this->isStaticResource(fd))
@@ -770,92 +765,182 @@ Server::openCgiPipe(int fd)
 char**
 Server::makeCgiEnvp(int fd)
 {
-    //  = this->_server_manager->getEnvp(); //NOTE: main으로 받은 envp
-    char** env;
-    // if (!(env = (char **)malloc(sizeof(char*) * 20)))
-    // {
-    //     for (int i = 0; i < 20; i++)
-    //         env[i] = nullptr;
-    // }
-
+    char** envp;
+    // header, location_info, server_config
     const std::map<std::string, std::string>& headers = this->_requests[fd].getHeaders();
+    const std::map<std::string, std::string>& location_info =
+        this->getLocationConfig().at(this->_responses[fd].getRoute());
+    const std::map<std::string, std::string>& server_info = getServerConfig();
+    // 각각에 대한 it
+    std::map<std::string, std::string>::const_iterator it;
 
-    std::map<std::string, std::string> env_map;
-
-    std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
-    (it == headers.end()) ? env_map["CONTENT_LENGTH"] = std::string("-1") : env_map["CONTENT_LENGTH"] = it->second;
-    std::map<std::string, std::string>::const_iterator it = headers.find("Content-Type");
-    (it == headers.end()) ? throw() : env_map["CONTENT_TYPE"] = it->second;
-
-
+    if (!(envp = (char **)malloc(sizeof(char *) * 20)))
+        return (nullptr);
+    for (int i = 0; i < 20; i++)
+        envp[i] = nullptr;
 
     // if (it == headers.end())
-    //     env_map["CONTENT_TYPE"] = std::string("");
+
+    // std::map<std::string, std::string>::const_iterator it = headers.find("Authorization");
+    // AUTH_TYPE // Request_Headers의 Authorization value 공백 앞부분
+    // REMOTE_IDENT & REMOTE_USER // Request_Headers의 Authorization value 공백 뒷부분
+    // AUTH_TYPE
+    // it = headers.find("Authorization");
+    // if (it == headers.end())
+    //     // envp[0] = ft::strdup("");
     // else
-    //     env_map["CONTENT_TYPE"] = it->second;
+    // {
+    //     // envp[0] = ft::strdup("")
+    //     // REMOTE_USER; 1
+    //     // REMOTE_IDENT 2
+    // }
+    
 
-
-    if (env_map.find("CONTENT_LENGTH") == env_map.end())
-
-    if (!(env = (char **)malloc(sizeof(char*) * env_map.size())))
+    // CONTENT_LENGTH // 리퀘스트 바디가 있을 경우 무조건 일치하는 길이가 세팅되어야 함. 없을 때는 null 또는 unset할 것.
+    //NOTE: if no data is attached, then NULL (or unset)
+    it = headers.find("Content-Length");
+    if (it == headers.end())
     {
-        for (int i = 0; i < 20; i++)
-            env[i] = nullptr;
+        if (!(envp[3] = ft::strdup("")))
+            return (nullptr);
+    }
+    else
+    {
+        if (!(envp[3] = ft::strdup("CONTENT_LENGTH=" + it->second)))
+            return (nullptr);
     }
 
-// AUTH_TYPE
-// CONTENT_LENGTH
-// CONTENT_TYPE
-// GATEWAY_INTERFACE
-// PATH_INFO
-// PATH_TRANSLATED
-// QUERY_STRING
-// REMOTE_ADDR
-// REMOTE_IDENT
-// REMOTE_USER
-// REQUEST_METHOD
-// REQUEST_URI
-// SCRIPT_NAME
-// SERVER_NAME
-// SERVER_PORT
-// SERVER_PROTOCOL
-// SERVER_SOFTWARE
+    // CONTENT_TYPE default는 text/html 나머지는 MIME 타입
+    //NOTE: http default is text
+    it = headers.find("Content-Type");
+    if (it == headers.end())
+    {
+        if (!(envp[4] = ft::strdup("CONTENT_TYPE=text/html")))
+            return (nullptr);
+    }
+    else
+    {
+        if (!(envp[4] = ft::strdup("CONTENT_TYPE=" + it->second)))
+            return (nullptr);
+    }
+
+    // GATEWAY_INTERFACE "CGI/1.1"
+    if (!(envp[5] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
+        return (nullptr);
+
+    // PATH_INFO / 로 시작하는 cgi 스크립트의 path
+    it = location_info.find("cgi_path");
+    if (it == location_info.end())
+        return (nullptr);
+    else
+    {
+        if (!(envp[6] = ft::strdup("PATH_INFO=" + it->second)))
+            return (nullptr);
+    }
+
+    // PATH_TRANSLATED는 (query가 없을땐...) PATH_INFO랑 동일한 값으로 세팅
+    // if (!(envp[7] = ft::strdup(envp[6])))
+    //     return (nullptr);
+
+    // QUERY_STRING의 경우 query가 없으면 ""로 세팅
+    // if (!(envp[8] = ft::strdup("")))
+        // return (nullptr);
+
+    // REMOTE_ADDR -> 클라이언트 ip
+    // TODO: requests에 추가하기
+
+    // REQUEST_METHOD : Location info의 limit_except or GET/POST/HEAD
+    if (!(this->_requests[fd].getMethod() == "GET" ||
+            this->_requests[fd].getMethod() == "POST" ||
+            this->_requests[fd].getMethod() == "HEAD"))
+            return (nullptr);
+    else
+    {
+        if (!(envp[10] = ft::strdup(this->_requests[fd].getMethod())))
+            return (nullptr);
+    }
+
+    // REQUEST_URI -> URI abs PATH no RFC
+    if (!(envp[11] = ft::strdup(this->_responses[fd].getResourceAbsPath())))
+        return (nullptr);
+
+    // SCRIPT_NAME -> URI (not url) // no path_info segment
+    if (!(envp[12] = ft::strdup(this->_requests[fd].getUri())))
+        return (nullptr);
+
+    // SERVER_NAME host -> server_info
+    it = server_info.find("host");
+    if (!(envp[13] = ft::strdup("SERVER_NAME=" + it->second)))
+        return (nullptr);
+    // SERVER_PORT port -> server_info
+    it = server_info.find("port");
+    if (!(envp[14] = ft::strdup("PORT=" + it->second)))
+        return (nullptr);
+    // SERVER_PROTOCOL "HTTP/1.1"
+    if (!(envp[15] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
+        return (nullptr);
+    // SERVER_SOFTWARE "GET_POLAR_BEAR/2.0"
+    if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
+        return (nullptr);
+    return (envp);
 }
 
-void
-Server::executeCgiAndReadCgiPipe(int fd)
+char**
+Server::makeCgiArgv(int fd)
 {
-    pid_t pid;
-    int status;
-    int ret;
-    char **argv = makeCgiArgv();
-    char **envp = makeCgiEnvp();
+    char** argv;
+    const std::string& body = this->_requests[fd].getBodies();
 
-    // pid = fork();
-    // //TODO: signal
-    // if (pid < 0)
-    // {
-    //     throw();
-    // }
-    // else if (pid == 0)
-    // {
-    //     //dup2
-    //     if ((dup2(this->_responses[fd].getCgiPipeFd(), 1)) < 0)
-    //     {
-    //         throw();
-    //     }
-    //     if ((ret = execve(cgi_path, cgi_path + request_body, envp)) < 0)
-    //     {
-    //         // execve(arg[0], arg, envp);
-    //     }
-    //     exit(ret);
-    // }
-    // else
-    // {
-    //     waitpid(pid, &status, 0);
-    //     //close
-    // }
-    //1. pid로 fork
-    //2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
-    //3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
+    if (!(argv = (char **)malloc(sizeof(char *) * 2)))
+        return (nullptr);
+
+    const location_info& location_info =
+            this->getLocationConfig().at(this->_responses[fd].getRoute());
+
+    //TODO: ft::strdup 만들기
+    if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
+        return (nullptr);
+    if (!(argv[1] = ft::strdup(body)))
+        return (nullptr);
+
+    return (argv);
 }
+
+// void
+// Server::executeCgiAndReadCgiPipe(int fd)
+// {
+//     pid_t pid;
+//     int status;
+//     int ret;
+
+//     char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
+//     char** envp = makeCgiEnvp(fd);
+
+//     // pid = fork();
+//     // //TODO: signal
+//     // if (pid < 0)
+//     // {
+//     //     throw();
+//     // }
+//     // else if (pid == 0)
+//     // {
+//     //     //dup2
+//     //     if ((dup2(this->_responses[fd].getCgiPipeFd(), 1)) < 0)
+//     //     {
+//     //         throw();
+//     //     }
+//     //     if ((ret = execve(cgi_path, cgi_path + request_body, envp)) < 0)
+//     //     {
+//     //         // execve(arg[0], arg, envp);
+//     //     }
+//     //     exit(ret);
+//     // }
+//     // else
+//     // {
+//     //     waitpid(pid, &status, 0);
+//     //     //close
+//     // }
+//     //1. pid로 fork
+//     //2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
+//     //3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
+// }
