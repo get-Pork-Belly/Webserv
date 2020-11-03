@@ -68,6 +68,7 @@ public:
 
     /* Util */
     bool closeClientSocket(int fd);
+    bool closeFdAndSetClientOnWriteFdSet(int fd);
     bool isFdManagedByServer(int fd) const;
     bool isServerSocket(int fd) const;
     bool isClientSocket(int fd) const;

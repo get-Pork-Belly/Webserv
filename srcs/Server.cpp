@@ -586,8 +586,6 @@ Server::closeClientSocket(int fd)
     int ret;
     Log::closeClient(*this, fd);
 
-    std::cout << "In Close" << std::endl;
-
     this->_server_manager->fdClr(fd, FdSet::READ);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
@@ -595,6 +593,19 @@ Server::closeClientSocket(int fd)
     Log::closeClient(*this, fd);
     if ((ret = close(fd)) < 0)
         return (false);
+    return (true);
+}
+
+bool
+Server::closeFdAndSetClientOnWriteFdSet(int fd)
+{
+    int client_socket = this->_server_manager->getFdTable()[fd].second;
+
+    this->_server_manager->fdClr(fd, FdSet::READ);
+    this->_server_manager->setClosedFdOnFdTable(fd);
+    this->_server_manager->updateFdMax(fd);
+    this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+    close(fd);
     return (true);
 }
 
