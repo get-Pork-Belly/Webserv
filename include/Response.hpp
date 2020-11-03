@@ -5,6 +5,7 @@
 # include <sys/stat.h>
 # include "Request.hpp"
 # include "types.hpp"
+# include "Exception.hpp"
 
 class Server;
 
