@@ -6,9 +6,10 @@ void
 PageGenerator::makeErrorPage(Response& res)
 {
     std::string body;
-    std::string code = res.getStatusCode();
-    std::string message = res.getStatusMessage(code);
+    const std::string& code = res.getStatusCode();
+    const std::string& message = res.getStatusMessage(code);
 
+    body.reserve(200);
     body += "<html>\n\t<head>\n\t\t<title>" + code + " " + message +
        "</title>\n\t</head>" + "\n\t<body>\n\t\t<center>\n\t\t\t<h1>" +
        code + " " + message + "</h1>\n\t\t</center>" +
@@ -24,7 +25,7 @@ PageGenerator::makeAutoIndex(Response& res)
     std::string temp;
     std::string body;
 
-    body.reserve(200);
+    body.reserve(300);
     body += "<html>\n\t<head>\n\t\t<title>Index of " + res.getRoute() +
         "</title>\n\t</head>\n\t<body>\n\t\t<h1>Index of" + res.getRoute() +
         "</h1>\n\t\t<hr>\n\t\t<pre>";
