@@ -1,6 +1,6 @@
 #include "utils.hpp"
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 
 namespace ft {
 
@@ -207,6 +207,22 @@ strlen(const char* str)
     while (str[i])
         i++;
     return (i);
+}
+
+char*
+strdup(const std::string& s)
+{
+	size_t		i = -1;
+	size_t		len = s.length();
+	char*		ret;
+
+	len = s.length();
+	if (!(ret = (char *)malloc(sizeof(char) * (len + 1))))
+        return (NULL);
+	while (++i < len)
+		ret[i] = s[i];
+	ret[len] = '\0';
+	return (ret);
 }
 
 }
