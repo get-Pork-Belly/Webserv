@@ -216,19 +216,7 @@ Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
     Request& req = this->_requests[fd];
 
     if ((bytes = read(fd, buf, header_end_pos + 4)) > 0)
-    {
-        // int tmp;
-        // if ((tmp = read(fd, buf, 100)) > 0)
-        //     std::cout<<"Buffer left!!;;;"<<std::endl;
-        // else if (tmp == 0)
-        //     std::cout<<"eof"<<std::endl;
-        // else
-        //     std::cout<<"read error"<<std::endl;
-        // std::cout<<"bytes: "<< bytes<<std::endl;
-        
         req.parseRequestWithoutBody(buf);
-
-    }
     else if (bytes == 0)
         throw (Request::RequestFormatException(req, "400"));
     else
