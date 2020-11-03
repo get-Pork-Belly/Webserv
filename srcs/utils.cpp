@@ -209,4 +209,20 @@ strlen(const char* str)
     return (i);
 }
 
+char*
+strdup(const std::string& s)
+{
+	size_t		i = -1;
+	size_t		len = s.length();
+	char*		ret;
+
+	len = s.length();
+	if (!(ret = (char *)malloc(sizeof(char) * (len + 1))))
+        throw "malloc failed";
+	while (++i < len)
+		ret[i] = s[i];
+	ret[len] = '\0';
+	return (ret);
+}
+
 }
