@@ -113,7 +113,7 @@ Log::fdTypeToString(const FdType& type)
         return ("CLIENT");
 
     case FdType::RESOURCE:
-        return ("RESOURCE");
+        return ("STATIC_RESOURCE");
 
     case FdType::PIPE:
         return ("PIPE");
