@@ -129,6 +129,8 @@ Response::setDirectoryEntry(DIR* dir_ptr)
     while ((entry = readdir(dir_ptr)) != NULL)
     {
         this->_directory_entry += entry->d_name;
+        if (entry->d_type == 4)
+            this->_directory_entry += "/";
         this->_directory_entry += " ";
     }
 }

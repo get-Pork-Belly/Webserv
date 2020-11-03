@@ -1,4 +1,3 @@
-#include <dirent.h>
 #include <string>
 #include "PageGenerator.hpp"
 
@@ -20,33 +19,17 @@ PageGenerator::makeErrorPage(Response& res)
 void
 PageGenerator::makeAutoIndex(Response& res)
 {
-    DIR *dir;
-    struct dirent *ent;
     std::string temp;
     std::string body;
+    const std::string& dir_ent = res.getDirectoryEntry();
+    std::vector<std::string> files = ft::split(dir_ent, " ");
 
     body.reserve(300);
     body += "<html>\n\t<head>\n\t\t<title>Index of " + res.getRoute() +
         "</title>\n\t</head>\n\t<body>\n\t\t<h1>Index of" + res.getRoute() +
         "</h1>\n\t\t<hr>\n\t\t<pre>";
-    
-    if ((dir = opendir(res.getResourceAbsPath().c_str())) != NULL)
-    {
-        while ((ent = readdir(dir)) != NULL)
-        {
-            temp = std::string(ent->d_name);
-            if (ent->d_type == 4)
-                temp.append("/");
-            body += "\n\t\t\t<a href=\""+ temp +"\">" + temp + "</a>";
-        }
-        closedir(dir);
-    }
-    else
-    {
-        res.setStatusCode("500");
-        PageGenerator::makeErrorPage(res);
-        return ;
-    }
+    for (auto& s : files)
+        body += "\n\t\t\t<a href=\""+ s +"\">" + s + "</a>";
     body += "\n\t\t</pre>\n\t\t<hr>\n\t</body>\n</html>";
     res.setBody(body);
 }
