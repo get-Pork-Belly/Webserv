@@ -22,6 +22,7 @@ public:
     static void serverIsCreated(Server& server);
     static void newClient(Server& server, int client_fd);
     static void closeClient(Server& server, int client_fd);
+    static void closeFd(Server& server, int client_socket, const FdType& type, int fd);
     static void getRequest(Server& server, int fd);
     static void timeLog(int fd);
     // error
@@ -31,6 +32,7 @@ public:
 
     // trace
     static void trace(const std::string& message);
+    static std::string fdTypeToString(const FdType& type);
 
 };
 

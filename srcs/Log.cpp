@@ -101,6 +101,50 @@ Log::closeClient(Server& server, int client_fd)
     write(fd, line.c_str(), line.length());
 }
 
+std::string
+Log::fdTypeToString(const FdType& type)
+{
+    switch (type)
+    {
+    case FdType::SERVER_SOCKET:
+        return ("SERVER");
+
+    case FdType::CLIENT_SOCKET:
+        return ("CLIENT");
+
+    case FdType::RESOURCE:
+        return ("RESOURCE");
+
+    case FdType::PIPE:
+        return ("PIPE");
+
+    case FdType::CLOSED:
+        return ("CLOSED");
+
+    default:
+        break;
+    }
+}
+
+void
+Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
+{
+    if (DEBUG == 0)
+        return ;
+
+    int server_fd = server.getServerSocket();
+    int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
+
+    std::string line;
+    line = "SERVER(" + std::to_string(server_fd) + ") CLOSE " 
+                    + fdTypeToString(type) + "(" + std::to_string(fd) 
+                    + ") which requested by CLIENT(" 
+                    + std::to_string(client_socket) + ")\n";
+
+    Log::timeLog(log_print_fd);
+    write(log_print_fd, line.c_str(), line.length());
+}
+
 void
 Log::getRequest(Server& server, int client_fd)
 {

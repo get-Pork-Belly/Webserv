@@ -599,7 +599,9 @@ Server::closeClientSocket(int fd)
 bool
 Server::closeFdAndSetClientOnWriteFdSet(int fd)
 {
+    const FdType& type = this->_server_manager->getFdTable()[fd].first;
     int client_socket = this->_server_manager->getFdTable()[fd].second;
+    Log::closeFd(*this, client_socket, type, fd);
 
     this->_server_manager->fdClr(fd, FdSet::READ);
     this->_server_manager->setClosedFdOnFdTable(fd);
