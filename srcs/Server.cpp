@@ -580,23 +580,18 @@ Server::run(int fd)
     }
 }
 
-bool
+void
 Server::closeClientSocket(int fd)
 {
-    int ret;
-    Log::closeClient(*this, fd);
-
     this->_server_manager->fdClr(fd, FdSet::READ);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
     this->_requests[fd].clear();
     Log::closeClient(*this, fd);
-    if ((ret = close(fd)) < 0)
-        return (false);
-    return (true);
+    close(fd);
 }
 
-bool
+void
 Server::closeFdAndSetClientOnWriteFdSet(int fd)
 {
     const FdType& type = this->_server_manager->getFdTable()[fd].first;
@@ -608,7 +603,6 @@ Server::closeFdAndSetClientOnWriteFdSet(int fd)
     this->_server_manager->updateFdMax(fd);
     this->_server_manager->fdSet(client_socket, FdSet::WRITE);
     close(fd);
-    return (true);
 }
 
 void
@@ -644,11 +638,12 @@ Server::readStaticResource(int fd)
         this->_responses[client_socket].appendBody(buf);
         if (bytes < BUFFER_SIZE)
         {
-            this->_server_manager->fdClr(fd, FdSet::READ);
-            this->_server_manager->setClosedFdOnFdTable(fd);
-            this->_server_manager->updateFdMax(fd);
-            this->_server_manager->fdSet(client_socket, FdSet::WRITE);
-            close(fd);
+            closeFdAndSetClientOnWriteFdSet(fd);
+            // this->_server_manager->fdClr(fd, FdSet::READ);
+            // this->_server_manager->setClosedFdOnFdTable(fd);
+            // this->_server_manager->updateFdMax(fd);
+            // this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+            // close(fd);
         }
     }
     else if (bytes == 0)
