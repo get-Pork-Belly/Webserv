@@ -71,6 +71,7 @@ public:
     std::string makeStatusLine();
 
     void applyAndCheckRequest(Request& request, Server* server);
+    void appendBody(char *buf);
 };
 
 #endif
