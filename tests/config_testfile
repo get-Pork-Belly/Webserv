@@ -7,7 +7,7 @@ http {
 
         location /folder {
             cgi .bin .cgi .bla;
-            autoindex off;
+            autoindex on;
             root /goinfre/yohlee/Webserv/tests/;
         }
     }
