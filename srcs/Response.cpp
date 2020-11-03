@@ -237,16 +237,19 @@ Response::initStatusCodeTable()
 void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
+    Log::trace("> applyAndCheckRequest");
     if (this->setRouteAndLocationInfo(request.getUri(), server))
     {
         if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
             this->setStatusCode("405");
     }
+    Log::trace("< applyAndCheckRequest");
 }
 
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
+    Log::trace("> setRouteAndLocationInfo");
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
 
@@ -277,12 +280,14 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
             break ;
         }
     }
+    Log::trace("< setRouteAndLocationInfo");
     return (false);
 }
 
 std::string
 Response::makeStatusLine()
 {
+    Log::trace("> makeStatusLine");
     std::string status_line;
 
     this->setStatusCode(std::string("400"));
@@ -291,6 +296,7 @@ Response::makeStatusLine()
     status_line += " ";
     status_line += this->getStatusMessage(this->getStatusCode());
     status_line += "\r\n";
+    Log::trace("< makeStatusLine");
     return (status_line);
 }
 
@@ -307,7 +313,7 @@ void
 Response::makeBody(Request& request)
 {
     // std::string body;
-    Log::error("in makeBody\n");
+    Log::trace("> makeBody");
     std::cout<<request<<std::endl;
     std::cout<<"=================="<<std::endl;
     (void)request;
@@ -328,6 +334,7 @@ Response::makeBody(Request& request)
     else // 일반적인 body
     {
     }
+    Log::trace("< makeBody");
 }
 
 bool
