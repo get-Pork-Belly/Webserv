@@ -22,24 +22,23 @@ PageGenerator::makeAutoIndex(Response& res)
     DIR *dir;
     struct dirent *ent;
     std::string temp;
-    std::cout << "auto inddex" << std::endl;
     std::string body;
 
     body.reserve(200);
-    body += "<htlm>\n\t<head>\n\t\t<title>Index of " + res.getRoute() +
+    body += "<html>\n\t<head>\n\t\t<title>Index of " + res.getRoute() +
         "</title>\n\t</head>\n\t<body>\n\t\t<h1>Index of" + res.getRoute() +
         "</h1>\n\t\t<hr>\n\t\t<pre>";
     
     if ((dir = opendir(res.getResourceAbsPath().c_str())) != NULL)
     {
-        while ((ent = readdir (dir)) != NULL)
+        while ((ent = readdir(dir)) != NULL)
         {
             temp = std::string(ent->d_name);
             if (ent->d_type == 4)
                 temp.append("/");
             body += "\n\t\t\t<a href=\""+ temp +"\">" + temp + "</a>";
         }
-        closedir (dir);
+        closedir(dir);
     }
     else
     {
