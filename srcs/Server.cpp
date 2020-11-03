@@ -580,22 +580,29 @@ Server::run(int fd)
     }
 }
 
-bool
+void
 Server::closeClientSocket(int fd)
 {
-    int ret;
-    Log::closeClient(*this, fd);
-
-    std::cout << "In Close" << std::endl;
-
     this->_server_manager->fdClr(fd, FdSet::READ);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
     this->_requests[fd].clear();
     Log::closeClient(*this, fd);
-    if ((ret = close(fd)) < 0)
-        return (false);
-    return (true);
+    close(fd);
+}
+
+void
+Server::closeFdAndSetClientOnWriteFdSet(int fd)
+{
+    const FdType& type = this->_server_manager->getFdTable()[fd].first;
+    int client_socket = this->_server_manager->getFdTable()[fd].second;
+    Log::closeFd(*this, client_socket, type, fd);
+
+    this->_server_manager->fdClr(fd, FdSet::READ);
+    this->_server_manager->setClosedFdOnFdTable(fd);
+    this->_server_manager->updateFdMax(fd);
+    this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+    close(fd);
 }
 
 void
@@ -630,26 +637,16 @@ Server::readStaticResource(int fd)
     {
         this->_responses[client_socket].appendBody(buf);
         if (bytes < BUFFER_SIZE)
-        {
-            this->_server_manager->fdClr(fd, FdSet::READ);
-            this->_server_manager->setClosedFdOnFdTable(fd);
-            this->_server_manager->updateFdMax(fd);
-            this->_server_manager->fdSet(client_socket, FdSet::WRITE);
-            close(fd);
-        }
+            this->closeFdAndSetClientOnWriteFdSet(fd);
     }
     else if (bytes == 0)
     {
-        this->_server_manager->fdClr(fd, FdSet::READ);
-        this->_server_manager->setClosedFdOnFdTable(fd);
-        this->_server_manager->updateFdMax(fd);
-        this->_server_manager->fdSet(client_socket, FdSet::WRITE);
-        close(fd);
+        this->closeFdAndSetClientOnWriteFdSet(fd);
         throw (ReadErrorException());
     }
     else
     {
-        close(fd);
+        this->closeFdAndSetClientOnWriteFdSet(fd);
         throw (ReadErrorException());
     }
     // Log::trace("< readStaticResource");
