@@ -32,7 +32,10 @@ public:
 
     // trace
     static void trace(const std::string& message);
+
     static std::string fdTypeToString(const FdType& type);
+    static void printLocationConfig(const std::map<std::string, location_info>& loc_config);
+    static void printLocationInfo(const location_info& loc_info);
 
 };
 
