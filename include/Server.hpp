@@ -18,7 +18,7 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-const int BUFFER_SIZE = 8192;
+const int BUFFER_SIZE = 200;
 
 class ServerManager;
 class Request;
