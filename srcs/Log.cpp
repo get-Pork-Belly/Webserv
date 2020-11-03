@@ -202,6 +202,9 @@ Log::fdTypeToString(const FdType& type)
 void
 Log::printLocationConfig(const std::map<std::string, location_info>& loc_config)
 {
+    if (DEBUG != 2)
+        return ;
+
     for(auto& kv: loc_config)
     {
         std::cout<<"|==============================================="<<std::endl;
@@ -214,6 +217,9 @@ Log::printLocationConfig(const std::map<std::string, location_info>& loc_config)
 void
 Log::printLocationInfo(const location_info& loc_info)
 {
+    if (DEBUG != 2)
+        return ;
+
     for(auto& kv : loc_info)
         std::cout<<"| "<<kv.first<<" : "<<kv.second<<std::endl;
 }
