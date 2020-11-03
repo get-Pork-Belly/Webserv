@@ -1,6 +1,7 @@
 #include "Response.hpp"
 #include "Server.hpp"
 #include "PageGenerator.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -236,7 +237,6 @@ Response::initStatusCodeTable()
 void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
-    this->setStatusCode(request.getStatusCode());
     if (this->setRouteAndLocationInfo(request.getUri(), server))
     {
         if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
@@ -307,13 +307,23 @@ void
 Response::makeBody(Request& request)
 {
     // std::string body;
+    Log::error("in makeBody\n");
+    std::cout<<request<<std::endl;
+    std::cout<<"=================="<<std::endl;
     (void)request;
     if ((this->getResourceType() == ResType::AUTO_INDEX) ||
          this->getStatusCode().front() != '2')
     {
-        (this->getResourceType() != ResType::AUTO_INDEX) ?
-            PageGenerator::makeErrorPage(*this) :
+        if (this->getResourceType() != ResType::AUTO_INDEX)
+        {
+            std::cout<<"Debug 1"<<std::endl;
+            PageGenerator::makeErrorPage(*this);
+        }
+        else
+        {
+            std::cout<<"Debug 2"<<std::endl;
             PageGenerator::makeAutoIndex(*this);
+        }
     }
     else // 일반적인 body
     {
