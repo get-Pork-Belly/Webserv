@@ -633,11 +633,7 @@ Server::readStaticResource(int fd)
         {
             this->_server_manager->fdClr(fd, FdSet::READ);
             this->_server_manager->setClosedFdOnFdTable(fd);
-            std::cout << "fd: " << fd << std::endl;
-            std::cout << "client: " << client_socket << std::endl;
-            std::cout << "before fdMax: " << this->_server_manager->getFdMax() << std::endl;
             this->_server_manager->updateFdMax(fd);
-            std::cout << "After fdMax: " << this->_server_manager->getFdMax() << std::endl;
             this->_server_manager->fdSet(client_socket, FdSet::WRITE);
             if (close(fd) < 0)
                 throw "";
@@ -645,11 +641,6 @@ Server::readStaticResource(int fd)
     }
     else if (bytes == 0)
     {
-        // this->_server_manager->fdClr(fd, FdSet::READ);
-        // this->_server_manager->setClosedFdOnFdTable(fd);
-        // this->_server_manager->updateFdMax(fd);
-        // this->_requests[fd].clear();
-        // Log::closeClient(*this, fd);
         if (close(fd) < 0)
             throw (ReadErrorException());
     }
