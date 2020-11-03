@@ -97,6 +97,8 @@ public:
     void processResponseBody(int fd);
     void preprocessResponseBody(int fd, ResType& res_type);
 
+    void readStaticResource(int fd);
+
     /* Server run function */
     void acceptClient();
     
