@@ -1,6 +1,6 @@
 #include "utils.hpp"
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 
 namespace ft {
 
@@ -218,7 +218,7 @@ strdup(const std::string& s)
 
 	len = s.length();
 	if (!(ret = (char *)malloc(sizeof(char) * (len + 1))))
-        throw "malloc failed";
+        return (NULL);
 	while (++i < len)
 		ret[i] = s[i];
 	ret[len] = '\0';
