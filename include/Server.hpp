@@ -17,6 +17,7 @@
 # include "types.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
+# include "Exception.hpp"
 
 const int BUFFER_SIZE = 200;
 
@@ -99,12 +100,12 @@ public:
     void preprocessResponseBody(int fd, ResType& res_type);
 
     void readStaticResource(int fd);
-    char** makeCgiEnvp(int fd);
 
     /* Server run function */
     void acceptClient();
     void openCgiPipe(int fd);
     void executeCgiAndReadCgiPipe(int fd);
+    char** makeCgiArgv(int fd);
     char** makeCgiEnvp(int fd);
 
 public:
@@ -122,12 +123,6 @@ public:
         virtual const char* what() const throw();
     };
 public:
-    class SendErrorCodeToClientException : public std::exception
-    {
-    public:
-        SendErrorCodeToClientException();
-        virtual const char* what() const throw();
-    };
     class CannotOpenDirectoryException : public SendErrorCodeToClientException
     {
     private:
