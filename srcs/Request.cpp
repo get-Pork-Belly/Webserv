@@ -1,4 +1,5 @@
 #include "Request.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -175,7 +176,6 @@ Request::RequestFormatException::s_what() const throw()
     std::string tmp;
     tmp += this->_msg;
     tmp += this->_req.getStatusCode();
-    std::cout<<"in reqformat except: "<<tmp<<std::endl;
     return (tmp);
 }
 
@@ -202,6 +202,7 @@ std::ostream& operator<< (std::ostream& out, Request& object)
 void
 Request::updateReqInfo()
 {
+    Log::trace("> updateReqInfo");
     if (this->getReqInfo() == ReqInfo::COMPLETE)
         return ;
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
@@ -212,6 +213,7 @@ Request::updateReqInfo()
         setReqInfo(ReqInfo::NORMAL_BODY);
     else if (this->isChunkedBody())
         setReqInfo(ReqInfo::CHUNKED_BODY);
+    Log::trace("< updateReqInfo");
 }
 
 bool
@@ -260,6 +262,7 @@ Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& r
 void
 Request::parseRequestWithoutBody(char* buf)
 {
+    Log::trace("> parseRequestWithoutBody");
     std::string line;
     std::string req_message(buf);
 
@@ -278,11 +281,13 @@ Request::parseRequestWithoutBody(char* buf)
             throw (RequestFormatException(*this));
     }
     this->updateReqInfo();
+    Log::trace("< parseRequestWithoutBody");
 }
 
 bool
 Request::parseRequestLine(std::string& req_message)
 {
+    Log::trace("> parseRequestLine");
     std::vector<std::string> request_line = ft::split(req_message, " ");
     
     if (isValidLine(request_line) == false)
@@ -290,12 +295,14 @@ Request::parseRequestLine(std::string& req_message)
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
     this->setVersion(request_line[2]);
+    Log::trace("< parseRequestLine");
     return (true);
 }
 
 bool
 Request::parseHeaders(std::string& req_message)
 {
+    Log::trace("> parseHeaders");
     std::string key;
     std::string value;
     std::string line;
@@ -315,6 +322,7 @@ Request::parseHeaders(std::string& req_message)
     if (this->isValidHeaders(key, value) == false)
         return (updateStatusCodeAndReturn("400", false));
     this->setHeaders(key, value);
+    Log::trace("< parseHeaders");
     return (true);
 }
 

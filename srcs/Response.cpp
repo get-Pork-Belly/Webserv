@@ -1,6 +1,7 @@
 #include "Response.hpp"
 #include "Server.hpp"
 #include "PageGenerator.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -236,17 +237,19 @@ Response::initStatusCodeTable()
 void
 Response::applyAndCheckRequest(Request& request, Server* server)
 {
-    this->setStatusCode(request.getStatusCode());
+    Log::trace("> applyAndCheckRequest");
     if (this->setRouteAndLocationInfo(request.getUri(), server))
     {
         if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
             this->setStatusCode("405");
     }
+    Log::trace("< applyAndCheckRequest");
 }
 
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
+    Log::trace("> setRouteAndLocationInfo");
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
 
@@ -277,12 +280,14 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
             break ;
         }
     }
+    Log::trace("< setRouteAndLocationInfo");
     return (false);
 }
 
 std::string
 Response::makeStatusLine()
 {
+    Log::trace("> makeStatusLine");
     std::string status_line;
 
     this->setStatusCode(std::string("400"));
@@ -291,6 +296,7 @@ Response::makeStatusLine()
     status_line += " ";
     status_line += this->getStatusMessage(this->getStatusCode());
     status_line += "\r\n";
+    Log::trace("< makeStatusLine");
     return (status_line);
 }
 
@@ -306,18 +312,20 @@ Response::makeStatusLine()
 void
 Response::makeBody(Request& request)
 {
-    // std::string body;
+    Log::trace("> makeBody");
     (void)request;
     if ((this->getResourceType() == ResType::AUTO_INDEX) ||
          this->getStatusCode().front() != '2')
     {
-        (this->getResourceType() != ResType::AUTO_INDEX) ?
-            PageGenerator::makeErrorPage(*this) :
+        if (this->getResourceType() != ResType::AUTO_INDEX)
+            PageGenerator::makeErrorPage(*this);
+        else
             PageGenerator::makeAutoIndex(*this);
     }
     else // 일반적인 body
     {
     }
+    Log::trace("< makeBody");
 }
 
 bool

@@ -29,6 +29,9 @@ public:
     // static void notAllowedMethod(Server& server);
     // static void fileNotfound();
 
+    // trace
+    static void trace(const std::string& message);
+
 };
 
 #endif
