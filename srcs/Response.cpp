@@ -338,7 +338,11 @@ Response::isAllowedMethod(const std::string& method)
 }
 
 void
-Response::appendBody(char *buf)
+Response::appendBody(char* buf)
 {
-    this->setBody(this->getBody() + std::string(buf));
+    std::string tmp = this->getBody();
+    std::string tmp2(buf);
+
+    std::string ret = tmp + tmp2;
+    this->setBody(ret);
 }

@@ -546,7 +546,6 @@ Server::run(int fd)
                 else if (this->isStaticResource(fd))
                 {
                     this->readStaticResource(fd);
-                    this->_server_manager->fdClr(fd, FdSet::READ);
                 }
                 else if (this->isClientSocket(fd))
                 {
@@ -621,6 +620,7 @@ Server::findResourceAbsPath(int fd)
 void 
 Server::readStaticResource(int fd)
 {
+    // Log::trace("> readStaticResource");
     char buf[BUFFER_SIZE + 1];
     int bytes;
     int client_socket = this->_server_manager->getFdTable()[fd].second;
@@ -635,20 +635,24 @@ Server::readStaticResource(int fd)
             this->_server_manager->setClosedFdOnFdTable(fd);
             this->_server_manager->updateFdMax(fd);
             this->_server_manager->fdSet(client_socket, FdSet::WRITE);
-            if (close(fd) < 0)
-                throw "";
+            close(fd);
         }
     }
     else if (bytes == 0)
     {
-        if (close(fd) < 0)
-            throw (ReadErrorException());
+        this->_server_manager->fdClr(fd, FdSet::READ);
+        this->_server_manager->setClosedFdOnFdTable(fd);
+        this->_server_manager->updateFdMax(fd);
+        this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+        close(fd);
+        throw (ReadErrorException());
     }
     else
     {
         close(fd);
         throw (ReadErrorException());
     }
+    // Log::trace("< readStaticResource");
 }
 
 void
@@ -718,6 +722,7 @@ Server::checkAndSetResourceType(int fd)
 void
 Server::preprocessResponseBody(int fd, ResType& res_type)
 {
+    Log::trace("> preprocessResponseBody");
     switch (res_type)
     {
     case ResType::AUTO_INDEX:
@@ -734,6 +739,7 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
     default:
         break ;
     }
+    Log::trace("< preprocessResponseBody");
 }
 
 void
