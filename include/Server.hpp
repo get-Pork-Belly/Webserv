@@ -98,10 +98,13 @@ public:
     void preprocessResponseBody(int fd, ResType& res_type);
 
     void readStaticResource(int fd);
+    char** makeCgiEnvp(int fd);
 
     /* Server run function */
     void acceptClient();
-    
+    void openCgiPipe(int fd);
+    void executeCgiAndReadCgiPipe(int fd);
+    char** makeCgiEnvp(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception

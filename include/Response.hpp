@@ -23,6 +23,7 @@ private:
     struct stat _file_info;
     ResType _resource_type;
     std::string _body;
+    int _cgi_pipe[2];
 
 public:
     /* Constructor */
@@ -48,6 +49,7 @@ public:
     const struct stat& getFileInfo() const;
     const ResType& getResourceType() const;
     const std::string& getBody() const;
+    int getCgiPipeFd() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -58,6 +60,15 @@ public:
     void setBody(const std::string& body);
     // void setMessageBody();
     /* Exception */
+public:
+    class CannotOpenCgiPipeException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        CannotOpenCgiPipeException(Response& response);
+        virtual const char* what() const throw();
+    };
     /* Util */
     // bool isLocationUri(const std::string& uri, Server* server);
     bool setRouteAndLocationInfo(const std::string& uri, Server* server);
@@ -71,6 +82,8 @@ public:
     std::string makeStatusLine();
 
     void applyAndCheckRequest(Request& request, Server* server);
+
+    void openCgiPipe();
     void appendBody(char *buf);
 };
 

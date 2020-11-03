@@ -515,7 +515,6 @@ Server::acceptClient()
         std::cerr<<"Accept error"<<std::endl;
 }
 
-
 void
 Server::run(int fd)
 {
@@ -542,6 +541,8 @@ Server::run(int fd)
             {
                 if (this->isCGIPipe(fd))
                 {
+                    this->executeCgiAndReadCgiPipe(fd)
+                    this->_server_manager->fdClr(fd, FdSet::READ);
                 }
                 else if (this->isStaticResource(fd))
                 {
@@ -633,23 +634,20 @@ Server::readStaticResource(int fd)
         {
             this->_server_manager->fdClr(fd, FdSet::READ);
             this->_server_manager->setClosedFdOnFdTable(fd);
-            std::cout << "fd: " << fd << std::endl;
-            std::cout << "client: " << client_socket << std::endl;
-            std::cout << "before fdMax: " << this->_server_manager->getFdMax() << std::endl;
             this->_server_manager->updateFdMax(fd);
-            std::cout << "After fdMax: " << this->_server_manager->getFdMax() << std::endl;
             this->_server_manager->fdSet(client_socket, FdSet::WRITE);
             if (close(fd) < 0)
                 throw "";
         }
+        else
+        {
+            
+        }
+        
     }
     else if (bytes == 0)
     {
-        // this->_server_manager->fdClr(fd, FdSet::READ);
-        // this->_server_manager->setClosedFdOnFdTable(fd);
-        // this->_server_manager->updateFdMax(fd);
-        // this->_requests[fd].clear();
-        // Log::closeClient(*this, fd);
+        
         if (close(fd) < 0)
             throw (ReadErrorException());
     }
@@ -738,7 +736,7 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
         break ;
     case ResType::CGI:
         std::cout << "CGIpipe will be opened" << std::endl;
-        //TODO: Cgi pipe
+        this->openCgiPipe(fd);
         break ;
     default:
         break ;
@@ -758,4 +756,109 @@ Server::processResponseBody(int fd)
     preprocessResponseBody(fd, res_type);
 
     Log::trace("< processResopnseBody");
+}
+
+//TODO OPENSTATICRESOURCE 처럼 변경하기
+void
+Server::openCgiPipe(int fd)
+{
+    this->_responses[fd].openCgiPipe();
+    int cgi_pipe_fd = this->_responses[fd].getCgiPipeFd();
+    fcntl(cgi_pipe_fd, F_SETFL, O_NONBLOCK);
+    this->_server_manager->fdSet(cgi_pipe_fd, FdSet::READ);
+    this->_server_manager->setCGIPipeOnFdTable(cgi_pipe_fd, fd);
+    this->_server_manager->updateFdMax(cgi_pipe_fd);
+}
+
+char**
+Server::makeCgiEnvp(int fd)
+{
+    //  = this->_server_manager->getEnvp(); //NOTE: main으로 받은 envp
+    char** env;
+    // if (!(env = (char **)malloc(sizeof(char*) * 20)))
+    // {
+    //     for (int i = 0; i < 20; i++)
+    //         env[i] = nullptr;
+    // }
+
+    const std::map<std::string, std::string>& headers = this->_requests[fd].getHeaders();
+
+    std::map<std::string, std::string> env_map;
+
+    std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+    (it == headers.end()) ? env_map["CONTENT_LENGTH"] = std::string("-1") : env_map["CONTENT_LENGTH"] = it->second;
+    std::map<std::string, std::string>::const_iterator it = headers.find("Content-Type");
+    (it == headers.end()) ? throw() : env_map["CONTENT_TYPE"] = it->second;
+
+
+
+    // if (it == headers.end())
+    //     env_map["CONTENT_TYPE"] = std::string("");
+    // else
+    //     env_map["CONTENT_TYPE"] = it->second;
+
+
+    if (env_map.find("CONTENT_LENGTH") == env_map.end())
+
+    if (!(env = (char **)malloc(sizeof(char*) * env_map.size())))
+    {
+        for (int i = 0; i < 20; i++)
+            env[i] = nullptr;
+    }
+
+// AUTH_TYPE
+// CONTENT_LENGTH
+// CONTENT_TYPE
+// GATEWAY_INTERFACE
+// PATH_INFO
+// PATH_TRANSLATED
+// QUERY_STRING
+// REMOTE_ADDR
+// REMOTE_IDENT
+// REMOTE_USER
+// REQUEST_METHOD
+// REQUEST_URI
+// SCRIPT_NAME
+// SERVER_NAME
+// SERVER_PORT
+// SERVER_PROTOCOL
+// SERVER_SOFTWARE
+}
+
+void
+Server::executeCgiAndReadCgiPipe(int fd)
+{
+    pid_t pid;
+    int status;
+    int ret;
+    char **argv = makeCgiArgv();
+    char **envp = makeCgiEnvp();
+
+    // pid = fork();
+    // //TODO: signal
+    // if (pid < 0)
+    // {
+    //     throw();
+    // }
+    // else if (pid == 0)
+    // {
+    //     //dup2
+    //     if ((dup2(this->_responses[fd].getCgiPipeFd(), 1)) < 0)
+    //     {
+    //         throw();
+    //     }
+    //     if ((ret = execve(cgi_path, cgi_path + request_body, envp)) < 0)
+    //     {
+    //         // execve(arg[0], arg, envp);
+    //     }
+    //     exit(ret);
+    // }
+    // else
+    // {
+    //     waitpid(pid, &status, 0);
+    //     //close
+    // }
+    //1. pid로 fork
+    //2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
+    //3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
 }

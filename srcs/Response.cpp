@@ -106,6 +106,12 @@ Response::getBody() const
     return (this->_body);
 }
 
+int
+Response::getCgiPipeFd() const
+{
+    return (this->_cgi_pipe[1]);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -156,6 +162,18 @@ Response::setBody(const std::string& body)
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
+
+Response::CannotOpenCgiPipeException::CannotOpenCgiPipeException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("500");
+}
+
+const char*
+Response::CannotOpenCgiPipeException::what() const throw()
+{
+    return ("[CODE 500] Cannot Open Cgi Pipe.");
+}
 
 /*============================================================================*/
 /*********************************  Util  *************************************/
@@ -335,6 +353,14 @@ bool
 Response::isAllowedMethod(const std::string& method)
 {
     return (this->_location_info["limit_except"].find(method) != std::string::npos);
+}
+
+void
+Response::openCgiPipe()
+{
+    if (pipe(this->_cgi_pipe) == -1)
+        throw (CannotOpenCgiPipeException(*this));
+    close(this->_cgi_pipe[0]); // cgi_pipe[0] == cgi_pipe[SIDE_OUT] 이라고 생각하자.. 헷갈리니 메모해둠.
 }
 
 void

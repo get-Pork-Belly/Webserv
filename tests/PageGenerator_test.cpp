@@ -19,7 +19,7 @@ int main(int argc, char *argv[], char *envp[])
     const char *config_path = (argc == 1) ? default_path : argv[1];
     try
     {
-        ServerManager server_manager(config_path);
+        ServerManager server_manager(config_path, envp);
         if (!server_manager.runServers())
         {
             std::cerr<<"error"<<std::endl;

@@ -10,7 +10,7 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-ServerManager::ServerManager(const char *config_path)
+ServerManager::ServerManager(const char* config_path, char** envp)
 : _config_file_path(config_path)
 {
     ft::fdZero(&this->_readfds);
@@ -25,6 +25,7 @@ ServerManager::ServerManager(const char *config_path)
     this->_fd_table.resize(1024, std::pair<FdType, int>(FdType::CLOSED, -1));
     this->_fd = 0;
     this->_fd_max = 2;
+    this->_envp = envp;
     this->initServers();
 }
 
@@ -67,6 +68,12 @@ ServerManager::getFdType(int fd) const
 {
     const std::pair<FdType, int>& pair = _fd_table.at(fd);
     return (pair.first);
+}
+
+const char**
+ServerManager::getEnvp() const
+{
+    return (this->_envp);
 }
 
 /*============================================================================*/
