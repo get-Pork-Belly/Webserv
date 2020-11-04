@@ -16,6 +16,7 @@ private:
     std::string _transfer_type;
     std::string _clients;
     std::map<std::string, std::string> _status_code_table;
+    std::map<std::string, std::string> _mime_type_table;
     location_info _location_info;
     std::string _resource_abs_path;
     std::string _route;
@@ -23,6 +24,7 @@ private:
     struct stat _file_info;
     ResType _resource_type;
     std::string _body;
+    std::string _uri_extension;
 
 public:
     /* Constructor */
@@ -48,6 +50,8 @@ public:
     const struct stat& getFileInfo() const;
     const ResType& getResourceType() const;
     const std::string& getBody() const;
+    const std::map<std::string, std::string>& getMimeTypeTable() const;
+    const std::string& getUriExtension() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -56,6 +60,7 @@ public:
     void setFileInfo(const struct stat& file_info);
     void setResourceType(const ResType& resource_type);
     void setBody(const std::string& body);
+    void setUriExtension(const std::string& extension);
     // void setMessageBody();
     /* Exception */
     /* Util */
@@ -66,6 +71,7 @@ public:
 
     void init();
     void initStatusCodeTable();
+    void initMimeTypeTable();
     void  makeBody(Request& request);
     std::string makeHeaders(Request& request);
     std::string makeStatusLine();
@@ -81,6 +87,7 @@ public:
     // std::string makeAllowHeader();
     std::string makeContentLengthHeader();
     std::string makeContentLocationHeader();
+    std::string makeContentTypeHeader();
 };
 
 #endif

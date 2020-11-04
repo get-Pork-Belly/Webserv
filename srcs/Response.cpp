@@ -12,17 +12,21 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code("200"), _transfer_type(""), _clients(""), _body("")
+: _status_code("200"), _transfer_type(""), _clients(""), _body(""), 
+_uri_extension("")
 {
     this->_headers = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
+    this->initMimeTypeTable();
 }
 
 Response::Response(const Response& other)
 : _status_code(other._status_code),  _headers(other._headers),
 _transfer_type(other._transfer_type), _clients(other._clients),
-_status_code_table(other._status_code_table), _body(other._body) {}
+_status_code_table(other._status_code_table), 
+_mime_type_table(other._mime_type_table), _body(other._body),
+_uri_extension(other._uri_extension) {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -45,6 +49,8 @@ Response::operator=(const Response& rhs)
     this->_clients = rhs._clients;
     this->_body= rhs._body;
     this->_status_code_table = rhs._status_code_table;
+    this->_mime_type_table = rhs._mime_type_table;
+    this->_uri_extension = rhs._uri_extension;
     return (*this);
 }
 
@@ -106,6 +112,18 @@ Response::getBody() const
     return (this->_body);
 }
 
+const std::map<std::string, std::string>&
+Response::getMimeTypeTable() const
+{
+    return (this->_mime_type_table);
+}
+
+const std::string&
+Response::getUriExtension() const
+{
+    return (this->_uri_extension);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -151,6 +169,12 @@ void
 Response::setBody(const std::string& body)
 {
     this->_body = body;
+}
+
+void
+Response::setUriExtension(const std::string& extension)
+{
+    this->_uri_extension = extension;
 }
 
 /*============================================================================*/
@@ -231,6 +255,71 @@ Response::initStatusCodeTable()
         {"510", "Not Extened"},
         {"511", "Network Authentication Required"},
         {"599", "Network Connect Timeout Error"},
+    };
+}
+
+void
+Response::initMimeTypeTable()
+{
+    this->_mime_type_table = {
+        {".aac", "audio/aac"},
+        {".abw", "application/x-abiword"},
+        {".arc", "application/octet-stream"},
+        {".avi", "video/x-msvideo"},
+        {".azw", "application/vnd.amazon.ebook"},
+        {".bin", "application/octet-stream"},
+        {".bz", "application/x-bzip"},
+        {".bz2", "application/x-bzip2"},
+        {".csh", "application/x-csh"},
+        {".css", "text/css"},
+        {".csv", "text/csv"},
+        {".doc", "application/msword"},
+        {".epub", "application/epub+zip"},
+        {".gif", "image/gif"},
+        {".htm", "text/html"},
+        {".html", "text/html"},
+        {".ico", "image/x-icon"},
+        {".ics", "text/calendar"},
+        {".jar", "Temporary Redirect"},
+        {".jpeg", "image/jpeg"},
+        {".jpg", "image/jpeg"},
+        {".js", "application/js"},
+        {".json", "application/json"},
+        {".mid", "audio/midi"},
+        {".midi", "audio/midi"},
+        {".mpeg", "video/mpeg"},
+        {".mpkg", "application/vnd.apple.installer+xml"},
+        {".odp", "application/vnd.oasis.opendocument.presentation"},
+        {".ods", "application/vnd.oasis.opendocument.spreadsheet"},
+        {".odt", "application/vnd.oasis.opendocument.text"},
+        {".oga", "audio/ogg"},
+        {".ogv", "video/ogg"},
+        {".ogx", "application/ogg"},
+        {".pdf", "application/pdf"},
+        {".ppt", "application/vnd.ms-powerpoint"},
+        {".rar", "application/x-rar-compressed"},
+        {".rtf", "application/rtf"},
+        {".sh", "application/x-sh"},
+        {".svg", "image/svg+xml"},
+        {".swf", "application/x-shockwave-flash"},
+        {".tar", "application/x-tar"},
+        {".tif", "image/tiff"},
+        {".tiff", "image/tiff"},
+        {".ttf", "application/x-font-ttf"},
+        {".vsd", " application/vnd.visio"},
+        {".wav", "audio/x-wav"},
+        {".weba", "audio/webm"},
+        {".webm", "video/webm"},
+        {".webp", "image/webp"},
+        {".woff", "application/x-font-woff"},
+        {".xhtml", "application/xhtml+xml"},
+        {".xls", "application/vnd.ms-excel"},
+        {".xml", "application/xml"},
+        {".xul", "application/vnd.mozilla.xul+xml"},
+        {".zip", "application/zip"},
+        {".3gp", "video/3gpp audio/3gpp"},
+        {".3g2", "video/3gpp2 audio/3gpp2"},
+        {".7z", "application/x-7z-compressed"},
     };
 }
 
@@ -356,6 +445,21 @@ Response::makeContentLocationHeader()
     return (header);
 }
 
+// std::string
+// Response::makeContentTypeHeader()
+// {
+//     std::string header = "Content-Type :";
+//     std::string extension = this->getUriExtension();
+//     if (extension == "")
+//     {
+//         std::cout<<"wowwowowowo"<<std::endl;
+//         throw ("");
+//     }
+//     header += this->getMimeTypeTable().at(extension);
+//     header += "\r\n";
+//     return (header);
+// }
+
 std::string
 Response::makeHeaders(Request& request)
 {
@@ -367,6 +471,7 @@ Response::makeHeaders(Request& request)
     // if not chunked
     headers += this->makeContentLengthHeader();
     headers += this->makeContentLocationHeader();
+    headers += this->makeContentTypeHeader();
     std::string status_code = this->getStatusCode();
 
     //TODO switch 문 고려
