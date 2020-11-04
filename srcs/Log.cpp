@@ -101,31 +101,6 @@ Log::closeClient(Server& server, int client_fd)
     write(fd, line.c_str(), line.length());
 }
 
-std::string
-Log::fdTypeToString(const FdType& type)
-{
-    switch (type)
-    {
-    case FdType::SERVER_SOCKET:
-        return ("SERVER");
-
-    case FdType::CLIENT_SOCKET:
-        return ("CLIENT");
-
-    case FdType::RESOURCE:
-        return ("STATIC_RESOURCE");
-
-    case FdType::PIPE:
-        return ("PIPE");
-
-    case FdType::CLOSED:
-        return ("CLOSED");
-
-    default:
-        break;
-    }
-}
-
 void
 Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
 {
@@ -197,4 +172,54 @@ Log::trace(const std::string& trace)
     Log::timeLog(fd);
     write(fd, trace.c_str(), trace.length());
     write(fd, "\n", 1);
+}
+
+std::string
+Log::fdTypeToString(const FdType& type)
+{
+    switch (type)
+    {
+    case FdType::SERVER_SOCKET:
+        return ("SERVER");
+
+    case FdType::CLIENT_SOCKET:
+        return ("CLIENT");
+
+    case FdType::RESOURCE:
+        return ("STATIC_RESOURCE");
+
+    case FdType::PIPE:
+        return ("PIPE");
+
+    case FdType::CLOSED:
+        return ("CLOSED");
+
+    default:
+        break;
+    }
+}
+
+void
+Log::printLocationConfig(const std::map<std::string, location_info>& loc_config)
+{
+    if (DEBUG != 2)
+        return ;
+
+    for(auto& kv: loc_config)
+    {
+        std::cout<<"|==============================================="<<std::endl;
+        std::cout<<"| Route: "<<kv.first<<std::endl;
+        printLocationInfo(kv.second);
+    }
+        std::cout<<"|==============================================="<<std::endl;
+}
+
+void
+Log::printLocationInfo(const location_info& loc_info)
+{
+    if (DEBUG != 2)
+        return ;
+
+    for(auto& kv : loc_info)
+        std::cout<<"| "<<kv.first<<" : "<<kv.second<<std::endl;
 }

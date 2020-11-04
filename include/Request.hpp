@@ -99,7 +99,7 @@ public:
     public:
         RequestFormatException(Request& req, const std::string& status_code);
         RequestFormatException(Request& req);
-        virtual std::string s_what() const throw();
+        virtual const char* what() const throw();
     };
 };
 

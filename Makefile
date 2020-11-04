@@ -8,7 +8,12 @@ DEBUG = -D DEBUG=2
 STDOUT = -D STDOUT=1
 
 # MAIN_FILES = setRouteAndLocationInfo_test
+<<<<<<< HEAD
 MAIN_FILES = PageGenerator_test PageGenerator Log utils ServerManager ServerGenerator Server Response Request UriParser Exception
+=======
+MAIN_FILES = makeResponseMessage_test PageGenerator Log utils ServerManager ServerGenerator Server Response Request UriParser
+# MAIN_FILES = strdup_test utils
+>>>>>>> d8621faa82a88d9de3fe5826abae995f7ad4d853
 # MAIN_FILES = PageGenerator_test PageGenerator
 
 SRCS_PATH = $(MAIN_FILES)

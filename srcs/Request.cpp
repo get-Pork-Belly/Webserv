@@ -176,21 +176,18 @@ Request::setIpAddress(const std::string& ip_address)
 /*============================================================================*/
 
 Request::RequestFormatException::RequestFormatException(Request& req, const std::string& status_code)
-: _msg("RequestFormatException: Invalid Request Format: "), _req(req) 
+: _msg("RequestFormatException: Invalid Request Format: " + status_code), _req(req) 
 {
-    req.setStatusCode(status_code);
+    this->_req.setStatusCode(status_code);
 }
 
 Request::RequestFormatException::RequestFormatException(Request& req)
 : _msg("RequestFormatException: Invalid Request Format: "), _req(req) {}
 
-std::string
-Request::RequestFormatException::s_what() const throw()
+const char*
+Request::RequestFormatException::what() const throw()
 {
-    std::string tmp;
-    tmp += this->_msg;
-    tmp += this->_req.getStatusCode();
-    return (tmp);
+    return (this->_msg.c_str());
 }
 
 /*============================================================================*/
