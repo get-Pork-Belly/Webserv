@@ -20,6 +20,7 @@ private:
     std::string _status_code;
     ReqInfo _info;
     bool _is_buffer_left;
+    std::string _ip_address;
 
 public:
     /* Constructor */
@@ -40,6 +41,7 @@ public:
     std::string getStatusCode();
     const ReqInfo& getReqInfo() const;
     bool getIsBufferLeft() const;
+    const std::string& getIpAddress() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -51,6 +53,7 @@ public:
     void setStatusCode(const std::string& code);
     void setReqInfo(const ReqInfo& info);
     void setIsBufferLeft(const bool& is_left_buffer);
+    void setIpAddress(const std::string& ip_address);
 
     /* Util */
 

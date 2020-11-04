@@ -186,6 +186,7 @@ Server::init()
     this->_server_address.sin_family = AF_INET;
     this->_server_address.sin_addr.s_addr = ft::hToNL(INADDR_ANY);
     this->_server_address.sin_port = ft::hToNS(stoi(this->_port));
+    std::cout << "Server addres: " << this->_server_address.sin_addr.s_addr << std::endl;
 
     if (bind(this->_server_socket, reinterpret_cast<struct sockaddr *>(&this->_server_address),
         static_cast<socklen_t>(sizeof(this->_server_address))))
@@ -498,8 +499,7 @@ Server::acceptClient()
         this->_server_manager->fdSet(client_socket, FdSet::READ);
 
         //TODO: Client IP address 저장하기
-        // this->_requests[client_socket].setIpAddr(addr)
-        // this->setFdTableClientAddr(client_address.sin_addr.s_addr = ft::hToNL(INADDR_ANY));
+        // this->_requests[client_socket].setIpAddress(ft::inetNtoA(client_address.sin_addr.s_addr))
 
         fcntl(client_socket, F_SETFL, O_NONBLOCK);
         this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
@@ -537,6 +537,17 @@ Server::run(int fd)
                 if (this->isCGIPipe(fd))
                 {
                     // this->executeCgiAndReadCgiPipe(fd);
+                    std::cout << "================================" << std::endl;
+                    std::cout << "================================" << std::endl;
+                    std::cout << "================================" << std::endl;
+                    std::cout << "================================" << std::endl;
+                    // char** test = this->makeCgiEnvp(fd);
+                    this->makeCgiEnvp(fd);
+                    // for (int i = 0; i < 20; i++)
+                    // {
+                        // std::cout << test[i] << std::endl;
+                    // }
+                    std::cout << "================================" << std::endl;
                     this->_server_manager->fdClr(fd, FdSet::READ);
                 }
                 else if (this->isStaticResource(fd))
@@ -766,10 +777,13 @@ char**
 Server::makeCgiEnvp(int fd)
 {
     char** envp;
-    // header, location_info, server_config
-    const std::map<std::string, std::string>& headers = this->_requests[fd].getHeaders();
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    int client_fd = fd_table.at(fd).second;
+    const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
+
     const std::map<std::string, std::string>& location_info =
-        this->getLocationConfig().at(this->_responses[fd].getRoute());
+        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
+
     const std::map<std::string, std::string>& server_info = getServerConfig();
     // 각각에 대한 it
     std::map<std::string, std::string>::const_iterator it;
@@ -778,8 +792,6 @@ Server::makeCgiEnvp(int fd)
         return (nullptr);
     for (int i = 0; i < 20; i++)
         envp[i] = nullptr;
-
-    // if (it == headers.end())
 
     // std::map<std::string, std::string>::const_iterator it = headers.find("Authorization");
     // AUTH_TYPE // Request_Headers의 Authorization value 공백 앞부분

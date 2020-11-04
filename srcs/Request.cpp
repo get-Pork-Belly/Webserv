@@ -11,14 +11,15 @@
 
 Request::Request()
 : _method(""), _uri(""), _version(""),
- _protocol(""), _bodies(""), _status_code(""), _info(ReqInfo::READY) {}
+ _protocol(""), _bodies(""), _status_code(""),
+ _info(ReqInfo::READY), _ip_address("") {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _bodies(other._bodies), 
 _status_code(other._status_code), _info(other._info),
-_is_buffer_left(false) {}
+_is_buffer_left(false), _ip_address(other._ip_address) {}
 
 Request&
 Request::operator=(const Request& other)
@@ -32,6 +33,7 @@ Request::operator=(const Request& other)
     this->_status_code = other._status_code;
     this->_info = other._info;
     this->_is_buffer_left = other._is_buffer_left;
+    this->_ip_address = other._ip_address;
     return (*this);
 }
 
@@ -99,6 +101,12 @@ Request::getIsBufferLeft() const
     return (this->_is_buffer_left);
 }
 
+const std::string&
+Request::getIpAddress() const
+{
+    return (this->_ip_address);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -155,6 +163,12 @@ void
 Request::setIsBufferLeft(const bool& is_left_buffer)
 {
     this->_is_buffer_left = is_left_buffer;
+}
+
+void
+Request::setIpAddress(const std::string& ip_address)
+{
+    this->_ip_address = ip_address;
 }
 
 /*============================================================================*/
