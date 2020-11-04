@@ -72,6 +72,14 @@ public:
 
     void applyAndCheckRequest(Request& request, Server* server);
     void appendBody(char *buf);
+
+    /* General header */
+    std::string makeDateHeader();
+    std::string makeServerHeader();
+
+    /* Entity header */
+    // std::string makeAllowHeader();
+    std::string makeContentLengthHeader();
 };
 
 #endif

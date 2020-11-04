@@ -365,11 +365,12 @@ Server::makeResponseMessage(int fd)
     std::string status_line;
     std::string headers;
 
-    response.applyAndCheckRequest(request, this);
+    //TODO: parsing 할 때 method 허용여부 확인하여 throw, response 꾸미기
+    // response.applyAndCheckRequest(request, this);
     response.makeBody(request);
     // std::cout << "---------- body --------------" << std::endl;
     // std::cout << response.getBody() << std::endl;
-    // headers = response.makeHeaders(request);
+    headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
     Log::trace("< makeResponseMessage");
     return (status_line + headers + response.getBody());

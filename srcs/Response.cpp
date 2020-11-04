@@ -294,7 +294,6 @@ Response::makeStatusLine()
     Log::trace("> makeStatusLine");
     std::string status_line;
 
-    this->setStatusCode(std::string("400"));
     status_line = "HTTP/1.1 ";
     status_line += this->getStatusCode();
     status_line += " ";
@@ -304,15 +303,71 @@ Response::makeStatusLine()
     return (status_line);
 }
 
-// std::string
-// Response::makeHeaders(Request& request)
-// {
-//     std::string headers;
+std::string
+Response::makeDateHeader()
+{
+    return ("Date: " + ft::getCurrentDateTime() + "\r\n");
+}
 
-//     headers += ft::getCurrentDateTime();
+std::string
+Response::makeServerHeader()
+{
+    return ("Server: gbp_nginx/0.4\r\n");
+}
+
+// std::string
+// Response::makeAllowHeader()
+// {
+//     if (this->isLimitExceptInLocation())
+//     {
+//         std::string header = "Allow:";
+
+//         for (auto& method : this->_implemented_methods)
+//         {
+//             if (this->isAllowedMethod(method))
+//             {
+//                 header += " ";
+//                 header += method;
+//             }
+//             header += "\r\n";
+//             return (header);
+//         }
+//     }
+//     else
+//         //NOTE: default method
+//         return ("Allow: GET HEAD");
 // }
 
-// std::string
+std::string
+Response::makeContentLengthHeader()
+{
+    std::string header = "Content-Length: ";
+    header += std::to_string(this->getBody().length());
+    header += "\r\n";
+    return (header);
+}
+
+std::string
+Response::makeHeaders(Request& request)
+{
+    (void)request;
+    std::string headers = this->makeDateHeader();
+    headers += this->makeServerHeader();
+    // if chunked 
+    // headers += this->makeTransferEncodingHeader();
+    std::string status_code = this->getStatusCode();
+
+    //TODO switch 문 고려
+    if (status_code.compare("405") == 0)
+    {
+        // headers += this->makeAllowHeader();
+    }
+    
+    headers += this->makeContentLengthHeader();
+    headers += "\r\n";
+    return (headers);
+}
+
 void
 Response::makeBody(Request& request)
 {
