@@ -1,6 +1,6 @@
 http { 
     include mime.types;
-    root /Users/humblego/Documents/dev/team_webserv/;
+    root /Users/iwoo/Documents/Webserv/;
     server {
         server_name first_server;
         listen       8080;
@@ -8,7 +8,7 @@ http {
         location /folder {
             cgi .bin .cgi .bla;
             autoindex on;
-            root /Users/humblego/Documents/dev/team_webserv/tests/;
+            root /Users/iwoo/Documents/Webserv/tests/;
         }
     }
     server {
@@ -18,7 +18,7 @@ http {
             index  index.html index.htm;
         }
         location /second {
-            root  /user/iwoo;
+            root /Users/humblego/Documents/dev/team_webserv/tests/;
             index  html;
             limit_except PUT POST GET
             index index.html index.htm index.abc;
