@@ -534,16 +534,13 @@ void
 Server::acceptClient()
 {
     int client_socket;
-    struct sockaddr client_address;
+    struct sockaddr_in client_address;
     socklen_t client_len = sizeof(client_address);
 
-    if ((client_socket = accept(this->getServerSocket(), &client_address, &client_len)))
+    if ((client_socket = accept(this->getServerSocket(), reinterpret_cast<sockaddr*>(&client_address), &client_len)))
     {
         this->_server_manager->fdSet(client_socket, FdSet::READ);
-
-        //TODO: Client IP address 저장하기
-        // this->_requests[client_socket].setIpAddress(ft::inetNtoA(client_address.sin_addr.s_addr))
-
+        this->_requests[client_socket].setIpAddress(ft::inetNtoA(client_address.sin_addr.s_addr));
         fcntl(client_socket, F_SETFL, O_NONBLOCK);
         this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
         this->_server_manager->updateFdMax(client_socket);
@@ -907,7 +904,8 @@ Server::makeCgiEnvp(int fd)
         // return (nullptr);
 
     // REMOTE_ADDR -> 클라이언트 ip
-    // TODO: requests에 추가하기
+    if (!(envp[9] = ft::strdup("REMOTE_ADDR=" + this->_requests[client_fd].getIpAddress())))
+        return (nullptr);
 
     // REQUEST_METHOD : Location info의 limit_except or GET/POST/HEAD
     if (!(this->_requests[client_fd].getMethod() == "GET" ||
@@ -978,24 +976,15 @@ Server::executeCgiAndReadCgiPipe(int fd)
     // int status;
     // int ret;
 
-    char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
+    // char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
     char** envp = makeCgiEnvp(fd);
-    std::cout << "================================" << std::endl;
-    std::cout << "================================" << std::endl;
-    std::cout << "================================" << std::endl;
-    for (int i = 0; i < 2; i ++)
-    {
-        std::cout << "argv[" << i << "] " << argv[i] << std::endl;
-    }
+    makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
+
     for (int i = 0; i < 20; i++)
     {
         if (envp[i])
-            std::cout << "ENVP[" << i << "] " << envp[i] << std::endl;
+            std::cout << "ENVP[" << i << "] " << envp[i]  << std::endl;
     }
-    std::cout << "================================" << std::endl;
-    std::cout << "================================" << std::endl;
-    std::cout << "================================" << std::endl;
-
     // pid = fork();
     // //TODO: signal
     // if (pid < 0)
