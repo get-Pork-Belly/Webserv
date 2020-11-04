@@ -12,7 +12,7 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code("200"), _transfer_type(""), _clients(""), _body("")
+: _status_code("200"), _transfer_type(""), _clients(""), _route(""), _body("")
 {
     this->_headers = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
@@ -22,7 +22,8 @@ Response::Response()
 Response::Response(const Response& other)
 : _status_code(other._status_code),  _headers(other._headers),
 _transfer_type(other._transfer_type), _clients(other._clients),
-_status_code_table(other._status_code_table), _body(other._body) {}
+_status_code_table(other._status_code_table),
+_route(other._route), _body(other._body) {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/

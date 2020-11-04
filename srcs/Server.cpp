@@ -279,7 +279,8 @@ Server::receiveRequestNormalBody(int fd)
     if ((bytes = recv(fd, buf, content_length, 0)) > 0)
     {
         req.parseNormalBodies(buf);
-        this->_server_manager->fdSet(fd, FdSet::WRITE);
+        // TODO cgi를 읽기전에 client의 write 플래그가 세워짐. 다음 select에서 client가 먼저 선택되고 리퀘스트가 초기화 되버림.
+        // this->_server_manager->fdSet(fd, FdSet::WRITE);
     }
     else if (bytes == 0)
         this->closeClientSocket(fd);
@@ -448,27 +449,35 @@ Server::isServerSocket(int fd) const
 bool
 Server::isClientSocket(int fd) const
 {
+    Log::trace("> isClientSocket");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::CLIENT_SOCKET)
         return true;
+    Log::trace("< isClientSocket");
     return false;
 }
 
 bool
 Server::isStaticResource(int fd) const
 {
+    Log::trace("> isStaticResource");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::RESOURCE)
         return true;
     return false;
+    Log::trace("< isStaticResource");
 }
 
 bool
 Server::isCGIPipe(int fd) const
 {
+    Log::trace("> isCGIPipe");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::PIPE)
+    {
         return true;
+        Log::trace("< isCGIPipe return true");
+    }
     return false;
 }
 
@@ -554,7 +563,9 @@ Server::run(int fd)
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
             Log::trace(">>> write sequence");
+            std::cout << "fd: " << fd << std::endl;
             std::string response_message = this->makeResponseMessage(fd);
+            // std::cout << "message: " << response_message << std::endl;
             // response_message = this->makeResponseMessage(this->_requests[fd], fd);
             // TODO: sendResponse error handling
             // std::cout<<response_message.c_str()<<std::endl;
@@ -573,16 +584,7 @@ Server::run(int fd)
             {
                 if (this->isCGIPipe(fd))
                 {
-                    // this->executeCgiAndReadCgiPipe(fd);
-                    std::cout << "================================" << std::endl;
-                    // char** test = this->makeCgiEnvp(fd);
-                    char** test = this->makeCgiEnvp(fd);
-                    for (int i = 0; i < 20; i++)
-                    {
-                        if (test[i] != NULL)
-                            std::cout << test[i] << std::endl;
-                    }
-                    std::cout << "================================" << std::endl;
+                    this->executeCgiAndReadCgiPipe(fd);
                     this->_server_manager->fdClr(fd, FdSet::READ);
                 }
                 else if (this->isStaticResource(fd))
@@ -656,9 +658,18 @@ Server::findResourceAbsPath(int fd)
     UriParser parser;
     parser.parseUri(this->_requests[fd].getUri());
     const std::string& path = parser.getPath();
+    std::cout << "=========================== " << std::endl;
+    std::cout << "path: " << path << std::endl;
+    std::cout<< "fd: " << fd << std::endl;
+    std::cout << "=========================== " << std::endl;
 
     Response& response = this->_responses[fd];
     response.setRouteAndLocationInfo(path, this);
+
+    std::cout << "=========================== " << std::endl;
+    std::cout << "route: " << path << std::endl;
+    std::cout<< "fd: " << fd << std::endl;
+    std::cout << "=========================== " << std::endl;
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
@@ -799,9 +810,8 @@ Server::processResponseBody(int fd)
     Log::trace("< processResopnseBody");
 }
 
-//TODO OPENSTATICRESOURCE 처럼 변경하기
 void
-Server::openCgiPipe(int fd)
+Server::openCgiPipe(int fd) // clienet
 {
     this->_responses[fd].openCgiPipe();
     int cgi_pipe_fd = this->_responses[fd].getCgiPipeFd();
@@ -814,6 +824,7 @@ Server::openCgiPipe(int fd)
 char**
 Server::makeCgiEnvp(int fd)
 {
+    Log::trace("> makeCgiEnvp");
     char** envp;
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     int client_fd = fd_table.at(fd).second;
@@ -931,21 +942,24 @@ Server::makeCgiEnvp(int fd)
     // SERVER_SOFTWARE "GET_POLAR_BEAR/2.0"
     if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
         return (nullptr);
-
+    Log::trace("< makeCgiEnvp");
     return (envp);
 }
 
 char**
 Server::makeCgiArgv(int fd)
 {
+    Log::trace("> makeCgiArgv");
     char** argv;
-    const std::string& body = this->_requests[fd].getBodies();
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    int client_fd = fd_table.at(fd).second;
+    const std::string& body = this->_requests[client_fd].getBodies();
 
     if (!(argv = (char **)malloc(sizeof(char *) * 2)))
         return (nullptr);
 
     const location_info& location_info =
-            this->getLocationConfig().at(this->_responses[fd].getRoute());
+            this->getLocationConfig().at(this->_responses[client_fd].getRoute());
 
     //TODO: ft::strdup 만들기
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
@@ -953,44 +967,63 @@ Server::makeCgiArgv(int fd)
     if (!(argv[1] = ft::strdup(body)))
         return (nullptr);
 
+    Log::trace("< makeCgiArgv");
     return (argv);
 }
 
-// void
-// Server::executeCgiAndReadCgiPipe(int fd)
-// {
-//     pid_t pid;
-//     int status;
-//     int ret;
+void
+Server::executeCgiAndReadCgiPipe(int fd)
+{
+    // pid_t pid;
+    // int status;
+    // int ret;
 
-//     char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
-//     char** envp = makeCgiEnvp(fd);
+    char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
+    char** envp = makeCgiEnvp(fd);
+    std::cout << "================================" << std::endl;
+    std::cout << "================================" << std::endl;
+    std::cout << "================================" << std::endl;
+    for (int i = 0; i < 2; i ++)
+    {
+        std::cout << "argv[" << i << "] " << argv[i] << std::endl;
+    }
+    for (int i = 0; i < 20; i++)
+    {
+        if (envp[i])
+            std::cout << "ENVP[" << i << "] " << envp[i] << std::endl;
+    }
+    std::cout << "================================" << std::endl;
+    std::cout << "================================" << std::endl;
+    std::cout << "================================" << std::endl;
 
-//     // pid = fork();
-//     // //TODO: signal
-//     // if (pid < 0)
-//     // {
-//     //     throw();
-//     // }
-//     // else if (pid == 0)
-//     // {
-//     //     //dup2
-//     //     if ((dup2(this->_responses[fd].getCgiPipeFd(), 1)) < 0)
-//     //     {
-//     //         throw();
-//     //     }
-//     //     if ((ret = execve(cgi_path, cgi_path + request_body, envp)) < 0)
-//     //     {
-//     //         // execve(arg[0], arg, envp);
-//     //     }
-//     //     exit(ret);
-//     // }
-//     // else
-//     // {
-//     //     waitpid(pid, &status, 0);
-//     //     //close
-//     // }
-//     //1. pid로 fork
-//     //2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
-//     //3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
-// }
+    // pid = fork();
+    // //TODO: signal
+    // if (pid < 0)
+    // {
+    //     throw();
+    // }
+    // else if (pid == 0)
+    // {
+    //     //dup2
+    //     if ((dup2(this->_responses[fd].getCgiPipeFd(), 1)) < 0)
+    //     {
+    //         throw();
+    //     }
+    //     if ((ret = execve(cgi_path, cgi_path + request_body, envp)) < 0)
+    //     {
+    //         // execve(arg[0], arg, envp);
+    //     }
+    //     exit(ret);
+    // }
+    // else
+    // {
+    //     waitpid(pid, &status, 0);
+    //     //close
+    // }
+    //1. pid로 fork
+    //2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
+    //3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
+
+    // TODO: cgi execute 끝나면 클라이언트 소켓 WRITE flag 세워주기.
+    this->closeFdAndSetClientOnWriteFdSet(fd);
+}
