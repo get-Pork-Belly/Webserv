@@ -249,6 +249,7 @@ Server::receiveRequestWithoutBody(int fd)
         }
         else
         {
+            //NOTE: if BUFFER_SIZE is too small to read including "\r\n\r\n", this block always execute. 
             req.setIsBufferLeft(true);
             throw (Request::RequestFormatException(req, "400"));
         }
@@ -549,11 +550,7 @@ Server::run(int fd)
         {
             Log::trace(">>> write sequence");
             std::string response_message = this->makeResponseMessage(fd);
-            // response_message = this->makeResponseMessage(this->_requests[fd], fd);
             // TODO: sendResponse error handling
-            // std::cout<<response_message.c_str()<<std::endl;
-            // const char* tmp = response_message.c_str();
-            // write(fd, tmp, strlen(tmp));
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
             this->_server_manager->fdClr(fd, FdSet::WRITE);
@@ -772,6 +769,7 @@ Server::processResponseBody(int fd)
 {
     Log::trace("> processResopnseBody");
 
+    std::cout<<"uri: "<<this->_requests[fd].getUri()<<std::endl;
     this->findResourceAbsPath(fd);
     this->checkAndSetResourceType(fd);
     if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)

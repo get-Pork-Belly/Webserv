@@ -348,6 +348,15 @@ Response::makeContentLengthHeader()
 }
 
 std::string
+Response::makeContentLocationHeader()
+{
+    std::string header = "Content-Location: ";
+    header += this->_resource_abs_path;
+    header += "\r\n";
+    return (header);
+}
+
+std::string
 Response::makeHeaders(Request& request)
 {
     (void)request;
@@ -355,6 +364,9 @@ Response::makeHeaders(Request& request)
     headers += this->makeServerHeader();
     // if chunked 
     // headers += this->makeTransferEncodingHeader();
+    // if not chunked
+    headers += this->makeContentLengthHeader();
+    headers += this->makeContentLocationHeader();
     std::string status_code = this->getStatusCode();
 
     //TODO switch 문 고려
@@ -363,7 +375,6 @@ Response::makeHeaders(Request& request)
         // headers += this->makeAllowHeader();
     }
     
-    headers += this->makeContentLengthHeader();
     headers += "\r\n";
     return (headers);
 }

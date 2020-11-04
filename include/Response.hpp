@@ -80,6 +80,7 @@ public:
     /* Entity header */
     // std::string makeAllowHeader();
     std::string makeContentLengthHeader();
+    std::string makeContentLocationHeader();
 };
 
 #endif
