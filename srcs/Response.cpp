@@ -247,12 +247,15 @@ Response::applyAndCheckRequest(Request& request, Server* server)
     Log::trace("< applyAndCheckRequest");
 }
 
+//NOTE
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
     Log::trace("> setRouteAndLocationInfo");
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
+
+    Log::printLocationConfig(location_config);
 
     if (uri.length() == 1)
     {
