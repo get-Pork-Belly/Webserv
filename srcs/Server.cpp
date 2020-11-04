@@ -248,7 +248,10 @@ Server::receiveRequestWithoutBody(int fd)
             this->readBufferUntilHeaders(fd, buf, header_end_pos);
         }
         else
+        {
+            req.setIsBufferLeft(true);
             throw (Request::RequestFormatException(req, "400"));
+        }
     }
     else if (bytes == 0)
         this->closeClientSocket(fd);
@@ -284,6 +287,7 @@ Server::receiveRequestNormalBody(int fd)
 void
 Server::clearRequestBuffer(int fd)
 {
+    Log::trace("> clearRequestBuffer");
     int bytes;
     char buf[BUFFER_SIZE + 1];
     Request& req = this->_requests[fd];
@@ -299,6 +303,7 @@ Server::clearRequestBuffer(int fd)
         this->closeClientSocket(fd);
     else
         throw (ReadErrorException());
+    Log::trace("< clearRequestBuffer");
 }
 
 void
@@ -353,6 +358,7 @@ Server::receiveRequest(int fd)
 std::string
 Server::makeResponseMessage(int fd)
 {
+    Log::trace("> makeResponseMessage");
     Request& request = this->_requests[fd];
     Response& response = this->_responses[fd];
 
@@ -365,25 +371,46 @@ Server::makeResponseMessage(int fd)
     // std::cout << response.getBody() << std::endl;
     // headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
+    Log::trace("< makeResponseMessage");
     return (status_line + headers + response.getBody());
 }
 
 bool
 Server::sendResponse(const std::string& response_message, int fd)
 {
-    // std::string tmp(response_message);
-    std::string tmp = "fd: ";
-    tmp += std::to_string(fd);
-    tmp += " in send response\n";
-    tmp += "===============================\n";
-    tmp += "response_message\n ";
-    tmp += "===============================\n";
+    Log::trace("> sendResponse");
+    std::string tmp;
+    // std::string tmp = "fd: ";
+    // tmp += std::to_string(fd);
+    // tmp += " in send response\n";
+    // tmp += "===============================\n";
+    // tmp += "response_message\n ";
+    // tmp += "===============================\n";
     tmp += response_message;
-    std::cout<<"rm length: "<<response_message.length()<<std::endl;
-    write(fd, tmp.c_str(), tmp.length());
+    tmp += "\r\n";
+    std::cout<<tmp<<std::endl;
+    // std::cout<<"rm length: "<<response_message.length()<<std::endl;
+    int res = write(fd, tmp.c_str(), tmp.length()); 
+    std::cout<<"res: "<<res<<std::endl;
     // response_message += "wow";
     // std::cout<<"response_message: "<<response_message<<std::endl;
+
+    // const char* tmp2 = ft::strdup(response_message);
+    // std::cout<<"response_message: "<<tmp2<<std::endl;
+    // std::cout<<"tmp2 len: "<<ft::strlen(tmp2)<<std::endl;
     // write(fd, response_message.c_str(), response_message.length());
+    // write(fd, tmp2, ft::strlen(tmp2));
+    // (void)response_message;
+    // std::cout<<"fd: "<<fd<<std::endl;
+    // errno = 0;
+    // int ret;
+    // ret = write(fd, "why?\r\n", 4); 
+    // ssize_t ret = send(fd, tmp.c_str(), tmp.length(), 0);
+    // std::cout<<"ret: "<<ret<<std::endl;
+    // int num = errno;
+    // std::cout<<"ret: "<<ret<<std::endl;
+    // std::cout<<num<< ": "<<strerror(num)<<std::endl;
+    Log::trace("< sendResponse");
     return (true);
 }
 
@@ -514,7 +541,6 @@ Server::acceptClient()
         std::cerr<<"Accept error"<<std::endl;
 }
 
-
 void
 Server::run(int fd)
 {
@@ -524,6 +550,7 @@ Server::run(int fd)
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
+            Log::trace(">>> write sequence");
             std::string response_message = this->makeResponseMessage(fd);
             // response_message = this->makeResponseMessage(this->_requests[fd], fd);
             // TODO: sendResponse error handling
@@ -535,6 +562,7 @@ Server::run(int fd)
             this->_server_manager->fdClr(fd, FdSet::WRITE);
             this->_requests[fd].clear();
             this->_responses[fd].init();
+            Log::trace("<<< write sequence");
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
@@ -562,10 +590,15 @@ Server::run(int fd)
             }
             catch(const Request::RequestFormatException& e)
             {
+                std::cerr << e.what() << '\n';
                 if (this->_requests[fd].isContentLeftInBuffer())
+                {
+                    std::cout<<"Debug 1"<<std::endl;
                     this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
+                }
                 else
                 {
+                    std::cout<<"Debug 2"<<std::endl;
                     this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
