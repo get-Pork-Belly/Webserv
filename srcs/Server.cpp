@@ -588,13 +588,9 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
                 if (this->_requests[fd].isContentLeftInBuffer())
-                {
-                    std::cout<<"Debug 1"<<std::endl;
                     this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
-                }
                 else
                 {
-                    std::cout<<"Debug 2"<<std::endl;
                     this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                 }
