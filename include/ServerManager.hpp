@@ -40,11 +40,10 @@ private:
     std::vector<std::pair<FdType, int>> _fd_table;
     int _fd;
     int _fd_max;
-    char** _envp;
 
 public:
     /* Constructor */
-    ServerManager(const char *config_path, char** envp);
+    ServerManager(const char *config_path);
     /* Destructor */
     virtual ~ServerManager();
     /* Overload */
@@ -53,7 +52,6 @@ public:
     int getFdMax() const;
     const std::vector<std::pair<FdType, int> >& getFdTable() const;
     FdType getFdType(int fd) const;
-    const char** getEnvp() const;
     /* Setter */
     void setFdMax(int fd);
     void setServerSocketOnFdTable(int fd);

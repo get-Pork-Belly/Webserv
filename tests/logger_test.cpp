@@ -5,9 +5,8 @@
 #include "Request.hpp"
 #include "Response.hpp"
 
-int main(int argc, char *argv[], char *envp[])
+int main(int argc, char *argv[])
 {
-    (void)envp;
     if (argc > 2)
     {
         //TODO: error message

@@ -1,6 +1,6 @@
 http { 
     include mime.types;
-    root /goinfre/yohlee/Webserv/
+    root /goinfre/yohlee/executeCgi/
     server {
         server_name first_server;
         listen       8080;
@@ -8,7 +8,7 @@ http {
         location /folder {
             cgi .bin .cgi .bla;
             autoindex on;
-            root /goinfre/yohlee/Webserv/tests/;
+            root /goinfre/yohlee/executeCgi/tests/;
         }
     }
     server {

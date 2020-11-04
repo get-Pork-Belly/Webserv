@@ -1,9 +1,8 @@
 #include "ServerManager.hpp"
 #include <iostream>
 
-int main(int argc, char *argv[], char *envp[])
+int main(int argc, char *argv[])
 {
-    (void)envp;
     if (argc > 2)
     {
         //TODO: error message

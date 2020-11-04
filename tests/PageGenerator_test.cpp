@@ -6,9 +6,8 @@
 #include "Request.hpp"
 #include "Response.hpp"
 
-int main(int argc, char *argv[], char *envp[])
+int main(int argc, char *argv[])
 {
-    (void)envp;
     if (argc > 2)
     {
         //TODO: error message
@@ -19,7 +18,7 @@ int main(int argc, char *argv[], char *envp[])
     const char *config_path = (argc == 1) ? default_path : argv[1];
     try
     {
-        ServerManager server_manager(config_path, envp);
+        ServerManager server_manager(config_path);
         if (!server_manager.runServers())
         {
             std::cerr<<"error"<<std::endl;

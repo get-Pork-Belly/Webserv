@@ -1,7 +1,7 @@
 #include "ServerManager.hpp"
 #include <iostream>
 
-int main(int argc, char *argv[], char *envp[])
+int main(int argc, char *argv[])
 {
 
     if (argc > 2)
@@ -14,7 +14,7 @@ int main(int argc, char *argv[], char *envp[])
     const char *config_path = (argc == 1) ? default_path : argv[1];
     try
     {
-        ServerManager server_manager(config_path, envp);
+        ServerManager server_manager(config_path);
         // server_manager 객체가 생성되며, 생성자안에서 serverInit 함수가 실행된다.
         // server_manager.init();
     }
