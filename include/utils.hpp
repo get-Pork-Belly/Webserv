@@ -34,6 +34,7 @@ namespace ft
     std::string getCurrentDateTime();
     size_t strlen(const char* str);
     char* strdup(const std::string& s);
+    std::string inetNtoA(const in_addr_t& client_address);
 }
 
 #endif

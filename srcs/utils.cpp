@@ -225,4 +225,13 @@ strdup(const std::string& s)
 	return (ret);
 }
 
+std::string
+inetNtoA(const in_addr_t& client_address)
+{
+     return (std::to_string(client_address % 256) + "."
+            + std::to_string((client_address / 256) % 256) + "."
+            + std::to_string((client_address / 256 / 256) % 256) + "."
+            + std::to_string((client_address / 256 / 256 / 256)));
+}
+
 }
