@@ -831,34 +831,39 @@ Server::makeCgiEnvp(int fd)
         this->getLocationConfig().at(this->_responses[client_fd].getRoute());
 
     // 각각에 대한 it
-    std::map<std::string, std::string>::const_iterator it;
-
-    if (!(envp = (char **)malloc(sizeof(char *) * 20)))
+    if (!(envp = (char **)malloc(sizeof(char *) * 18)))
         return (nullptr);
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i < 18; i++)
         envp[i] = nullptr;
 
-    // std::map<std::string, std::string>::const_iterator it = headers.find("Authorization");
+    std::map<std::string, std::string>::const_iterator it = headers.find("Authorization");
     // AUTH_TYPE // Request_Headers의 Authorization value 공백 앞부분
     // REMOTE_IDENT & REMOTE_USER // Request_Headers의 Authorization value 공백 뒷부분
     // AUTH_TYPE
-    // it = headers.find("Authorization");
-    // if (it == headers.end())
-    //     // envp[0] = ft::strdup("");
-    // else
-    // {
-    //     // envp[0] = ft::strdup("")
-    //     // REMOTE_USER; 1
-    //     // REMOTE_IDENT 2
-    // }
-    
+    it = headers.find("Authorization");
+    if (it == headers.end())
+    {
+        if (!(envp[0] = ft::strdup("AUTH_TYPE=")))
+            return (nullptr);
+    }
+    else
+    {
+        if (!(envp[0] = ft::strdup("AUTH_TYPE=")))
+            return (nullptr);
+    }
+        // REMOTE_USER; 1
+    if (!(envp[1] = ft::strdup("REMOTE_USER=")))
+        return (nullptr);
+        // REMOTE_IDENT 2
+    if (!(envp[2] = ft::strdup("REMOTE_IDENT=")))
+        return (nullptr);
 
     // CONTENT_LENGTH // 리퀘스트 바디가 있을 경우 무조건 일치하는 길이가 세팅되어야 함. 없을 때는 null 또는 unset할 것.
     //NOTE: if no data is attached, then NULL (or unset)
     it = headers.find("Content-Length");
     if (it == headers.end())
     {
-        if (!(envp[3] = ft::strdup("")))
+        if (!(envp[3] = ft::strdup("CONTENT_LENGTH=-1")))
             return (nullptr);
     }
     else
@@ -896,12 +901,12 @@ Server::makeCgiEnvp(int fd)
     }
 
     // PATH_TRANSLATED는 (query가 없을땐...) PATH_INFO랑 동일한 값으로 세팅
-    // if (!(envp[7] = ft::strdup(envp[6])))
-    //     return (nullptr);
+    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + it->second)))
+        return (nullptr);
 
     // QUERY_STRING의 경우 query가 없으면 ""로 세팅
-    // if (!(envp[8] = ft::strdup("")))
-        // return (nullptr);
+    if (!(envp[8] = ft::strdup("QUERY_STRING=")))
+        return (nullptr);
 
     // REMOTE_ADDR -> 클라이언트 ip
     if (!(envp[9] = ft::strdup("REMOTE_ADDR=" + this->_requests[client_fd].getIpAddress())))
@@ -972,47 +977,64 @@ Server::makeCgiArgv(int fd)
 void
 Server::executeCgiAndReadCgiPipe(int fd)
 {
-    // pid_t pid;
-    // int status;
-    // int ret;
+    Log::trace("> executeCgiAndReadCgiPipe");
+    pid_t pid;
+    int status;
+    int ret;
 
-    // char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
+    char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
     char** envp = makeCgiEnvp(fd);
-    makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
+    std::string path(envp[6]);
+    // std::string cgi_path = path.substr(path.find("=") + 1);
+    // const char* cgi = ft::strdup(cgi_path);
+    // std::cout << "----------------------------" << std::endl;
+    // std::cout << "----------------------------" << std::endl;
+    // std::cout << "cgiPath: " << cgi_path.c_str() << std::endl;
+    // std::cout << "----------------------------" << std::endl;
+    // std::cout << "----------------------------" << std::endl;
 
-    for (int i = 0; i < 20; i++)
-    {
-        if (envp[i])
-            std::cout << "ENVP[" << i << "] " << envp[i]  << std::endl;
-    }
-    // pid = fork();
+    pid = fork();
     // //TODO: signal
-    // if (pid < 0)
-    // {
-    //     throw();
-    // }
-    // else if (pid == 0)
-    // {
-    //     //dup2
-    //     if ((dup2(this->_responses[fd].getCgiPipeFd(), 1)) < 0)
-    //     {
-    //         throw();
-    //     }
-    //     if ((ret = execve(cgi_path, cgi_path + request_body, envp)) < 0)
-    //     {
-    //         // execve(arg[0], arg, envp);
-    //     }
-    //     exit(ret);
-    // }
-    // else
-    // {
-    //     waitpid(pid, &status, 0);
-    //     //close
-    // }
-    //1. pid로 fork
-    //2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
-    //3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
+    if (pid < 0)
+        throw strerror(errno);
+    else if (pid == 0)
+    {
+        //dup2 1번을 CGI fd로 만든다. 
+        if ((dup2(this->_responses[fd].getCgiPipeFd(), 1)) < 0)
+            throw strerror(errno);
+        if ((ret = execve(argv[0], NULL, envp)) < 0)
+        {
+            // std::cout << "cgi: " << cgi << std::endl;
+            std::cout << "argv[0] " << argv[0] << std::endl;
+            std::cout << "failed" << std::endl;
+            std::cout << "failed" << std::endl;
+            std::cout << "failed" << std::endl;
+            std::cout << "failed" << std::endl;
+            std::cout << "failed" << std::endl;
+            throw strerror(errno);
+        }
+        exit(ret);
+    }
+    else
+    {
+        waitpid(pid, &status, 0);
+        char buf[BUFFER_SIZE + 1];
+        ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
+        std::cout << "--------------------- cgi output------------------" << std::endl;
+        std::cout << "--------------------- cgi output------------------" << std::endl;
+        std::cout << "--------------------- cgi output------------------" << std::endl;
+        write(this->_responses[fd].getCgiPipeFd(), buf, BUFFER_SIZE);
+        std::cout << buf << std::endl;
+        std::cout << "--------------------- cgi output------------------" << std::endl;
+        std::cout << "--------------------- cgi output------------------" << std::endl;
+        std::cout << "--------------------- cgi output------------------" << std::endl;
+        
+    }
+    // 1. pid로 fork
+    // 2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
+    // 3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
 
     // TODO: cgi execute 끝나면 클라이언트 소켓 WRITE flag 세워주기.
     this->closeFdAndSetClientOnWriteFdSet(fd);
+    Log::trace("< executeCgiAndReadCgiPipe");
 }

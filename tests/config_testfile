@@ -6,7 +6,7 @@ http {
         listen       8080;
 
         location /folder {
-            cgi_path /goinfre/yohlee/Webserv;
+            cgi_path /goinfre/yohlee/Webserv/cgi_tester;
 
             cgi .bin .cgi .bla;
             autoindex on;
