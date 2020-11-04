@@ -14,7 +14,7 @@
 
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
-_server_socket(-1), _server_name(""), _host(""), _port(""),
+_server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
 _request_uri_limit_size(0), _request_header_limit_size(0), 
 _limit_client_body_size(BUFFER_SIZE), _default_error_page(""), 
 _location_config(location_config)
@@ -68,6 +68,18 @@ Request&
 Server::getRequest(int fd)
 {
     return (this->_requests[fd]);
+}
+
+const std::string&
+Server::getHost() const
+{
+    return (this->_host);
+}
+
+const std::string&
+Server::getPort() const
+{
+    return (this->_port);
 }
 
 /*============================================================================*/
@@ -563,15 +575,13 @@ Server::run(int fd)
                 {
                     // this->executeCgiAndReadCgiPipe(fd);
                     std::cout << "================================" << std::endl;
-                    std::cout << "================================" << std::endl;
-                    std::cout << "================================" << std::endl;
-                    std::cout << "================================" << std::endl;
                     // char** test = this->makeCgiEnvp(fd);
-                    this->makeCgiEnvp(fd);
-                    // for (int i = 0; i < 20; i++)
-                    // {
-                        // std::cout << test[i] << std::endl;
-                    // }
+                    char** test = this->makeCgiEnvp(fd);
+                    for (int i = 0; i < 20; i++)
+                    {
+                        if (test[i] != NULL)
+                            std::cout << test[i] << std::endl;
+                    }
                     std::cout << "================================" << std::endl;
                     this->_server_manager->fdClr(fd, FdSet::READ);
                 }
@@ -812,7 +822,6 @@ Server::makeCgiEnvp(int fd)
     const std::map<std::string, std::string>& location_info =
         this->getLocationConfig().at(this->_responses[client_fd].getRoute());
 
-    const std::map<std::string, std::string>& server_info = getServerConfig();
     // 각각에 대한 it
     std::map<std::string, std::string>::const_iterator it;
 
@@ -890,38 +899,39 @@ Server::makeCgiEnvp(int fd)
     // TODO: requests에 추가하기
 
     // REQUEST_METHOD : Location info의 limit_except or GET/POST/HEAD
-    if (!(this->_requests[fd].getMethod() == "GET" ||
-            this->_requests[fd].getMethod() == "POST" ||
-            this->_requests[fd].getMethod() == "HEAD"))
+    if (!(this->_requests[client_fd].getMethod() == "GET" ||
+            this->_requests[client_fd].getMethod() == "POST" ||
+            this->_requests[client_fd].getMethod() == "HEAD"))
             return (nullptr);
     else
     {
-        if (!(envp[10] = ft::strdup(this->_requests[fd].getMethod())))
+        if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ this->_requests[client_fd].getMethod())))
             return (nullptr);
     }
 
     // REQUEST_URI -> URI abs PATH no RFC
-    if (!(envp[11] = ft::strdup(this->_responses[fd].getResourceAbsPath())))
+    if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getResourceAbsPath())))
         return (nullptr);
 
     // SCRIPT_NAME -> URI (not url) // no path_info segment
-    if (!(envp[12] = ft::strdup(this->_requests[fd].getUri())))
+    if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + this->_requests[client_fd].getUri())))
         return (nullptr);
 
     // SERVER_NAME host -> server_info
-    it = server_info.find("host");
-    if (!(envp[13] = ft::strdup("SERVER_NAME=" + it->second)))
+    if (!(envp[13] = ft::strdup("SERVER_NAME=" + this->getHost())))
         return (nullptr);
+    
     // SERVER_PORT port -> server_info
-    it = server_info.find("port");
-    if (!(envp[14] = ft::strdup("PORT=" + it->second)))
+    if (!(envp[14] = ft::strdup("SERVER_PORT=" + this->getPort())))
         return (nullptr);
+
     // SERVER_PROTOCOL "HTTP/1.1"
     if (!(envp[15] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
         return (nullptr);
     // SERVER_SOFTWARE "GET_POLAR_BEAR/2.0"
     if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
         return (nullptr);
+
     return (envp);
 }
 
