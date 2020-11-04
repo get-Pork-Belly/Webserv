@@ -9,7 +9,7 @@ STDOUT = -D STDOUT=1
 
 # MAIN_FILES = setRouteAndLocationInfo_test
 # MAIN_FILES = PageGenerator_test PageGenerator Log utils ServerManager ServerGenerator Server Response Request UriParser
-MAIN_FILES = strdup_test utils
+MAIN_FILES = inet_ntoa_test utils
 # MAIN_FILES = PageGenerator_test PageGenerator
 
 SRCS_PATH = $(MAIN_FILES)
