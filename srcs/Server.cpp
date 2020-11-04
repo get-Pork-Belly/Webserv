@@ -522,15 +522,11 @@ void
 Server::acceptClient()
 {
     int client_socket;
-    int client_len;
-    struct sockaddr_in client_address;
+    struct sockaddr client_address;
+    socklen_t client_len = sizeof(client_address);
 
-    if ((client_socket = accept(this->getServerSocket(),
-        reinterpret_cast<struct sockaddr *>(&client_address),
-        reinterpret_cast<socklen_t *>(&client_len))) != -1)
+    if ((client_socket = accept(this->getServerSocket(), &client_address, &client_len)))
     {
-        if (client_socket > this->_server_manager->getFdMax())
-            this->_server_manager->setFdMax(client_socket);
         this->_server_manager->fdSet(client_socket, FdSet::READ);
         fcntl(client_socket, F_SETFL, O_NONBLOCK);
         this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
