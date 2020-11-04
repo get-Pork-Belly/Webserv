@@ -254,7 +254,6 @@ Server::receiveRequestWithoutBody(int fd)
         this->closeClientSocket(fd);
     else
         throw (ReadErrorException());
-    std::cout<<"reqinfo: "<<(int)this->_requests[fd].getReqInfo()<<std::endl;
     Log::trace("< receiveRequestWithoutBody");
 }
 
@@ -327,7 +326,6 @@ Server::receiveRequest(int fd)
     Log::trace("> receiveRequest");
     const ReqInfo& req_info = this->_requests[fd].getReqInfo();
 
-    std::cout<<"at the begin ReqInfo: "<<(int)req_info<<std::endl;
     switch (req_info)
     {
     case ReqInfo::READY:
@@ -357,27 +355,23 @@ Server::makeResponseMessage(int fd)
 {
     Request& request = this->_requests[fd];
     Response& response = this->_responses[fd];
-    // FdType을 알아야하는 이유.
-    // FdType을 굳이 알 필요가 있나?
-    // FdType fd_type = this->_server_manager->getFdType(fd);
 
     std::string status_line;
     std::string headers;
 
-    std::cout<<"in makeResponseMessage: before applyandcheck status code:"<<response.getStatusCode()<<std::endl;
     response.applyAndCheckRequest(request, this);
-    std::cout<<"in makeResponseMessage: after applyandcheck status code:"<<response.getStatusCode()<<std::endl;
     response.makeBody(request);
-    std::cout << "---------- body --------------" << std::endl;
-    std::cout << response.getBody() << std::endl;
+    // std::cout << "---------- body --------------" << std::endl;
+    // std::cout << response.getBody() << std::endl;
     // headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
-    return (status_line + headers);
+    return (status_line + headers + response.getBody());
 }
 
 bool
-Server::sendResponse(std::string& response_message, int fd)
+Server::sendResponse(const std::string& response_message, int fd)
 {
+    // std::string tmp(response_message);
     std::string tmp = "fd: ";
     tmp += std::to_string(fd);
     tmp += " in send response\n";
@@ -385,7 +379,11 @@ Server::sendResponse(std::string& response_message, int fd)
     tmp += "response_message\n ";
     tmp += "===============================\n";
     tmp += response_message;
+    std::cout<<"rm length: "<<response_message.length()<<std::endl;
     write(fd, tmp.c_str(), tmp.length());
+    // response_message += "wow";
+    // std::cout<<"response_message: "<<response_message<<std::endl;
+    // write(fd, response_message.c_str(), response_message.length());
     return (true);
 }
 
@@ -469,6 +467,7 @@ bool
 Server::isAutoIndexOn(int fd)
 {
     const location_info& location_info = this->_responses[fd].getLocationInfo();
+    Log::printLocationInfo(location_info);
     if (location_info.at("autoindex") == "on")
         return (true);
     return (false);
@@ -525,11 +524,12 @@ Server::run(int fd)
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
-            std::string response_message;
-            //  fd의 type이 뭔지 알아야한다.
-            response_message = this->makeResponseMessage(fd);
+            std::string response_message = this->makeResponseMessage(fd);
             // response_message = this->makeResponseMessage(this->_requests[fd], fd);
             // TODO: sendResponse error handling
+            // std::cout<<response_message.c_str()<<std::endl;
+            // const char* tmp = response_message.c_str();
+            // write(fd, tmp, strlen(tmp));
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
             this->_server_manager->fdClr(fd, FdSet::WRITE);
@@ -605,6 +605,7 @@ Server::closeFdAndSetClientOnWriteFdSet(int fd)
     close(fd);
 }
 
+//TODO: 함수명이 기능을 담지 못함, 수정 필요함!
 void
 Server::findResourceAbsPath(int fd)
 {
@@ -703,6 +704,7 @@ Server::checkAndSetResourceType(int fd)
             response.setResourceType(ResType::INDEX_HTML);
         else
         {
+            std::cout<<"in checkAndSetResourceType fd:"<<fd<<std::endl;
             if (this->isAutoIndexOn(fd))
             {
                 response.setResourceType(ResType::AUTO_INDEX);
