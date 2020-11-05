@@ -70,6 +70,7 @@ public:
     bool isAllowedMethod(const std::string& method);
     bool isExtensionExist(const std::string& extension) const;
     bool isExtensionInMimeTypeTable(const std::string& extension) const;
+    void findAndSetUriExtension();
 
     void init();
     void initStatusCodeTable();

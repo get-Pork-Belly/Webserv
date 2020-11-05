@@ -445,19 +445,7 @@ Response::makeContentLocationHeader()
     return (header);
 }
 
-bool
-Response::isExtensionExist(const std::string& extension) const
-{
-    return (extension != "");
-}
 
-bool
-Response::isExtensionInMimeTypeTable(const std::string& extension) const
-{
-    const std::map<std::string, std::string>& mime_type_table = this->getMimeTypeTable();
-    std::cout<<"in isExtensionInMimeTypeTable extension:"<<extension<<std::endl;
-    return (mime_type_table.find(extension) != mime_type_table.end());
-}
 
 std::string
 Response::makeContentTypeHeader()
@@ -521,6 +509,31 @@ bool
 Response::isAllowedMethod(const std::string& method)
 {
     return (this->_location_info["limit_except"].find(method) != std::string::npos);
+}
+
+bool
+Response::isExtensionExist(const std::string& extension) const
+{
+    return (extension != "");
+}
+
+bool
+Response::isExtensionInMimeTypeTable(const std::string& extension) const
+{
+    const std::map<std::string, std::string>& mime_type_table = this->getMimeTypeTable();
+    std::cout<<"in isExtensionInMimeTypeTable extension:"<<extension<<std::endl;
+    return (mime_type_table.find(extension) != mime_type_table.end());
+}
+
+
+void 
+Response::findAndSetUriExtension()
+{
+    size_t dot = this->getResourceAbsPath().rfind(".");
+    if (dot == std::string::npos)
+        return ;
+    std::string extension = this->getResourceAbsPath().substr(dot);
+    this->setUriExtension(extension);
 }
 
 void

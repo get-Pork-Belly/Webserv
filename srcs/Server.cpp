@@ -502,20 +502,17 @@ Server::isAutoIndexOn(int fd)
     return (false);
 }
 
-//TODO: uri extension을 셋팅하는 기능과 분리 필요.
 bool
-Server::isCgiUri(int fd)
+Server::isCgiUri(int fd, const std::string& extension)
 {
-    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    if (extension == "")
+        return (false);
 
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
     location_info::const_iterator it = location_info.find("cgi");
     if (it == location_info.end())
         return (false);
-    size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
-    if (dot == std::string::npos)
-        return (false);
-    std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
-    this->_responses[fd].setUriExtension(extension);
+
     const std::string& cgi = it->second;
     if (cgi.find(extension) == std::string::npos)
         return (false);
@@ -705,7 +702,8 @@ Server::checkAndSetResourceType(int fd)
     Log::trace("> checkAndSetResourceType");
 
     Response& response = this->_responses[fd];
-    if (this->isCgiUri(fd))
+    response.findAndSetUriExtension();
+    if (this->isCgiUri(fd, response.getUriExtension()))
     {
         response.setResourceType(ResType::CGI);
         return ;
