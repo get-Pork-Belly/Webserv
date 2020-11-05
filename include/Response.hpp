@@ -89,7 +89,7 @@ public:
     std::string makeServerHeader();
 
     /* Entity header */
-    // std::string makeAllowHeader();
+    std::string makeAllowHeader();
     std::string makeContentLengthHeader();
     std::string makeContentLocationHeader();
     std::string makeContentTypeHeader();

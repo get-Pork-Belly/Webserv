@@ -404,28 +404,44 @@ Response::makeServerHeader()
     return ("Server: gbp_nginx/0.4\r\n");
 }
 
-// std::string
-// Response::makeAllowHeader()
-// {
-//     if (this->isLimitExceptInLocation())
-//     {
-//         std::string header = "Allow:";
+std::string
+Response::makeAllowHeader()
+{
+    const std::vector<const std::string> implemented_methods = {
+        "GET",
+        // "POST",
+        // "HEAD",
+        // "PUT",
+        // "DELETE",
+        // "CONNECT",
+        // "OPTIONS",
+        // "TRACE",
+        // "PATCH",
+    };
 
-//         for (auto& method : this->_implemented_methods)
-//         {
-//             if (this->isAllowedMethod(method))
-//             {
-//                 header += " ";
-//                 header += method;
-//             }
-//             header += "\r\n";
-//             return (header);
-//         }
-//     }
-//     else
-//         //NOTE: default method
-//         return ("Allow: GET HEAD");
-// }
+    std::string header = "Allow: ";
+    if (this->isLimitExceptInLocation())
+    {
+        for (const std::string& method : implemented_methods)
+        {
+            if (this->isAllowedMethod(method))
+            {
+                header += " ";
+                header += method;
+            }
+        }
+    }
+    else
+    {
+        for (const std::string& method : implemented_methods)
+        {
+            header += " ";
+            header += method;
+        }
+    }
+    header += "\r\n";
+    return (header);
+}
 
 std::string
 Response::makeContentLengthHeader()
@@ -497,13 +513,12 @@ Response::makeHeaders(Request& request)
     headers += this->makeContentTypeHeader();
 
     //TODO switch 문 고려
+    this->setStatusCode("405");
     std::string status_code = this->getStatusCode();
     if (status_code.compare("200") == 0)
         headers += this->makeLastModifiedHeader();
     else if (status_code.compare("405") == 0)
-    {
-        // headers += this->makeAllowHeader();
-    }
+        headers += this->makeAllowHeader();
     else if (status_code.compare("401") == 0)
     {
         // headers += this->makeAuthenticateHeader();
