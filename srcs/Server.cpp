@@ -383,7 +383,7 @@ Server::sendResponse(const std::string& response_message, int fd)
     tmp += response_message;
     tmp += "\r\n";
     std::cout<<tmp<<std::endl;
-    int res = write(fd, tmp.c_str(), tmp.length()); 
+    write(fd, tmp.c_str(), tmp.length()); 
     Log::trace("< sendResponse");
     return (true);
 }
