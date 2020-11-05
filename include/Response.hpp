@@ -25,6 +25,7 @@ private:
     ResType _resource_type;
     std::string _body;
     int _cgi_pipe[2];
+    std::string _path;
 
 public:
     /* Constructor */
@@ -50,6 +51,7 @@ public:
     const struct stat& getFileInfo() const;
     const ResType& getResourceType() const;
     const std::string& getBody() const;
+    const std::string& getPath() const;
     // int getCgiPipeFd() const;
     int getCgiPipeFdIn() const;
     int getCgiPipeFdOut() const;
@@ -61,6 +63,7 @@ public:
     void setFileInfo(const struct stat& file_info);
     void setResourceType(const ResType& resource_type);
     void setBody(const std::string& body);
+    void setPath(const std::string& path);
     // void setMessageBody();
     /* Exception */
 public:

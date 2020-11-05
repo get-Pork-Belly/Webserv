@@ -125,6 +125,12 @@ Response::getCgiPipeFdIn() const
     return (this->_cgi_pipe[0]);
 }
 
+const std::string&
+Response::getPath() const
+{
+    return (this->_path);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -170,6 +176,12 @@ void
 Response::setBody(const std::string& body)
 {
     this->_body = body;
+}
+
+void
+Response::setPath(const std::string& path)
+{
+    this->_path = path;
 }
 
 /*============================================================================*/
