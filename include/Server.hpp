@@ -18,7 +18,7 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-const int BUFFER_SIZE = 200;
+const int BUFFER_SIZE = 65536;
 
 class ServerManager;
 class Request;
@@ -91,7 +91,7 @@ public:
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
     bool isAutoIndexOn(int fd);
-    bool isCgiUri(int fd);
+    bool isCgiUri(int fd, const std::string& extension);
     void checkAndSetResourceType(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
