@@ -661,6 +661,7 @@ Server::findResourceAbsPath(int fd)
     std::cout << "=========================== " << std::endl;
 
     Response& response = this->_responses[fd];
+    response.setPath(path);
     response.setRouteAndLocationInfo(path, this);
 
     std::cout << "=========================== " << std::endl;
@@ -819,12 +820,6 @@ Server::openCgiPipe(int fd) // client
     // this->_server_manager->fdSet(cgi_pipe_fd, FdSet::READ);
     this->_server_manager->setCGIPipeOnFdTable(cgi_pipe_fd, fd);
     // this->_server_manager->updateFdMax(cgi_pipe_fd);
-    std::cout << "open CGi PIPE in server " << std::endl;
-    std::cout << "open CGi PIPE in server " << std::endl;
-    std::cout << "open CGi PIPE in server " << std::endl;
-    std::cout << "cgi pipe: " << cgi_pipe_fd << std::endl;
-    std::cout << "open CGi PIPE in server " << std::endl;
-    std::cout << "open CGi PIPE in server " << std::endl;
 
     executeCgiAndReadCgiPipe(cgi_pipe_fd);
 }
@@ -838,8 +833,8 @@ Server::makeCgiEnvp(int fd)
     int client_fd = fd_table.at(fd).second;
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
 
-    const std::map<std::string, std::string>& location_info =
-        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
+    // const std::map<std::string, std::string>& location_info =
+    //     this->getLocationConfig().at(this->_responses[client_fd].getRoute());
 
     // 각각에 대한 it
     if (!(envp = (char **)malloc(sizeof(char *) * 18)))
@@ -874,7 +869,7 @@ Server::makeCgiEnvp(int fd)
     it = headers.find("Content-Length");
     if (it == headers.end())
     {
-        if (!(envp[3] = ft::strdup("CONTENT_LENGTH=-1")))
+        if (!(envp[3] = ft::strdup("CONTENT_LENGTH=")))
             return (nullptr);
     }
     else
@@ -902,21 +897,11 @@ Server::makeCgiEnvp(int fd)
         return (nullptr);
 
     // PATH_INFO / 로 시작하는 cgi 스크립트의 path
-    it = location_info.find("cgi_path");
-    if (it == location_info.end())
+    // std::string temp = this->_responses[client_fd].getPath();
+    if (!(envp[6] = ft::strdup("PATH_INFO=" + this->_responses[client_fd].getPath())))
         return (nullptr);
-    else
-    {
-        // std::cout << "==================\n"<<it->second.substr(it->second.rfind("/") + 1) << std::endl;
-        // if (!(envp[6] = ft::strdup("PATH_INFO=" + it->second.substr(it->second.rfind("/") + 1))))
-        // if (!(envp[6] = ft::strdup("PATH_INFO=/folder/test.cgi")))
-        if (!(envp[6] = ft::strdup("PATH_INFO=/directory/youpi.bla")))
-            return (nullptr);
-    }
 
     // PATH_TRANSLATED는 (query가 없을땐...) PATH_INFO랑 동일한 값으로 세팅
-    // if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + it->second)))
-    // if (!(envp[7] = ft::strdup("PATH_TRANSLATED=/goinfre/yohlee/Webserv/tests/folder/test.cgi")))
     if (!(envp[7] = ft::strdup("PATH_TRANSLATED=/goinfre/yohlee/Webserv/www/YoupiBanane/youpi.bla")))
         return (nullptr);
 
@@ -941,7 +926,6 @@ Server::makeCgiEnvp(int fd)
 
     // REQUEST_URI -> URI abs PATH no RFC
     // if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getResourceAbsPath())))
-    // if (!(envp[11] = ft::strdup("REQUEST_URI=/folder/test.cgi")))
     if (!(envp[11] = ft::strdup("REQUEST_URI=/directory/youpi.bla")))
         return (nullptr);
 
@@ -969,6 +953,11 @@ Server::makeCgiEnvp(int fd)
         std::cout << "ENVP[" << i << "]: " << envp[i] << std::endl;
     Log::trace("< makeCgiEnvp");
 
+    std::cout << "==============================" << std::endl;
+    std::cout << "==============================" << std::endl;
+    std::cout << envp[6] << std::endl;
+    std::cout << "==============================" << std::endl;
+    std::cout << "==============================" << std::endl;
 
     return (envp);
 }
@@ -1015,7 +1004,7 @@ Server::executeCgiAndReadCgiPipe(int fd)
 
     char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
     char** envp = makeCgiEnvp(fd);
-    std::string path(envp[6]);
+    // std::string path(envp[6]);
 
     pid = fork();
     // //TODO: signal
@@ -1038,6 +1027,7 @@ Server::executeCgiAndReadCgiPipe(int fd)
     }
     else
     {
+        //TODO: POST인 경우에는 STDIN으로 넣어주고, GET인 경우에는 쿼리로 넣어준다.
         write(out, this->_requests[client_fd].getBodies().c_str(), this->_requests[client_fd].getBodies().length());
         waitpid(pid, &status, 0);
         char buf[1000];
