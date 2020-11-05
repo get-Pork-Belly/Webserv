@@ -107,10 +107,22 @@ Response::getBody() const
     return (this->_body);
 }
 
+// int
+// Response::getCgiPipeFd() const
+// {
+//     return (this->_cgi_pipe[1]);
+// }
+
 int
-Response::getCgiPipeFd() const
+Response::getCgiPipeFdOut() const
 {
     return (this->_cgi_pipe[1]);
+}
+
+int
+Response::getCgiPipeFdIn() const
+{
+    return (this->_cgi_pipe[0]);
 }
 
 /*============================================================================*/
@@ -364,7 +376,7 @@ Response::openCgiPipe()
 {
     if (pipe(this->_cgi_pipe) == -1)
         throw (CannotOpenCgiPipeException(*this));
-    close(this->_cgi_pipe[0]); // cgi_pipe[0] == cgi_pipe[SIDE_OUT] 이라고 생각하자.. 헷갈리니 메모해둠.
+    // close(this->_cgi_pipe[1]); // cgi_pipe[0] == cgi_pipe[SIDE_OUT] 이라고 생각하자.. 헷갈리니 메모해둠.
 }
 
 void

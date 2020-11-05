@@ -50,7 +50,9 @@ public:
     const struct stat& getFileInfo() const;
     const ResType& getResourceType() const;
     const std::string& getBody() const;
-    int getCgiPipeFd() const;
+    // int getCgiPipeFd() const;
+    int getCgiPipeFdIn() const;
+    int getCgiPipeFdOut() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
