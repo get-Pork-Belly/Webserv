@@ -614,7 +614,7 @@ Server::findResourceAbsPath(int fd)
     if (response.getRoute() != "/")
         root.pop_back();
     std::string file_path = path.substr(response.getRoute().length());
-    response.setResourceAbsPath(root + this->_responses[fd].getRoute() + file_path);
+    response.setResourceAbsPath(root + file_path);
     std::cout<<"in findresourceAbsPath: "<<response.getResourceAbsPath()<<std::endl;
     Log::trace("< findResourceAbsPath");
 }
