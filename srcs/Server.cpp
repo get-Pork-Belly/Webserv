@@ -515,7 +515,7 @@ Server::isCgiUri(int fd)
     if (dot == std::string::npos)
         return (false);
     std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
-    // this->_responses[fd].setUriExtension(extension);
+    this->_responses[fd].setUriExtension(extension);
     const std::string& cgi = it->second;
     if (cgi.find(extension) == std::string::npos)
         return (false);

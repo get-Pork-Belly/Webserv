@@ -445,20 +445,32 @@ Response::makeContentLocationHeader()
     return (header);
 }
 
-// std::string
-// Response::makeContentTypeHeader()
-// {
-//     std::string header = "Content-Type :";
-//     std::string extension = this->getUriExtension();
-//     if (extension == "")
-//     {
-//         std::cout<<"wowwowowowo"<<std::endl;
-//         throw ("");
-//     }
-//     header += this->getMimeTypeTable().at(extension);
-//     header += "\r\n";
-//     return (header);
-// }
+bool
+Response::isExtensionExist(const std::string& extension) const
+{
+    return (extension != "");
+}
+
+bool
+Response::isExtensionInMimeTypeTable(const std::string& extension) const
+{
+    const std::map<std::string, std::string>& mime_type_table = this->getMimeTypeTable();
+    std::cout<<"in isExtensionInMimeTypeTable extension:"<<extension<<std::endl;
+    return (mime_type_table.find(extension) != mime_type_table.end());
+}
+
+std::string
+Response::makeContentTypeHeader()
+{
+    std::string header = "Content-Type: ";
+    std::string extension = this->getUriExtension();
+    if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
+        header += this->getMimeTypeTable().at(extension);
+    else
+        header += "application/octet-stream";
+    header += "\r\n";
+    return (header);
+}
 
 std::string
 Response::makeHeaders(Request& request)

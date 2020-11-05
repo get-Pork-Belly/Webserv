@@ -68,6 +68,8 @@ public:
     bool setRouteAndLocationInfo(const std::string& uri, Server* server);
     bool isLimitExceptInLocation();
     bool isAllowedMethod(const std::string& method);
+    bool isExtensionExist(const std::string& extension) const;
+    bool isExtensionInMimeTypeTable(const std::string& extension) const;
 
     void init();
     void initStatusCodeTable();
