@@ -804,9 +804,8 @@ Server::makeCgiEnvp(int fd)
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     int client_fd = fd_table.at(fd).second;
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
-
-    // const std::map<std::string, std::string>& location_info =
-    //     this->getLocationConfig().at(this->_responses[client_fd].getRoute());
+    const std::map<std::string, std::string>& location_info =
+        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
 
     // 각각에 대한 it
     if (!(envp = (char **)malloc(sizeof(char *) * 18)))
@@ -836,8 +835,6 @@ Server::makeCgiEnvp(int fd)
     if (!(envp[2] = ft::strdup("REMOTE_IDENT=")))
         return (nullptr);
 
-    // CONTENT_LENGTH // 리퀘스트 바디가 있을 경우 무조건 일치하는 길이가 세팅되어야 함. 없을 때는 null 또는 unset할 것.
-    //NOTE: if no data is attached, then NULL (or unset)
     it = headers.find("Content-Length");
     if (it == headers.end())
     {
@@ -850,8 +847,6 @@ Server::makeCgiEnvp(int fd)
             return (nullptr);
     }
 
-    // CONTENT_TYPE default는 text/html 나머지는 MIME 타입
-    //NOTE: http default is text
     it = headers.find("Content-Type");
     if (it == headers.end())
     {
@@ -864,73 +859,40 @@ Server::makeCgiEnvp(int fd)
             return (nullptr);
     }
 
-    // GATEWAY_INTERFACE "CGI/1.1"
     if (!(envp[5] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
         return (nullptr);
-
-    // PATH_INFO / 로 시작하는 cgi 스크립트의 path
-    // std::string temp = this->_responses[client_fd].getPath();
     if (!(envp[6] = ft::strdup("PATH_INFO=" + this->_responses[client_fd].getPath())))
         return (nullptr);
-
-    // PATH_TRANSLATED는 (query가 없을땐...) PATH_INFO랑 동일한 값으로 세팅
-    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=/goinfre/yohlee/Webserv/www/YoupiBanane/youpi.bla")))
+    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + this->_responses[client_fd].getResourceAbsPath())))
         return (nullptr);
-
-    // QUERY_STRING의 경우 query가 없으면 ""로 세팅
+    //TODO: GET일 때는 QUERY를 여기로 넣어주기
     if (!(envp[8] = ft::strdup("QUERY_STRING=")))
         return (nullptr);
-
-    // REMOTE_ADDR -> 클라이언트 ip
     if (!(envp[9] = ft::strdup("REMOTE_ADDR=" + this->_requests[client_fd].getIpAddress())))
         return (nullptr);
-
-    // REQUEST_METHOD : Location info의 limit_except or GET/POST/HEAD
+    //TODO: get/head <-> post 구조 다르게 가져가야함.  REQUEST_METHOD : Location info의 limit_except or GET/POST/HEAD
     if (!(this->_requests[client_fd].getMethod() == "GET" ||
             this->_requests[client_fd].getMethod() == "POST" ||
             this->_requests[client_fd].getMethod() == "HEAD"))
-            return (nullptr);
+        return (nullptr);
     else
     {
         if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ this->_requests[client_fd].getMethod())))
             return (nullptr);
     }
-
-    // REQUEST_URI -> URI abs PATH no RFC
-    // if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getResourceAbsPath())))
-    if (!(envp[11] = ft::strdup("REQUEST_URI=/directory/youpi.bla")))
+    if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getPath())))
         return (nullptr);
-
-    // SCRIPT_NAME -> URI (not url) // no path_info segment
-    // if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + this->_requests[client_fd].getUri())))
-    if (!(envp[12] = ft::strdup("SCRIPT_NAME=/goinfre/yohlee/Webserv/cgi_tester")))
+    if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
         return (nullptr);
-
-    // SERVER_NAME host -> server_info
     if (!(envp[13] = ft::strdup("SERVER_NAME=" + this->getHost())))
         return (nullptr);
-    
-    // SERVER_PORT port -> server_info
     if (!(envp[14] = ft::strdup("SERVER_PORT=" + this->getPort())))
         return (nullptr);
-
-    // SERVER_PROTOCOL "HTTP/1.1"
     if (!(envp[15] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
         return (nullptr);
-    // SERVER_SOFTWARE "GET_POLAR_BEAR/2.0"
-    // if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
-    if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=Webserv")))
+    if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
         return (nullptr);
-    for (int i = 0; i < 17; i++)
-        std::cout << "ENVP[" << i << "]: " << envp[i] << std::endl;
     Log::trace("< makeCgiEnvp");
-
-    std::cout << "==============================" << std::endl;
-    std::cout << "==============================" << std::endl;
-    std::cout << envp[6] << std::endl;
-    std::cout << "==============================" << std::endl;
-    std::cout << "==============================" << std::endl;
-
     return (envp);
 }
 
@@ -1000,7 +962,9 @@ Server::executeCgiAndReadCgiPipe(int fd)
     else
     {
         //TODO: POST인 경우에는 STDIN으로 넣어주고, GET인 경우에는 쿼리로 넣어준다.
+        // waitpid를 해주면 안된다?
         write(out, this->_requests[client_fd].getBodies().c_str(), this->_requests[client_fd].getBodies().length());
+        // write가 끝난 시점에 waitpid
         waitpid(pid, &status, 0);
         char buf[1000];
         ft::memset((void*)buf, 0, 1000);

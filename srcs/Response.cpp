@@ -201,6 +201,7 @@ Response::setPath(const std::string& path)
     this->_path = path;
 }
 
+void
 Response::setUriExtension(const std::string& extension)
 {
     this->_uri_extension = extension;
