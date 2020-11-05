@@ -671,7 +671,7 @@ Server::findResourceAbsPath(int fd)
     if (response.getRoute() != "/")
         root.pop_back();
     std::string file_path = path.substr(response.getRoute().length());
-    response.setResourceAbsPath(root + this->_responses[fd].getRoute() + file_path);
+    response.setResourceAbsPath(root + file_path);
     std::cout<<"in findresourceAbsPath: "<<response.getResourceAbsPath()<<std::endl;
     Log::trace("< findResourceAbsPath");
 }
@@ -808,14 +808,25 @@ Server::processResponseBody(int fd)
 }
 
 void
-Server::openCgiPipe(int fd) // clienet
+Server::openCgiPipe(int fd) // client
 {
     this->_responses[fd].openCgiPipe();
-    int cgi_pipe_fd = this->_responses[fd].getCgiPipeFd();
-    fcntl(cgi_pipe_fd, F_SETFL, O_NONBLOCK);
-    this->_server_manager->fdSet(cgi_pipe_fd, FdSet::READ);
+    // int cgi_pipe_fd = this->_responses[fd].getCgiPipeFd();
+    // int cgi_pipe_fd_in = this->_responses[fd].getCgiPipeFdIn();
+    int cgi_pipe_fd = this->_responses[fd].getCgiPipeFdIn();
+    // fcntl(cgi_pipe_fd_in, F_SETFL, O_NONBLOCK);
+    // fcntl(cgi_pipe_fd, F_SETFL, O_NONBLOCK);
+    // this->_server_manager->fdSet(cgi_pipe_fd, FdSet::READ);
     this->_server_manager->setCGIPipeOnFdTable(cgi_pipe_fd, fd);
-    this->_server_manager->updateFdMax(cgi_pipe_fd);
+    // this->_server_manager->updateFdMax(cgi_pipe_fd);
+    std::cout << "open CGi PIPE in server " << std::endl;
+    std::cout << "open CGi PIPE in server " << std::endl;
+    std::cout << "open CGi PIPE in server " << std::endl;
+    std::cout << "cgi pipe: " << cgi_pipe_fd << std::endl;
+    std::cout << "open CGi PIPE in server " << std::endl;
+    std::cout << "open CGi PIPE in server " << std::endl;
+
+    executeCgiAndReadCgiPipe(cgi_pipe_fd);
 }
 
 char**
@@ -896,12 +907,17 @@ Server::makeCgiEnvp(int fd)
         return (nullptr);
     else
     {
-        if (!(envp[6] = ft::strdup("PATH_INFO=" + it->second)))
+        // std::cout << "==================\n"<<it->second.substr(it->second.rfind("/") + 1) << std::endl;
+        // if (!(envp[6] = ft::strdup("PATH_INFO=" + it->second.substr(it->second.rfind("/") + 1))))
+        // if (!(envp[6] = ft::strdup("PATH_INFO=/folder/test.cgi")))
+        if (!(envp[6] = ft::strdup("PATH_INFO=/directory/youpi.bla")))
             return (nullptr);
     }
 
     // PATH_TRANSLATED는 (query가 없을땐...) PATH_INFO랑 동일한 값으로 세팅
-    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + it->second)))
+    // if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + it->second)))
+    // if (!(envp[7] = ft::strdup("PATH_TRANSLATED=/goinfre/yohlee/Webserv/tests/folder/test.cgi")))
+    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=/goinfre/yohlee/Webserv/www/YoupiBanane/youpi.bla")))
         return (nullptr);
 
     // QUERY_STRING의 경우 query가 없으면 ""로 세팅
@@ -924,11 +940,14 @@ Server::makeCgiEnvp(int fd)
     }
 
     // REQUEST_URI -> URI abs PATH no RFC
-    if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getResourceAbsPath())))
+    // if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getResourceAbsPath())))
+    // if (!(envp[11] = ft::strdup("REQUEST_URI=/folder/test.cgi")))
+    if (!(envp[11] = ft::strdup("REQUEST_URI=/directory/youpi.bla")))
         return (nullptr);
 
     // SCRIPT_NAME -> URI (not url) // no path_info segment
-    if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + this->_requests[client_fd].getUri())))
+    // if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + this->_requests[client_fd].getUri())))
+    if (!(envp[12] = ft::strdup("SCRIPT_NAME=/goinfre/yohlee/Webserv/cgi_tester")))
         return (nullptr);
 
     // SERVER_NAME host -> server_info
@@ -943,9 +962,14 @@ Server::makeCgiEnvp(int fd)
     if (!(envp[15] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
         return (nullptr);
     // SERVER_SOFTWARE "GET_POLAR_BEAR/2.0"
-    if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
+    // if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
+    if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=Webserv")))
         return (nullptr);
+    for (int i = 0; i < 17; i++)
+        std::cout << "ENVP[" << i << "]: " << envp[i] << std::endl;
     Log::trace("< makeCgiEnvp");
+
+
     return (envp);
 }
 
@@ -956,9 +980,9 @@ Server::makeCgiArgv(int fd)
     char** argv;
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     int client_fd = fd_table.at(fd).second;
-    const std::string& body = this->_requests[client_fd].getBodies();
+    // const std::string& body = this->_requests[client_fd].getBodies();
 
-    if (!(argv = (char **)malloc(sizeof(char *) * 2)))
+    if (!(argv = (char **)malloc(sizeof(char *) * 3)))
         return (nullptr);
 
     const location_info& location_info =
@@ -967,8 +991,10 @@ Server::makeCgiArgv(int fd)
     //TODO: ft::strdup 만들기
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
         return (nullptr);
-    if (!(argv[1] = ft::strdup(body)))
+    // if (!(argv[1] = ft::strdup(body)))
+    if (!(argv[1] = ft::strdup("/goinfre/yohlee/Webserv/www/YoupiBanane/youpi.bla")))
         return (nullptr);
+    argv[2] = nullptr;
 
     Log::trace("< makeCgiArgv");
     return (argv);
@@ -981,17 +1007,15 @@ Server::executeCgiAndReadCgiPipe(int fd)
     pid_t pid;
     int status;
     int ret;
+    int client_fd = this->_server_manager->getFdTable()[fd].second;
+    int in = this->_responses[client_fd].getCgiPipeFdIn();
+    int out = this->_responses[client_fd].getCgiPipeFdOut();
+    fcntl(out, F_SETFL, O_NONBLOCK);
+    fcntl(in, F_SETFL, O_NONBLOCK);
 
     char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
     char** envp = makeCgiEnvp(fd);
     std::string path(envp[6]);
-    // std::string cgi_path = path.substr(path.find("=") + 1);
-    // const char* cgi = ft::strdup(cgi_path);
-    // std::cout << "----------------------------" << std::endl;
-    // std::cout << "----------------------------" << std::endl;
-    // std::cout << "cgiPath: " << cgi_path.c_str() << std::endl;
-    // std::cout << "----------------------------" << std::endl;
-    // std::cout << "----------------------------" << std::endl;
 
     pid = fork();
     // //TODO: signal
@@ -999,38 +1023,29 @@ Server::executeCgiAndReadCgiPipe(int fd)
         throw strerror(errno);
     else if (pid == 0)
     {
-        //dup2 1번을 CGI fd로 만든다. 
-        if ((dup2(this->_responses[fd].getCgiPipeFd(), 1)) < 0)
-            throw strerror(errno);
-        if ((ret = execve(argv[0], NULL, envp)) < 0)
+        //dup2 1번을 CGI fd로 만든다.
+        if (dup2(in, 0) < 0)
+            std::cout << "dup2 0" << std::endl;
+        if (dup2(out, 1) < 0)
+            std::cout << "dup2 1" << std::endl;
+        // close(out);
+        if ((ret = execve(argv[0], argv, envp)) < 0)
         {
-            // std::cout << "cgi: " << cgi << std::endl;
-            std::cout << "argv[0] " << argv[0] << std::endl;
-            std::cout << "failed" << std::endl;
-            std::cout << "failed" << std::endl;
-            std::cout << "failed" << std::endl;
-            std::cout << "failed" << std::endl;
-            std::cout << "failed" << std::endl;
-            throw strerror(errno);
+            std::cout << "execve error" << std::endl;
+            exit(ret);
         }
         exit(ret);
     }
     else
     {
+        write(out, this->_requests[client_fd].getBodies().c_str(), this->_requests[client_fd].getBodies().length());
         waitpid(pid, &status, 0);
-        char buf[BUFFER_SIZE + 1];
-        ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
-        std::cout << "--------------------- cgi output------------------" << std::endl;
-        std::cout << "--------------------- cgi output------------------" << std::endl;
-        std::cout << "--------------------- cgi output------------------" << std::endl;
-        write(this->_responses[fd].getCgiPipeFd(), buf, BUFFER_SIZE);
-        std::cout << buf << std::endl;
-        std::cout << "--------------------- cgi output------------------" << std::endl;
-        std::cout << "--------------------- cgi output------------------" << std::endl;
-        std::cout << "--------------------- cgi output------------------" << std::endl;
-        
+        char buf[1000];
+        ft::memset((void*)buf, 0, 1000);
+        read(in, buf, 999);
+        std::cout << "buf: " << buf << std::endl;
     }
-    // 1. pid로 fork
+    // 1. pid로 for
     // 2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
     // 3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
 
