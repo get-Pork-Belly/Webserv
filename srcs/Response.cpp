@@ -392,20 +392,22 @@ Response::makeStatusLine()
     return (status_line);
 }
 
-std::string
-Response::makeDateHeader()
+void
+Response::appendDateHeader(std::string& headers)
 {
-    return ("Date: " + ft::getCurrentDateTime() + "\r\n");
+    headers += "Date: ";
+    headers += ft::getCurrentDateTime();
+    headers += "\r\n";
 }
 
-std::string
-Response::makeServerHeader()
+void
+Response::appendServerHeader(std::string& headers)
 {
-    return ("Server: gbp_nginx/0.4\r\n");
+    headers += "Server: gbp_nginx/0.4\r\n";
 }
 
-std::string
-Response::makeAllowHeader()
+void
+Response::appendAllowHeader(std::string& headers)
 {
     const std::vector<const std::string> implemented_methods = {
         "GET",
@@ -419,15 +421,15 @@ Response::makeAllowHeader()
         // "PATCH",
     };
 
-    std::string header = "Allow: ";
+    headers += "Allow: ";
     if (this->isLimitExceptInLocation())
     {
         for (const std::string& method : implemented_methods)
         {
             if (this->isAllowedMethod(method))
             {
-                header += " ";
-                header += method;
+                headers += " ";
+                headers += method;
             }
         }
     }
@@ -435,43 +437,39 @@ Response::makeAllowHeader()
     {
         for (const std::string& method : implemented_methods)
         {
-            header += " ";
-            header += method;
+            headers += " ";
+            headers += method;
         }
     }
-    header += "\r\n";
-    return (header);
+    headers += "\r\n";
 }
 
-std::string
-Response::makeContentLengthHeader()
+void
+Response::appendContentLengthHeader(std::string& headers)
 {
-    std::string header = "Content-Length: ";
-    header += std::to_string(this->getBody().length());
-    header += "\r\n";
-    return (header);
+    headers += "Content-Length: ";
+    headers += std::to_string(this->getBody().length());
+    headers += "\r\n";
 }
 
-std::string
-Response::makeContentLocationHeader()
+void
+Response::appendContentLocationHeader(std::string& headers)
 {
-    std::string header = "Content-Location: ";
-    header += this->_resource_abs_path;
-    header += "\r\n";
-    return (header);
+    headers += "Content-Location: ";
+    headers += this->_resource_abs_path;
+    headers += "\r\n";
 }
 
-std::string
-Response::makeContentTypeHeader()
+void
+Response::appendContentTypeHeader(std::string& headers)
 {
-    std::string header = "Content-Type: ";
+    headers += "Content-Type: ";
     std::string extension = this->getUriExtension();
     if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
-        header += this->getMimeTypeTable().at(extension);
+        headers += this->getMimeTypeTable().at(extension);
     else
-        header += "application/octet-stream";
-    header += "\r\n";
-    return (header);
+        headers += "application/octet-stream";
+    headers += "\r\n";
 }
 
 std::string
@@ -490,47 +488,52 @@ Response::getLastModifiedDateTimeOfResource() const
     return (buf);
 }
 
-std::string
-Response::makeLastModifiedHeader()
+void
+Response::appendLastModifiedHeader(std::string& headers)
 {
-    std::string header = "Last-Modified: ";
-    header += this->getLastModifiedDateTimeOfResource();
-    header += "\r\n";
-    return (header);
+    headers += "Last-Modified: ";
+    headers += this->getLastModifiedDateTimeOfResource();
+    headers += "\r\n";
 }
 
 std::string
 Response::makeHeaders(Request& request)
 {
     (void)request;
-    std::string headers = this->makeDateHeader();
-    headers += this->makeServerHeader();
+    std::string headers;
+    
+    //TODO 적정 reserve size 구하기
+    headers.reserve(200);
+    this->appendDateHeader(headers);
+    this->appendServerHeader(headers);
     // if chunked 
     // headers += this->makeTransferEncodingHeader();
     // if not chunked
-    headers += this->makeContentLengthHeader();
-    headers += this->makeContentLocationHeader();
-    headers += this->makeContentTypeHeader();
+    this->appendContentLengthHeader(headers);
+    this->appendContentLocationHeader(headers);
+    this->appendContentTypeHeader(headers);
 
     //TODO switch 문 고려
     this->setStatusCode("405");
     std::string status_code = this->getStatusCode();
     if (status_code.compare("200") == 0)
-        headers += this->makeLastModifiedHeader();
+        this->appendLastModifiedHeader(headers);
     else if (status_code.compare("405") == 0)
-        headers += this->makeAllowHeader();
+    {
+        this->appendAllowHeader(headers);
+    }
     else if (status_code.compare("401") == 0)
     {
-        // headers += this->makeAuthenticateHeader();
+        // this->appendAuthenticateHeader(headers);
     }
     else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
     {
-        // headers += this->makeLocationHeader();
+        // this->appendLocationHeader(headers);
     }
     else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
             || status_code.compare("301") == 0)
     {
-        // headers += this->makeRetryAfterHeader();
+        // this->appendRetryAfterHeader(headers);
     }
     
     headers += "\r\n";
