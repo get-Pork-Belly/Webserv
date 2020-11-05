@@ -85,15 +85,15 @@ public:
     void appendBody(char *buf);
 
     /* General header */
-    std::string makeDateHeader();
-    std::string makeServerHeader();
+    void appendDateHeader(std::string& headers);
+    void appendServerHeader(std::string& headers);
 
     /* Entity header */
-    // std::string makeAllowHeader();
-    std::string makeContentLengthHeader();
-    std::string makeContentLocationHeader();
-    std::string makeContentTypeHeader();
-    std::string makeLastModifiedHeader();
+    // void appendAllowHeader();
+    void appendContentLengthHeader(std::string& headers);
+    void appendContentLocationHeader(std::string& headers);
+    void appendContentTypeHeader(std::string& headers);
+    void appendLastModifiedHeader(std::string& headers);
 };
 
 #endif
