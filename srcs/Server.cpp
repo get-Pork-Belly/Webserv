@@ -252,6 +252,7 @@ Server::receiveRequestWithoutBody(int fd)
         }
         else
         {
+            //NOTE: if BUFFER_SIZE is too small to read including "\r\n\r\n", this block always execute. 
             req.setIsBufferLeft(true);
             throw (Request::RequestFormatException(req, "400"));
         }
@@ -369,11 +370,10 @@ Server::makeResponseMessage(int fd)
     std::string status_line;
     std::string headers;
 
-    response.applyAndCheckRequest(request, this);
+    //TODO: parsing 할 때 method 허용여부 확인하여 throw, response 꾸미기
+    // response.applyAndCheckRequest(request, this);
     response.makeBody(request);
-    // std::cout << "---------- body --------------" << std::endl;
-    // std::cout << response.getBody() << std::endl;
-    // headers = response.makeHeaders(request);
+    headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
     Log::trace("< makeResponseMessage");
     return (status_line + headers + response.getBody());
@@ -384,36 +384,10 @@ Server::sendResponse(const std::string& response_message, int fd)
 {
     Log::trace("> sendResponse");
     std::string tmp;
-    // std::string tmp = "fd: ";
-    // tmp += std::to_string(fd);
-    // tmp += " in send response\n";
-    // tmp += "===============================\n";
-    // tmp += "response_message\n ";
-    // tmp += "===============================\n";
     tmp += response_message;
     tmp += "\r\n";
     std::cout<<tmp<<std::endl;
-    // std::cout<<"rm length: "<<response_message.length()<<std::endl;
-    int res = write(fd, tmp.c_str(), tmp.length()); 
-    std::cout<<"res: "<<res<<std::endl;
-    // response_message += "wow";
-    // std::cout<<"response_message: "<<response_message<<std::endl;
-
-    // const char* tmp2 = ft::strdup(response_message);
-    // std::cout<<"response_message: "<<tmp2<<std::endl;
-    // std::cout<<"tmp2 len: "<<ft::strlen(tmp2)<<std::endl;
-    // write(fd, response_message.c_str(), response_message.length());
-    // write(fd, tmp2, ft::strlen(tmp2));
-    // (void)response_message;
-    // std::cout<<"fd: "<<fd<<std::endl;
-    // errno = 0;
-    // int ret;
-    // ret = write(fd, "why?\r\n", 4); 
-    // ssize_t ret = send(fd, tmp.c_str(), tmp.length(), 0);
-    // std::cout<<"ret: "<<ret<<std::endl;
-    // int num = errno;
-    // std::cout<<"ret: "<<ret<<std::endl;
-    // std::cout<<num<< ": "<<strerror(num)<<std::endl;
+    write(fd, tmp.c_str(), tmp.length()); 
     Log::trace("< sendResponse");
     return (true);
 }
@@ -513,17 +487,16 @@ Server::isAutoIndexOn(int fd)
 }
 
 bool
-Server::isCgiUri(int fd)
+Server::isCgiUri(int fd, const std::string& extension)
 {
-    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    if (extension == "")
+        return (false);
 
+    const location_info& location_info = this->_responses[fd].getLocationInfo();
     location_info::const_iterator it = location_info.find("cgi");
     if (it == location_info.end())
         return (false);
-    size_t dot = this->_responses[fd].getResourceAbsPath().rfind(".");
-    if (dot == std::string::npos)
-        return (false);
-    std::string extension = this->_responses[fd].getResourceAbsPath().substr(dot);
+
     const std::string& cgi = it->second;
     if (cgi.find(extension) == std::string::npos)
         return (false);
@@ -565,9 +538,6 @@ Server::run(int fd)
             // std::cout << "message: " << response_message << std::endl;
             // response_message = this->makeResponseMessage(this->_requests[fd], fd);
             // TODO: sendResponse error handling
-            // std::cout<<response_message.c_str()<<std::endl;
-            // const char* tmp = response_message.c_str();
-            // write(fd, tmp, strlen(tmp));
             if (!(sendResponse(response_message, fd)))
                 std::cerr<<"Error: sendResponse"<<std::endl;
             this->_server_manager->fdClr(fd, FdSet::WRITE);
@@ -732,7 +702,8 @@ Server::checkAndSetResourceType(int fd)
     Log::trace("> checkAndSetResourceType");
 
     Response& response = this->_responses[fd];
-    if (this->isCgiUri(fd))
+    response.findAndSetUriExtension();
+    if (this->isCgiUri(fd, response.getUriExtension()))
     {
         response.setResourceType(ResType::CGI);
         return ;
@@ -798,6 +769,7 @@ Server::processResponseBody(int fd)
 {
     Log::trace("> processResopnseBody");
 
+    std::cout<<"uri: "<<this->_requests[fd].getUri()<<std::endl;
     this->findResourceAbsPath(fd);
     this->checkAndSetResourceType(fd);
     if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)

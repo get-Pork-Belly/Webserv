@@ -12,18 +12,21 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code("200"), _transfer_type(""), _clients(""), _route(""), _body("")
+: _status_code("200"), _transfer_type(""), _clients(""), _body(""), 
+_uri_extension("")
 {
     this->_headers = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
+    this->initMimeTypeTable();
 }
 
 Response::Response(const Response& other)
 : _status_code(other._status_code),  _headers(other._headers),
 _transfer_type(other._transfer_type), _clients(other._clients),
-_status_code_table(other._status_code_table),
-_route(other._route), _body(other._body) {}
+_status_code_table(other._status_code_table), 
+_mime_type_table(other._mime_type_table), _body(other._body),
+_uri_extension(other._uri_extension) {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -46,6 +49,8 @@ Response::operator=(const Response& rhs)
     this->_clients = rhs._clients;
     this->_body= rhs._body;
     this->_status_code_table = rhs._status_code_table;
+    this->_mime_type_table = rhs._mime_type_table;
+    this->_uri_extension = rhs._uri_extension;
     return (*this);
 }
 
@@ -131,6 +136,18 @@ Response::getPath() const
     return (this->_path);
 }
 
+const std::map<std::string, std::string>&
+Response::getMimeTypeTable() const
+{
+    return (this->_mime_type_table);
+}
+
+const std::string&
+Response::getUriExtension() const
+{
+    return (this->_uri_extension);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -182,6 +199,11 @@ void
 Response::setPath(const std::string& path)
 {
     this->_path = path;
+}
+
+Response::setUriExtension(const std::string& extension)
+{
+    this->_uri_extension = extension;
 }
 
 /*============================================================================*/
@@ -277,6 +299,71 @@ Response::initStatusCodeTable()
     };
 }
 
+void
+Response::initMimeTypeTable()
+{
+    this->_mime_type_table = {
+        {".aac", "audio/aac"},
+        {".abw", "application/x-abiword"},
+        {".arc", "application/octet-stream"},
+        {".avi", "video/x-msvideo"},
+        {".azw", "application/vnd.amazon.ebook"},
+        {".bin", "application/octet-stream"},
+        {".bz", "application/x-bzip"},
+        {".bz2", "application/x-bzip2"},
+        {".csh", "application/x-csh"},
+        {".css", "text/css"},
+        {".csv", "text/csv"},
+        {".doc", "application/msword"},
+        {".epub", "application/epub+zip"},
+        {".gif", "image/gif"},
+        {".htm", "text/html"},
+        {".html", "text/html"},
+        {".ico", "image/x-icon"},
+        {".ics", "text/calendar"},
+        {".jar", "Temporary Redirect"},
+        {".jpeg", "image/jpeg"},
+        {".jpg", "image/jpeg"},
+        {".js", "application/js"},
+        {".json", "application/json"},
+        {".mid", "audio/midi"},
+        {".midi", "audio/midi"},
+        {".mpeg", "video/mpeg"},
+        {".mpkg", "application/vnd.apple.installer+xml"},
+        {".odp", "application/vnd.oasis.opendocument.presentation"},
+        {".ods", "application/vnd.oasis.opendocument.spreadsheet"},
+        {".odt", "application/vnd.oasis.opendocument.text"},
+        {".oga", "audio/ogg"},
+        {".ogv", "video/ogg"},
+        {".ogx", "application/ogg"},
+        {".pdf", "application/pdf"},
+        {".ppt", "application/vnd.ms-powerpoint"},
+        {".rar", "application/x-rar-compressed"},
+        {".rtf", "application/rtf"},
+        {".sh", "application/x-sh"},
+        {".svg", "image/svg+xml"},
+        {".swf", "application/x-shockwave-flash"},
+        {".tar", "application/x-tar"},
+        {".tif", "image/tiff"},
+        {".tiff", "image/tiff"},
+        {".ttf", "application/x-font-ttf"},
+        {".vsd", " application/vnd.visio"},
+        {".wav", "audio/x-wav"},
+        {".weba", "audio/webm"},
+        {".webm", "video/webm"},
+        {".webp", "image/webp"},
+        {".woff", "application/x-font-woff"},
+        {".xhtml", "application/xhtml+xml"},
+        {".xls", "application/vnd.ms-excel"},
+        {".xml", "application/xml"},
+        {".xul", "application/vnd.mozilla.xul+xml"},
+        {".zip", "application/zip"},
+        {".3gp", "video/3gpp audio/3gpp"},
+        {".3g2", "video/3gpp2 audio/3gpp2"},
+        {".7z", "application/x-7z-compressed"},
+    };
+}
+
 //TODO: Response에 상태코드 세팅하게 변경하기.
 void
 Response::applyAndCheckRequest(Request& request, Server* server)
@@ -337,7 +424,6 @@ Response::makeStatusLine()
     Log::trace("> makeStatusLine");
     std::string status_line;
 
-    this->setStatusCode(std::string("400"));
     status_line = "HTTP/1.1 ";
     status_line += this->getStatusCode();
     status_line += " ";
@@ -347,15 +433,138 @@ Response::makeStatusLine()
     return (status_line);
 }
 
-// std::string
-// Response::makeHeaders(Request& request)
-// {
-//     std::string headers;
+void
+Response::appendDateHeader(std::string& headers)
+{
+    headers += "Date: ";
+    headers += ft::getCurrentDateTime();
+    headers += "\r\n";
+}
 
-//     headers += ft::getCurrentDateTime();
+void
+Response::appendServerHeader(std::string& headers)
+{
+    headers += "Server: gbp_nginx/0.4\r\n";
+}
+
+// std::string
+// Response::appendAllowHeader(std::string& headers)
+// {
+//     if (this->isLimitExceptInLocation())
+//     {
+//         std::string header = "Allow:";
+
+//         for (auto& method : this->_implemented_methods)
+//         {
+//             if (this->isAllowedMethod(method))
+//             {
+//                 header += " ";
+//                 header += method;
+//             }
+//             header += "\r\n";
+//             return (header);
+//         }
+//     }
+//     else
+//         //NOTE: default method
+//         return ("Allow: GET HEAD");
 // }
 
-// std::string
+void
+Response::appendContentLengthHeader(std::string& headers)
+{
+    headers += "Content-Length: ";
+    headers += std::to_string(this->getBody().length());
+    headers += "\r\n";
+}
+
+void
+Response::appendContentLocationHeader(std::string& headers)
+{
+    headers += "Content-Location: ";
+    headers += this->_resource_abs_path;
+    headers += "\r\n";
+}
+
+void
+Response::appendContentTypeHeader(std::string& headers)
+{
+    headers += "Content-Type: ";
+    std::string extension = this->getUriExtension();
+    if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
+        headers += this->getMimeTypeTable().at(extension);
+    else
+        headers += "application/octet-stream";
+    headers += "\r\n";
+}
+
+std::string
+Response::getLastModifiedDateTimeOfResource() const
+{
+    struct tm time;
+    time_t mtime = this->_file_info.st_mtime;
+    char buf[64];
+    const char* fmt = "%a, %d %b %Y %X GMT";
+
+    ft::memset(buf, 0, sizeof(buf));
+    strptime(std::to_string(mtime).c_str(), "%s", &time);
+    mtime -= ft::getTimeDiffBetweenGMT(time.tm_zone);
+    strptime(std::to_string(this->_file_info.st_mtime).c_str(), "%s", &time);
+    strftime(buf, sizeof(buf), fmt, &time);
+    return (buf);
+}
+
+void
+Response::appendLastModifiedHeader(std::string& headers)
+{
+    headers += "Last-Modified: ";
+    headers += this->getLastModifiedDateTimeOfResource();
+    headers += "\r\n";
+}
+
+std::string
+Response::makeHeaders(Request& request)
+{
+    (void)request;
+    std::string headers;
+    
+    //TODO 적정 reserve size 구하기
+    headers.reserve(200);
+    this->appendDateHeader(headers);
+    this->appendServerHeader(headers);
+    // if chunked 
+    // headers += this->makeTransferEncodingHeader();
+    // if not chunked
+    this->appendContentLengthHeader(headers);
+    this->appendContentLocationHeader(headers);
+    this->appendContentTypeHeader(headers);
+
+    //TODO switch 문 고려
+    std::string status_code = this->getStatusCode();
+    if (status_code.compare("200") == 0)
+        this->appendLastModifiedHeader(headers);
+    else if (status_code.compare("405") == 0)
+    {
+        // this->appendAllowHeader(headers);
+    }
+    else if (status_code.compare("401") == 0)
+    {
+        // this->appendAuthenticateHeader(headers);
+    }
+    else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
+    {
+        // this->appendLocationHeader(headers);
+    }
+    else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
+            || status_code.compare("301") == 0)
+    {
+        // this->appendRetryAfterHeader(headers);
+    }
+    
+    headers += "\r\n";
+    return (headers);
+}
+
 void
 Response::makeBody(Request& request)
 {
@@ -381,6 +590,37 @@ bool
 Response::isAllowedMethod(const std::string& method)
 {
     return (this->_location_info["limit_except"].find(method) != std::string::npos);
+}
+
+bool
+Response::isExtensionExist(const std::string& extension) const
+{
+    return (extension != "");
+}
+
+bool
+Response::isExtensionInMimeTypeTable(const std::string& extension) const
+{
+    const std::map<std::string, std::string>& mime_type_table = this->getMimeTypeTable();
+    std::cout<<"in isExtensionInMimeTypeTable extension:"<<extension<<std::endl;
+    return (mime_type_table.find(extension) != mime_type_table.end());
+}
+
+
+void 
+Response::findAndSetUriExtension()
+{
+    size_t dot = this->getResourceAbsPath().rfind(".");
+    if (dot == std::string::npos)
+        return ;
+    std::string extension = this->getResourceAbsPath().substr(dot);
+    this->setUriExtension(extension);
+}
+
+bool
+Response::isRedirection(const std::string& status_code) const
+{
+    return (status_code[0] == '3');
 }
 
 void

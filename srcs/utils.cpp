@@ -170,7 +170,7 @@ stoiHex(const std::string& str)
     return (ret);
 }
 
-static int
+int
 getTimeDiffBetweenGMT(char *time_zone)
 {
     std::map<std::string, int> time_diff_between_gmt = {

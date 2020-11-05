@@ -17,6 +17,7 @@ private:
     std::string _transfer_type;
     std::string _clients;
     std::map<std::string, std::string> _status_code_table;
+    std::map<std::string, std::string> _mime_type_table;
     location_info _location_info;
     std::string _resource_abs_path;
     std::string _route;
@@ -26,6 +27,7 @@ private:
     std::string _body;
     int _cgi_pipe[2];
     std::string _path;
+    std::string _uri_extension;
 
 public:
     /* Constructor */
@@ -55,6 +57,8 @@ public:
     // int getCgiPipeFd() const;
     int getCgiPipeFdIn() const;
     int getCgiPipeFdOut() const;
+    const std::map<std::string, std::string>& getMimeTypeTable() const;
+    const std::string& getUriExtension() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -64,6 +68,7 @@ public:
     void setResourceType(const ResType& resource_type);
     void setBody(const std::string& body);
     void setPath(const std::string& path);
+    void setUriExtension(const std::string& extension);
     // void setMessageBody();
     /* Exception */
 public:
@@ -80,9 +85,15 @@ public:
     bool setRouteAndLocationInfo(const std::string& uri, Server* server);
     bool isLimitExceptInLocation();
     bool isAllowedMethod(const std::string& method);
+    bool isExtensionExist(const std::string& extension) const;
+    bool isExtensionInMimeTypeTable(const std::string& extension) const;
+    void findAndSetUriExtension();
+    bool isRedirection(const std::string& status_code) const;
+    std::string getLastModifiedDateTimeOfResource() const;
 
     void init();
     void initStatusCodeTable();
+    void initMimeTypeTable();
     void  makeBody(Request& request);
     std::string makeHeaders(Request& request);
     std::string makeStatusLine();
@@ -91,6 +102,17 @@ public:
 
     void openCgiPipe();
     void appendBody(char *buf);
+
+    /* General header */
+    void appendDateHeader(std::string& headers);
+    void appendServerHeader(std::string& headers);
+
+    /* Entity header */
+    // void appendAllowHeader();
+    void appendContentLengthHeader(std::string& headers);
+    void appendContentLocationHeader(std::string& headers);
+    void appendContentTypeHeader(std::string& headers);
+    void appendLastModifiedHeader(std::string& headers);
 };
 
 #endif
