@@ -445,8 +445,6 @@ Response::makeContentLocationHeader()
     return (header);
 }
 
-
-
 std::string
 Response::makeContentTypeHeader()
 {
@@ -456,6 +454,31 @@ Response::makeContentTypeHeader()
         header += this->getMimeTypeTable().at(extension);
     else
         header += "application/octet-stream";
+    header += "\r\n";
+    return (header);
+}
+
+std::string
+Response::getLastModifiedDateTimeOfResource() const
+{
+    struct tm time;
+    time_t mtime = this->_file_info.st_mtime;
+    char buf[64];
+    const char* fmt = "%a, %d %b %Y %X GMT";
+
+    ft::memset(buf, 0, sizeof(buf));
+    strptime(std::to_string(mtime).c_str(), "%s", &time);
+    mtime -= ft::getTimeDiffBetweenGMT(time.tm_zone);
+    strptime(std::to_string(this->_file_info.st_mtime).c_str(), "%s", &time);
+    strftime(buf, sizeof(buf), fmt, &time);
+    return (buf);
+}
+
+std::string
+Response::makeLastModifiedHeader()
+{
+    std::string header = "Last-Modified: ";
+    header += this->getLastModifiedDateTimeOfResource();
     header += "\r\n";
     return (header);
 }
@@ -472,12 +495,27 @@ Response::makeHeaders(Request& request)
     headers += this->makeContentLengthHeader();
     headers += this->makeContentLocationHeader();
     headers += this->makeContentTypeHeader();
-    std::string status_code = this->getStatusCode();
 
     //TODO switch 문 고려
-    if (status_code.compare("405") == 0)
+    std::string status_code = this->getStatusCode();
+    if (status_code.compare("200") == 0)
+        headers += this->makeLastModifiedHeader();
+    else if (status_code.compare("405") == 0)
     {
         // headers += this->makeAllowHeader();
+    }
+    else if (status_code.compare("401") == 0)
+    {
+        // headers += this->makeAuthenticateHeader();
+    }
+    else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
+    {
+        // headers += this->makeLocationHeader();
+    }
+    else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
+            || status_code.compare("301") == 0)
+    {
+        // headers += this->makeRetryAfterHeader();
     }
     
     headers += "\r\n";
@@ -534,6 +572,12 @@ Response::findAndSetUriExtension()
         return ;
     std::string extension = this->getResourceAbsPath().substr(dot);
     this->setUriExtension(extension);
+}
+
+bool
+Response::isRedirection(const std::string& status_code) const
+{
+    return (status_code[0] == '3');
 }
 
 void

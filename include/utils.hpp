@@ -31,6 +31,7 @@ namespace ft
 
     int stoiHex(const std::string& str);
 
+    int getTimeDiffBetweenGMT(char *time_zone);
     std::string getCurrentDateTime();
     size_t strlen(const char* str);
     char* strdup(const std::string& s);
