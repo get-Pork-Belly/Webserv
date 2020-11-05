@@ -369,8 +369,6 @@ Server::makeResponseMessage(int fd)
     //TODO: parsing 할 때 method 허용여부 확인하여 throw, response 꾸미기
     // response.applyAndCheckRequest(request, this);
     response.makeBody(request);
-    // std::cout << "---------- body --------------" << std::endl;
-    // std::cout << response.getBody() << std::endl;
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
     Log::trace("< makeResponseMessage");
@@ -382,36 +380,10 @@ Server::sendResponse(const std::string& response_message, int fd)
 {
     Log::trace("> sendResponse");
     std::string tmp;
-    // std::string tmp = "fd: ";
-    // tmp += std::to_string(fd);
-    // tmp += " in send response\n";
-    // tmp += "===============================\n";
-    // tmp += "response_message\n ";
-    // tmp += "===============================\n";
     tmp += response_message;
     tmp += "\r\n";
     std::cout<<tmp<<std::endl;
-    // std::cout<<"rm length: "<<response_message.length()<<std::endl;
     int res = write(fd, tmp.c_str(), tmp.length()); 
-    std::cout<<"res: "<<res<<std::endl;
-    // response_message += "wow";
-    // std::cout<<"response_message: "<<response_message<<std::endl;
-
-    // const char* tmp2 = ft::strdup(response_message);
-    // std::cout<<"response_message: "<<tmp2<<std::endl;
-    // std::cout<<"tmp2 len: "<<ft::strlen(tmp2)<<std::endl;
-    // write(fd, response_message.c_str(), response_message.length());
-    // write(fd, tmp2, ft::strlen(tmp2));
-    // (void)response_message;
-    // std::cout<<"fd: "<<fd<<std::endl;
-    // errno = 0;
-    // int ret;
-    // ret = write(fd, "why?\r\n", 4); 
-    // ssize_t ret = send(fd, tmp.c_str(), tmp.length(), 0);
-    // std::cout<<"ret: "<<ret<<std::endl;
-    // int num = errno;
-    // std::cout<<"ret: "<<ret<<std::endl;
-    // std::cout<<num<< ": "<<strerror(num)<<std::endl;
     Log::trace("< sendResponse");
     return (true);
 }
