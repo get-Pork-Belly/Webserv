@@ -73,7 +73,8 @@ public:
     void findAndSetUriExtension();
     bool isRedirection(const std::string& status_code) const;
     bool isLocationToBeRedirected() const;
-    std::string findRedirectStatusCode();
+    std::string getRedirectStatusCode();
+    // std::string getRedirectUri();
     std::string getLastModifiedDateTimeOfResource() const;
 
     void init();

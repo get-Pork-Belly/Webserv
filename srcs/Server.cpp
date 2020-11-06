@@ -126,9 +126,9 @@ Server::ReadErrorException::what() const throw()
 }
 
 Server::MustReadirectException::MustReadirectException(Response& res)
-: _res(res), _msg("MustReadirectException: [CODE " + res.findRedirectStatusCode() + "]")
+: _res(res), _msg("MustReadirectException: [CODE " + res.getRedirectStatusCode() + "]")
 {
-    this->_res.setStatusCode(res.findRedirectStatusCode());
+    this->_res.setStatusCode(res.getRedirectStatusCode());
 }
 
 const char*

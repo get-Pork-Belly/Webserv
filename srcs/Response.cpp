@@ -324,19 +324,19 @@ Response::initMimeTypeTable()
 }
 
 //TODO: Response에 상태코드 세팅하게 변경하기.
-// void
-// Response::applyAndCheckRequest(Request& request, Server* server)
-// {
-//     Log::trace("> applyAndCheckRequest");
-//     if (this->setRouteAndLocationInfo(request.getUri(), server))
-//     {
-//         if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
-//             this->setStatusCode("405");
-//         else if (this->isLocationToBeRedirected())
-//             this->setStatusCode(this->findRedirectStatusCode());
-//     }
-//     Log::trace("< applyAndCheckRequest");
-// }
+void
+Response::applyAndCheckRequest(Request& request, Server* server)
+{
+    Log::trace("> applyAndCheckRequest");
+    if (this->setRouteAndLocationInfo(request.getUri(), server))
+    {
+        if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
+            this->setStatusCode("405");
+        // else if (this->isLocationToBeRedirected())
+        //     this->setStatusCode(this->getRedirectStatusCode());
+    }
+    Log::trace("< applyAndCheckRequest");
+}
 
 //NOTE
 bool
@@ -617,7 +617,7 @@ Response::isLocationToBeRedirected() const
 }
 
 std::string
-Response::findRedirectStatusCode()
+Response::getRedirectStatusCode()
 {
     std::string& redirection_info = this->_location_info.at("return");
 
