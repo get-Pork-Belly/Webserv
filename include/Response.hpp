@@ -74,7 +74,7 @@ public:
     bool isRedirection(const std::string& status_code) const;
     bool isLocationToBeRedirected() const;
     std::string getRedirectStatusCode();
-    // std::string getRedirectUri();
+    std::string getRedirectUri(const Request& request);
     std::string getLastModifiedDateTimeOfResource() const;
 
     void init();
@@ -97,7 +97,7 @@ public:
     void appendContentLocationHeader(std::string& headers);
     void appendContentTypeHeader(std::string& headers);
     void appendLastModifiedHeader(std::string& headers);
-    void appendLocationHeader(std::string& headers);
+    void appendLocationHeader(std::string& headers, const Request& request);
 };
 
 #endif

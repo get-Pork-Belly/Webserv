@@ -499,18 +499,16 @@ Response::appendLastModifiedHeader(std::string& headers)
 }
 
 void
-Response::appendLocationHeader(std::string& headers)
+Response::appendLocationHeader(std::string& headers, const Request& request)
 {
     headers += "Location: ";
-    headers += "/redirect-uri";
-    // headers += this->getRedirectUri();
+    headers += this->getRedirectUri(request);
     headers += "\r\n";
 }
 
 std::string
 Response::makeHeaders(Request& request)
 {
-    (void)request;
     std::string headers;
     
     //TODO 적정 reserve size 구하기
@@ -540,7 +538,7 @@ Response::makeHeaders(Request& request)
     }
     else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
     {
-        this->appendLocationHeader(headers);
+        this->appendLocationHeader(headers, request);
     }
     else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
             || status_code.compare("301") == 0)
@@ -623,6 +621,22 @@ Response::getRedirectStatusCode()
 
     size_t index = redirection_info.find(" ");
     return (redirection_info.substr(0, index));
+}
+
+std::string
+Response::getRedirectUri(const Request& request)
+{
+    Log::trace("> getRedirectUri");
+    //TODO: find 실패하지 않도록 invalid 여부는 처음 서버 만들 때 잘 확인할 것.
+
+    std::string& redirection_info = this->_location_info.at("return");
+    std::string redirect_route = redirection_info.substr(redirection_info.find(" "));
+    std::string requested_uri = request.getUri();
+    size_t offset = requested_uri.find(this->getRoute());
+    requested_uri.replace(offset, this->getRoute().length(), redirect_route);
+
+    Log::trace("< getRedirectUri");
+    return (requested_uri);
 }
 
 void
