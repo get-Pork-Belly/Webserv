@@ -1,0 +1,226 @@
+[06/Nov/2020/15:01:49 KST] SERVER(7) HAS CREATED
+[06/Nov/2020/15:01:50 KST] SERVER(8) HAS CREATED
+[06/Nov/2020/15:01:53 KST] SERVER(7) HAS NEW CLIENT: 9
+[06/Nov/2020/15:01:53 KST] > receiveRequest
+[06/Nov/2020/15:01:53 KST] > receiveRequestWithoutBody
+[06/Nov/2020/15:01:53 KST] > readBufferUntilHeaders
+[06/Nov/2020/15:01:53 KST] > parseRequestWithoutBody
+[06/Nov/2020/15:01:53 KST] > parseRequestLine
+[06/Nov/2020/15:01:53 KST] < parseRequestLine
+[06/Nov/2020/15:01:53 KST] > parseHeaders
+[06/Nov/2020/15:01:53 KST] < parseHeaders
+[06/Nov/2020/15:01:53 KST] > updateReqInfo
+[06/Nov/2020/15:01:53 KST] < parseRequestWithoutBody
+[06/Nov/2020/15:01:53 KST] < readBufferUntilHeaders
+[06/Nov/2020/15:01:53 KST] < receiveRequestWithoutBody
+[06/Nov/2020/15:01:53 KST] < receiveRequest
+[06/Nov/2020/15:01:53 KST] > processResopnseBody
+uri: /old-folder
+[06/Nov/2020/15:01:53 KST] > findResourceAbsPath
+[06/Nov/2020/15:01:53 KST] > setRouteAndLocationInfo
+|===============================================
+| Route: /
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| root : /Users/iwoo/Documents/Webserv/
+|===============================================
+| Route: /folder
+| auth_basic : off
+| autoindex : on
+| cgi : .bin .cgi .bla
+| index : index.html
+| root : /Users/iwoo/Documents/Webserv/tests/
+| route : /folder
+|===============================================
+| Route: /old-folder
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| return : 301 /folder
+| root : /Users/iwoo/Documents/Webserv/
+| route : /old-folder
+|===============================================
+[06/Nov/2020/15:01:53 KST] < setRouteAndLocationInfo
+in findresourceAbsPath: /Users/iwoo/Documents/Webserv/old-folder
+[06/Nov/2020/15:01:53 KST] < findResourceAbsPath
+[06/Nov/2020/15:01:53 KST] > checkAndSetResourceType
+[06/Nov/2020/15:01:53 KST] >>> write sequence
+[06/Nov/2020/15:01:53 KST] > makeResponseMessage
+[06/Nov/2020/15:01:53 KST] > makeBody
+[06/Nov/2020/15:01:53 KST] < makeBody
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| root : /Users/iwoo/Documents/Webserv/
+[06/Nov/2020/15:01:53 KST] > makeStatusLine
+[06/Nov/2020/15:01:53 KST] < makeStatusLine
+[06/Nov/2020/15:01:53 KST] < makeResponseMessage
+[06/Nov/2020/15:01:53 KST] > sendResponse
+HTTP/1.1 404 Not found
+Date: Fri, 06 Nov 2020 06:01:53 GMT
+Server: gbp_nginx/0.4
+Content-Length: 164
+Content-Type: application/octet-stream
+
+<html>
+	<head>
+		<title>404 Not found</title>
+	</head>
+	<body>
+		<center>
+			<h1>404 Not found</h1>
+		</center>
+		<hr>
+	<center> ft_nginx </center>
+	</body>
+</html>
+
+[06/Nov/2020/15:01:53 KST] < sendResponse
+[06/Nov/2020/15:01:53 KST] <<< write sequence
+[06/Nov/2020/15:01:57 KST] > receiveRequest
+[06/Nov/2020/15:01:57 KST] > receiveRequestWithoutBody
+[06/Nov/2020/15:01:57 KST] > readBufferUntilHeaders
+[06/Nov/2020/15:01:57 KST] > parseRequestWithoutBody
+[06/Nov/2020/15:01:57 KST] > parseRequestLine
+[06/Nov/2020/15:01:57 KST] < parseRequestLine
+[06/Nov/2020/15:01:57 KST] > parseHeaders
+[06/Nov/2020/15:01:57 KST] < parseHeaders
+[06/Nov/2020/15:01:57 KST] > updateReqInfo
+[06/Nov/2020/15:01:57 KST] < parseRequestWithoutBody
+[06/Nov/2020/15:01:57 KST] < readBufferUntilHeaders
+[06/Nov/2020/15:01:57 KST] < receiveRequestWithoutBody
+[06/Nov/2020/15:01:57 KST] < receiveRequest
+[06/Nov/2020/15:01:57 KST] > processResopnseBody
+uri: /old-folder/
+[06/Nov/2020/15:01:57 KST] > findResourceAbsPath
+[06/Nov/2020/15:01:57 KST] > setRouteAndLocationInfo
+|===============================================
+| Route: /
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| root : /Users/iwoo/Documents/Webserv/
+|===============================================
+| Route: /folder
+| auth_basic : off
+| autoindex : on
+| cgi : .bin .cgi .bla
+| index : index.html
+| root : /Users/iwoo/Documents/Webserv/tests/
+| route : /folder
+|===============================================
+| Route: /old-folder
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| return : 301 /folder
+| root : /Users/iwoo/Documents/Webserv/
+| route : /old-folder
+|===============================================
+in findresourceAbsPath: /Users/iwoo/Documents/Webserv/
+[06/Nov/2020/15:01:57 KST] < findResourceAbsPath
+[06/Nov/2020/15:01:57 KST] >>> write sequence
+[06/Nov/2020/15:01:57 KST] > makeResponseMessage
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| return : 301 /folder
+| root : /Users/iwoo/Documents/Webserv/
+| route : /old-folder
+requeted_uri: /old-folder/
+requeted_route: /old-folder
+redirect_route:  /folder
+Finally, changed uri:  /folder/
+[06/Nov/2020/15:01:57 KST] > makeStatusLine
+[06/Nov/2020/15:01:57 KST] < makeStatusLine
+[06/Nov/2020/15:01:57 KST] < makeResponseMessage
+[06/Nov/2020/15:01:57 KST] > sendResponse
+HTTP/1.1 301 Moved Permanently
+Date: Fri, 06 Nov 2020 06:01:57 GMT
+Server: gbp_nginx/0.4
+Content-Length: 0
+Content-Type: application/octet-stream
+Location: /redirect-uri
+
+
+
+[06/Nov/2020/15:01:57 KST] < sendResponse
+[06/Nov/2020/15:01:57 KST] <<< write sequence
+[06/Nov/2020/15:01:57 KST] > receiveRequest
+[06/Nov/2020/15:01:57 KST] > receiveRequestWithoutBody
+[06/Nov/2020/15:01:57 KST] > readBufferUntilHeaders
+[06/Nov/2020/15:01:57 KST] > parseRequestWithoutBody
+[06/Nov/2020/15:01:57 KST] > parseRequestLine
+[06/Nov/2020/15:01:57 KST] < parseRequestLine
+[06/Nov/2020/15:01:57 KST] > parseHeaders
+[06/Nov/2020/15:01:57 KST] < parseHeaders
+[06/Nov/2020/15:01:57 KST] > updateReqInfo
+[06/Nov/2020/15:01:57 KST] < parseRequestWithoutBody
+[06/Nov/2020/15:01:57 KST] < readBufferUntilHeaders
+[06/Nov/2020/15:01:57 KST] < receiveRequestWithoutBody
+[06/Nov/2020/15:01:57 KST] < receiveRequest
+[06/Nov/2020/15:01:57 KST] > processResopnseBody
+uri: /redirect-uri
+[06/Nov/2020/15:01:57 KST] > findResourceAbsPath
+[06/Nov/2020/15:01:57 KST] > setRouteAndLocationInfo
+|===============================================
+| Route: /
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| root : /Users/iwoo/Documents/Webserv/
+|===============================================
+| Route: /folder
+| auth_basic : off
+| autoindex : on
+| cgi : .bin .cgi .bla
+| index : index.html
+| root : /Users/iwoo/Documents/Webserv/tests/
+| route : /folder
+|===============================================
+| Route: /old-folder
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| return : 301 /folder
+| root : /Users/iwoo/Documents/Webserv/
+| route : /old-folder
+|===============================================
+[06/Nov/2020/15:01:57 KST] < setRouteAndLocationInfo
+in findresourceAbsPath: /Users/iwoo/Documents/Webserv/redirect-uri
+[06/Nov/2020/15:01:57 KST] < findResourceAbsPath
+[06/Nov/2020/15:01:57 KST] > checkAndSetResourceType
+[06/Nov/2020/15:01:57 KST] >>> write sequence
+[06/Nov/2020/15:01:57 KST] > makeResponseMessage
+[06/Nov/2020/15:01:57 KST] > makeBody
+[06/Nov/2020/15:01:57 KST] < makeBody
+| auth_basic : off
+| autoindex : off
+| index : index.html
+| root : /Users/iwoo/Documents/Webserv/
+[06/Nov/2020/15:01:57 KST] > makeStatusLine
+[06/Nov/2020/15:01:57 KST] < makeStatusLine
+[06/Nov/2020/15:01:57 KST] < makeResponseMessage
+[06/Nov/2020/15:01:57 KST] > sendResponse
+HTTP/1.1 404 Not found
+Date: Fri, 06 Nov 2020 06:01:57 GMT
+Server: gbp_nginx/0.4
+Content-Length: 164
+Content-Type: application/octet-stream
+
+<html>
+	<head>
+		<title>404 Not found</title>
+	</head>
+	<body>
+		<center>
+			<h1>404 Not found</h1>
+		</center>
+		<hr>
+	<center> ft_nginx </center>
+	</body>
+</html>
+
+[06/Nov/2020/15:01:57 KST] < sendResponse
+[06/Nov/2020/15:01:57 KST] <<< write sequence

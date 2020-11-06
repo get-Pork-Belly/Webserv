@@ -11,7 +11,7 @@ http {
             root /Users/iwoo/Documents/Webserv/tests/;
         }
         location /old-folder {
-            return 301 /folder/;
+            return 301 /folder;
         }
     }
     server {
