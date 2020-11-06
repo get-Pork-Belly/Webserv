@@ -1056,56 +1056,7 @@ Server::forkAndExecuteCgi(int fd)
     {
         response.setCgiPid(pid);
         // this->_server_manager->fdClr(fd, FdSet::READ);
-        //TODO double free
-        // free(argv);
-        // free(envp);
+        ft::doubleFree(argv);
+        ft::doubleFree(envp);
     }
 }
-
-    // Log::trace("> forkAndExecuteCgi");
-    // pid_t pid;
-    // int status;
-    // int ret;
-    // int client_fd = this->_server_manager->getFdTable()[fd].second;
-    // int in = this->_responses[client_fd].getPipeIn();
-    // int out = this->_responses[client_fd].getCgiPipeFdOut();
-    // fcntl(out, F_SETFL, O_NONBLOCK);
-    // fcntl(in, F_SETFL, O_NONBLOCK);
-    // char** argv = makeCgiArgv(fd);
-    // char** envp = makeCgiEnvp(fd);
-
-    // pid = fork();
-    // // //TODO: signal
-    // if (pid < 0)
-    //     throw strerror(errno);
-    // else if (pid == 0)
-    // {
-    //     //dup2 1번을 CGI fd로 만든다.
-    //     if (dup2(in, 0) < 0)
-    //         std::cout << "dup2 0" << std::endl;
-    //     if (dup2(out, 1) < 0)
-    //         std::cout << "dup2 1" << std::endl;
-    //     // close(out);
-    //     if ((ret = execve(argv[0], argv, envp)) < 0)
-    //     {
-    //         std::cout << "argv[0]: " << argv[0] << std::endl;
-    //         std::cout << "execve error" << std::endl;
-    //         exit(ret);
-    //     }
-    //     exit(ret);
-    // }
-    // else
-    // {
-    //     //TODO: POST인 경우에는 STDIN으로 넣어주고, GET인 경우에는 쿼리로 넣어준다.
-    //     // waitpid를 해주면 안된다?
-    //     write(out, this->_requests[client_fd].getBodies().c_str(), this->_requests[client_fd].getBodies().length());
-    //     // write가 끝난 시점에 waitpid
-    //     waitpid(pid, &status, 0);
-    //     char buf[1000];
-    //     ft::memset((void*)buf, 0, 1000);
-    //     read(in, buf, 999);
-    //     std::cout << "buf: " << buf << std::endl;
-    // }
-    // // TODO: cgi execute 끝나면 클라이언트 소켓 WRITE flag 세워주기.
-    // this->closeFdAndSetClientOnWriteFdSet(fd);
-    // Log::trace("< forkAndExecuteCgi");
