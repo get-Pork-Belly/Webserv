@@ -421,7 +421,7 @@ Response::appendAllowHeader(std::string& headers)
         // "PATCH",
     };
 
-    headers += "Allow: ";
+    headers += "Allow:";
     if (this->isLimitExceptInLocation())
     {
         for (const std::string& method : implemented_methods)
@@ -510,18 +510,17 @@ Response::makeHeaders(Request& request)
     // headers += this->makeTransferEncodingHeader();
     // if not chunked
     this->appendContentLengthHeader(headers);
-    this->appendContentLocationHeader(headers);
     this->appendContentTypeHeader(headers);
 
     //TODO switch 문 고려
-    this->setStatusCode("405");
     std::string status_code = this->getStatusCode();
     if (status_code.compare("200") == 0)
-        this->appendLastModifiedHeader(headers);
-    else if (status_code.compare("405") == 0)
     {
-        this->appendAllowHeader(headers);
+        this->appendContentLocationHeader(headers);
+        this->appendLastModifiedHeader(headers);
     }
+    else if (status_code.compare("405") == 0)
+        this->appendAllowHeader(headers);
     else if (status_code.compare("401") == 0)
     {
         // this->appendAuthenticateHeader(headers);
