@@ -3,6 +3,8 @@
 #include "ServerManager.hpp"
 #include "Log.hpp"
 #include "UriParser.hpp"
+#include <iostream>
+#include <signal.h>
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -530,40 +532,108 @@ Server::run(int fd)
         this->acceptClient();
     else
     {
+        Log::trace(">>> write sequence");
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
-            // CLIENT READ==CLEAR
-            // if (CIG)
-            // {
-                // fd는 pipe_out
-                // write(pipe[1], ~, ~);
-                // if data ended data->CGI PROCESS가 자동으로 실행됨
-                // 데이터 넣어주는게 끝난다면, pipe_in을 세워줌
-            // }
-            Log::trace(">>> write sequence");
-            std::cout << "fd: " << fd << std::endl;
-            std::string response_message = this->makeResponseMessage(fd);
-            // std::cout << "message: " << response_message << std::endl;
-            // response_message = this->makeResponseMessage(this->_requests[fd], fd);
-            // TODO: sendResponse error handling
-            if (!(sendResponse(response_message, fd)))
-                std::cerr<<"Error: sendResponse"<<std::endl;
-            this->_server_manager->fdClr(fd, FdSet::WRITE);
-            this->_requests[fd].clear();
-            this->_responses[fd].init();
-            Log::trace("<<< write sequence");
+            if (this->_server_manager->getFdType(fd) == FdType::PIPE)
+            {
+                //NOTE: FD는 PIPE_OUT
+                std::cout << "============================" << std::endl;
+                std::cout << "cgi Open && in Write!!!!!!!!!!!!" << std::endl;
+                std::cout << "============================" << std::endl;
+                int client_fd = this->_server_manager->getConnectedFd(fd);
+                Request& request = this->_requests[client_fd];
+                Response& response = this->_responses[client_fd];
+                int content_length = request.getContentLength();
+                int transfered = request.getTransfered();
+                // const char* temp = request.getBodies().c_str();
+                char* body = ft::strdup(request.getBodies());
+                int bytes;
+                bytes = write(fd, &body[transfered], content_length);
+                free(body);
+                if (bytes > 0)
+                {
+                    transfered += bytes;
+                    request.setTransfered(transfered);
+                    if (transfered == content_length)
+                    {
+                        this->_server_manager->fdClr(fd, FdSet::WRITE);
+                        this->_server_manager->setClosedFdOnFdTable(fd);
+                        this->_server_manager->updateFdMax(fd);
+                        this->_server_manager->fdSet(response.getPipeIn(), FdSet::READ);
+                        close(fd); // pipe_out close
+                    }
+                }
+                else if (bytes == 0)
+                {
+                    throw "write error";
+                    // close
+                    // WriteErrorException -> 500
+                }
+                else
+                {
+                    throw "write error";
+                    // server internal error -> 500
+                }
+            }
+            else
+            {
+                std::cout << "fd: " << fd << std::endl;
+                std::string response_message = this->makeResponseMessage(fd);
+                // std::cout << "message: " << response_message << std::endl;
+                // response_message = this->makeResponseMessage(this->_requests[fd], fd);
+                // TODO: sendResponse error handling
+                if (!(sendResponse(response_message, fd)))
+                    std::cerr<<"Error: sendResponse"<<std::endl;
+                this->_server_manager->fdClr(fd, FdSet::WRITE);
+                this->_requests[fd].clear();
+                this->_responses[fd].init();
+                Log::trace("<<< write sequence");
+            }
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
             try
             {
-                // isCGIPipeIn, isCGIPipeOut 두가지 함수를 만들어야 할 듯
-                if (this->isCGIPipe(fd)) // 여기서 READ할 건 두가지다. 
+                if (this->isCGIPipe(fd)) 
                 {
-                    //NOTE: 여기서 READ는 두 경우
-                    // 1. CGI 프로세스가 STDOUT으로 넣어준 데이터를 부모가 READ
-                    // this->executeCgiAndReadCgiPipe(fd);
-                    this->_server_manager->fdClr(fd, FdSet::READ);
+                    //NOTE: 여기로 들어온 FD는 파이프_인 이지만 실제로 read 할 것은 client_Fd
+                    std::cout << "==========================" << std::endl;
+                    std::cout << "READ in cgi pipe!!!!!!!!!!!!!!!!!" << std::endl;
+                    std::cout << "==========================" << std::endl;
+                    //TODO: 변수화
+                    usleep(30000);
+                    int client_fd = this->_server_manager->getConnectedFd(fd);
+                    char buf[BUFFER_SIZE + 1];
+                    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+                    Response& response = this->_responses[client_fd];
+                    int pipe_in = response.getPipeIn();
+                    int bytes = read(pipe_in, buf, BUFFER_SIZE + 1);
+                    if (bytes > 0)
+                    {
+                        std::cout << "--------------- buf ------------" << std::endl;
+                        std::cout << buf << std::endl;
+                        std::cout << "--------------- buf ------------" << std::endl;
+                        //TODO 파이프에 맞게 수정하기
+                        // this->closeFdAndSetClientOnWriteFdSet(pipe_in);
+                        this->_server_manager->fdClr(pipe_in, FdSet::WRITE);
+                        this->_server_manager->setClosedFdOnFdTable(pipe_in);
+                        this->_server_manager->updateFdMax(pipe_in);
+                        //TODO: Write 시점 찾기
+                        // this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+                        close(pipe_in);
+                        int status;
+                        // 매크로함수 써서 그럴듯하게 만들기
+                        waitpid(response.getCgiPid(), &status, 0);
+                    }
+                    else if (bytes == 0)
+                    {
+                        std::cout << "read end!" << std::endl;
+                    }
+                    else
+                    {
+                        throw("cgi read error");
+                    }
                 }
                 else if (this->isStaticResource(fd))
                 {
@@ -768,7 +838,7 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
     case ResType::CGI:
         std::cout << "CGIpipe will be opened" << std::endl;
         this->openCgiPipe(fd); //fd: client fd, cgiPipe[2]
-        forkAndExecuteCgi(fd);
+        this->forkAndExecuteCgi(fd);
         // write flag -> CGI 프로세스에 스탠다드 인(pipe[1])으로 데이터를 넣어줌.
         // Client fd에 대해서 clear 해준다.
         break ;
@@ -800,6 +870,8 @@ Server::openCgiPipe(int fd)
     //NOTE 인자로 들어오는 fd는 client_fd다.
     Response& response = this->_responses[fd];
     int pipe_fd[2];
+
+    //TODO: 예외객체
     if (pipe(pipe_fd) < 0)
         return ;
     //NOTE pipeFd[0] -> CGI가 데이터를 읽어올 곳.
@@ -981,7 +1053,13 @@ Server::forkAndExecuteCgi(int fd)
         exit(ret);
     }
     else
-        this->_server_manager->fdClr(fd, FdSet::READ);
+    {
+        response.setCgiPid(pid);
+        // this->_server_manager->fdClr(fd, FdSet::READ);
+        //TODO double free
+        // free(argv);
+        // free(envp);
+    }
 }
 
     // Log::trace("> forkAndExecuteCgi");
