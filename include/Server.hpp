@@ -125,6 +125,15 @@ public:
         SendErrorCodeToClientException();
         virtual const char* what() const throw();
     };
+    class MustReadirectException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _res;
+        std::string _msg;
+    public:
+        MustReadirectException(Response& res);
+        virtual const char* what() const throw();
+    };
     class CannotOpenDirectoryException : public SendErrorCodeToClientException
     {
     private:

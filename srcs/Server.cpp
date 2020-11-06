@@ -125,6 +125,18 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
+Server::MustReadirectException::MustReadirectException(Response& res)
+: _res(res), _msg("MustReadirectException: [CODE " + res.findRedirectStatusCode() + "]")
+{
+    this->_res.setStatusCode(res.findRedirectStatusCode());
+}
+
+const char*
+Server::MustReadirectException::what() const throw()
+{
+    return (this->_msg.c_str());
+}
+
 Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num)
 : _res(res), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
 {
@@ -368,7 +380,9 @@ Server::makeResponseMessage(int fd)
 
     //TODO: parsing 할 때 method 허용여부 확인하여 throw, response 꾸미기
     // response.applyAndCheckRequest(request, this);
-    response.makeBody(request);
+
+    if (response.isRedirection(response.getStatusCode()) == false)
+        response.makeBody(request);
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
     Log::trace("< makeResponseMessage");
@@ -680,7 +694,7 @@ Server::checkAndSetResourceType(int fd)
         response.setResourceType(ResType::CGI);
         return ;
     }
-        
+
     DIR* dir_ptr;
     if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) == NULL)
     {
@@ -743,6 +757,10 @@ Server::processResponseBody(int fd)
 
     std::cout<<"uri: "<<this->_requests[fd].getUri()<<std::endl;
     this->findResourceAbsPath(fd);
+
+    if (this->_responses[fd].isLocationToBeRedirected())
+        throw (MustReadirectException(this->_responses[fd]));
+
     this->checkAndSetResourceType(fd);
     if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
         this->setResourceAbsPathAsIndex(fd);
