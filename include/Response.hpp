@@ -30,6 +30,8 @@ private:
     int _pipe_in;
     int _pipe_out;
 
+    int _cig_pid;
+
     std::string _path;
     std::string _uri_extension;
 
@@ -63,6 +65,7 @@ public:
     int getPipeOut() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
+    int getCgiPid() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -77,6 +80,8 @@ public:
 
     void setPipeIn(const int pipe_in);
     void setPipeOut(const int pipe_out);
+
+    void setCgiPid(const int pid);
 
     /* Exception */
 public:

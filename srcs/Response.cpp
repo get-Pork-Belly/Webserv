@@ -142,6 +142,12 @@ Response::getPipeOut() const
     return (this->_pipe_out);
 }
 
+int
+Response::getCgiPid() const
+{
+    return (this->_cig_pid);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -213,6 +219,12 @@ Response::setPipeOut(const int pipe_out)
     this->_pipe_out = pipe_out;
 }
 
+void
+Response::setCgiPid(const int pid)
+{
+    this->_cig_pid = pid;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -245,6 +257,8 @@ Response::init()
     this->_resource_abs_path = "";
     this->_route = "";
     this->_directory_entry = "";
+    this->_pipe_in = 0;
+    this->_pipe_out = 0;
 }
 
 void
