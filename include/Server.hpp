@@ -99,6 +99,8 @@ public:
     void setResourceAbsPathAsIndex(int fd);
     void processResponseBody(int fd);
     void preprocessResponseBody(int fd, ResType& res_type);
+    void sendDataToCgi(int fd);
+    void receiveDataFromCgi(int fd);
 
     void readStaticResource(int fd);
 

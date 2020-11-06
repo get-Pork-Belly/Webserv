@@ -260,7 +260,15 @@ Server::receiveRequestWithoutBody(int fd)
         }
     }
     else if (bytes == 0)
+    {
+        std::cout << "========================================≠" << std::endl;
+        std::cout << "========================================≠" << std::endl;
+        std::cout << "HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+        std::cout << "========================================≠" << std::endl;
+        std::cout << "========================================≠" << std::endl;
+        std::cout << "========================================≠" << std::endl;
         this->closeClientSocket(fd);
+    }
     else
         throw (ReadErrorException());
     Log::trace("< receiveRequestWithoutBody");
@@ -439,9 +447,12 @@ Server::isStaticResource(int fd) const
     Log::trace("> isStaticResource");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::RESOURCE)
+    {
+        Log::trace("< isStaticResource");
         return true;
-    return false;
+    }
     Log::trace("< isStaticResource");
+    return false;
 }
 
 bool
@@ -451,9 +462,10 @@ Server::isCGIPipe(int fd) const
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::PIPE)
     {
-        return true;
         Log::trace("< isCGIPipe return true");
+        return true;
     }
+    Log::trace("< isCGIPipe return true");
     return false;
 }
 
@@ -526,56 +538,99 @@ Server::acceptClient()
 }
 
 void
+Server::sendDataToCgi(int fd)
+{
+    //NOTE: FD는 PIPE_OUT
+    int bytes = 0;
+    int client_fd = this->_server_manager->getConnectedFd(fd);
+    Request& request = this->_requests[client_fd];
+    Response& response = this->_responses[client_fd];
+    int content_length = request.getContentLength();
+    int transfered = request.getTransfered();
+    //NOTE 이 부분에서 문제가 속도 이슈가 생길수도 있음.
+    char* body = ft::strdup(request.getBodies());
+
+    bytes = write(fd, &body[transfered], content_length);
+    free(body);
+    if (bytes > 0)
+    {
+        transfered += bytes;
+        request.setTransfered(transfered);
+        if (transfered == content_length)
+        {
+            this->_server_manager->fdClr(fd, FdSet::WRITE);
+            this->_server_manager->setClosedFdOnFdTable(fd);
+            this->_server_manager->updateFdMax(fd);
+            this->_server_manager->fdSet(response.getPipeIn(), FdSet::READ);
+            close(fd); // pipe_out close
+        }
+    }
+    else if (bytes == 0)
+    {
+        throw "write error"; //error 500
+    }
+    else
+    {
+        throw "write error"; //error 500
+    }
+}
+
+void
+Server::receiveDataFromCgi(int fd)
+{
+    //NOTE: 여기로 들어온 FD는 파이프_인 이지만 실제로 read 할 것은 client_Fd
+    std::cout << "==========================" << std::endl;
+    std::cout << "READ in cgi pipe!!!!!!!!!!!!!!!!!" << std::endl;
+    std::cout << "==========================" << std::endl;
+    //TODO: 변수화
+    usleep(30000);
+    int client_fd = this->_server_manager->getConnectedFd(fd);
+    char buf[BUFFER_SIZE + 1];
+    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+    Response& response = this->_responses[client_fd];
+    int pipe_in = response.getPipeIn();
+    int bytes = read(pipe_in, buf, BUFFER_SIZE + 1);
+    std::cout << "==========================" << std::endl;
+    std::cout << "READ " << std::endl;
+    std::cout << "==========================" << std::endl;
+    if (bytes > 0)
+    {
+        //NOTE: CLIENT가 바로 끊긴다. 이유 찾자.
+        response.setBody(buf);
+        //TODO 파이프에 맞게 수정하기
+        // this->closeFdAndSetClientOnWriteFdSet(pipe_in);
+        this->_server_manager->fdClr(pipe_in, FdSet::READ);
+        this->_server_manager->setClosedFdOnFdTable(pipe_in);
+        this->_server_manager->updateFdMax(pipe_in);
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+        //TODO: Write 시점 찾기
+        close(pipe_in);
+        int status;
+        // 매크로함수 써서 그럴듯하게 만들기
+        waitpid(response.getCgiPid(), &status, 0);
+    }
+    else if (bytes == 0)
+    {
+        std::cout << "read end!" << std::endl;
+    }
+    else
+    {
+        throw("cgi read error");
+    }
+}
+
+void
 Server::run(int fd)
 {
     if (isServerSocket(fd))
         this->acceptClient();
     else
     {
-        Log::trace(">>> write sequence");
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
-            if (this->_server_manager->getFdType(fd) == FdType::PIPE)
-            {
-                //NOTE: FD는 PIPE_OUT
-                std::cout << "============================" << std::endl;
-                std::cout << "cgi Open && in Write!!!!!!!!!!!!" << std::endl;
-                std::cout << "============================" << std::endl;
-                int client_fd = this->_server_manager->getConnectedFd(fd);
-                Request& request = this->_requests[client_fd];
-                Response& response = this->_responses[client_fd];
-                int content_length = request.getContentLength();
-                int transfered = request.getTransfered();
-                // const char* temp = request.getBodies().c_str();
-                char* body = ft::strdup(request.getBodies());
-                int bytes;
-                bytes = write(fd, &body[transfered], content_length);
-                free(body);
-                if (bytes > 0)
-                {
-                    transfered += bytes;
-                    request.setTransfered(transfered);
-                    if (transfered == content_length)
-                    {
-                        this->_server_manager->fdClr(fd, FdSet::WRITE);
-                        this->_server_manager->setClosedFdOnFdTable(fd);
-                        this->_server_manager->updateFdMax(fd);
-                        this->_server_manager->fdSet(response.getPipeIn(), FdSet::READ);
-                        close(fd); // pipe_out close
-                    }
-                }
-                else if (bytes == 0)
-                {
-                    throw "write error";
-                    // close
-                    // WriteErrorException -> 500
-                }
-                else
-                {
-                    throw "write error";
-                    // server internal error -> 500
-                }
-            }
+            Log::trace(">>> write sequence");
+            if (this->isCGIPipe(fd))
+                sendDataToCgi(fd);
             else
             {
                 std::cout << "fd: " << fd << std::endl;
@@ -588,57 +643,17 @@ Server::run(int fd)
                 this->_server_manager->fdClr(fd, FdSet::WRITE);
                 this->_requests[fd].clear();
                 this->_responses[fd].init();
-                Log::trace("<<< write sequence");
             }
+            Log::trace("<<< write sequence");
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
             try
             {
                 if (this->isCGIPipe(fd)) 
-                {
-                    //NOTE: 여기로 들어온 FD는 파이프_인 이지만 실제로 read 할 것은 client_Fd
-                    std::cout << "==========================" << std::endl;
-                    std::cout << "READ in cgi pipe!!!!!!!!!!!!!!!!!" << std::endl;
-                    std::cout << "==========================" << std::endl;
-                    //TODO: 변수화
-                    usleep(30000);
-                    int client_fd = this->_server_manager->getConnectedFd(fd);
-                    char buf[BUFFER_SIZE + 1];
-                    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-                    Response& response = this->_responses[client_fd];
-                    int pipe_in = response.getPipeIn();
-                    int bytes = read(pipe_in, buf, BUFFER_SIZE + 1);
-                    if (bytes > 0)
-                    {
-                        std::cout << "--------------- buf ------------" << std::endl;
-                        std::cout << buf << std::endl;
-                        std::cout << "--------------- buf ------------" << std::endl;
-                        //TODO 파이프에 맞게 수정하기
-                        // this->closeFdAndSetClientOnWriteFdSet(pipe_in);
-                        this->_server_manager->fdClr(pipe_in, FdSet::WRITE);
-                        this->_server_manager->setClosedFdOnFdTable(pipe_in);
-                        this->_server_manager->updateFdMax(pipe_in);
-                        //TODO: Write 시점 찾기
-                        // this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-                        close(pipe_in);
-                        int status;
-                        // 매크로함수 써서 그럴듯하게 만들기
-                        waitpid(response.getCgiPid(), &status, 0);
-                    }
-                    else if (bytes == 0)
-                    {
-                        std::cout << "read end!" << std::endl;
-                    }
-                    else
-                    {
-                        throw("cgi read error");
-                    }
-                }
+                    receiveDataFromCgi(fd);
                 else if (this->isStaticResource(fd))
-                {
                     this->readStaticResource(fd);
-                }
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
@@ -697,6 +712,19 @@ Server::closeFdAndSetClientOnWriteFdSet(int fd)
     this->_server_manager->fdSet(client_socket, FdSet::WRITE);
     close(fd);
 }
+
+// void
+// Server::closeFdAndSetFd(int clear_fd, int set_fd)
+// {
+// 	const FdType& origin_type = this->_server_manager->getFdTable()[clear_fd].first;
+//     Log::closeFd(*this, client_socket, type, fd);
+
+// 	this->_server_manager->fdClr(clear_fd, FdSet::READ);
+// 	this->_server_manager->setClosedFdOnFdTable(clear_fd);
+// 	this->_server_manager->updateFdMax(clear_fd);
+// 	this->_server_manager->fdSet(set_fd, FdSet::WRITE);
+// 	close(clear_fd);
+// }
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
 void
