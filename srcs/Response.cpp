@@ -447,6 +447,25 @@ Response::appendAllowHeader(std::string& headers)
 }
 
 void
+Response::appendContentLanguageHeader(std::string& headers)
+{
+    //NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면 생략한다.
+    std::string extension = this->getUriExtension();
+    if (!(this->isExtensionExist(extension) 
+            && this->isExtensionInMimeTypeTable(extension)
+            && this->getMimeTypeTable().at(extension).compare("text/html") == 0))
+        return ;
+
+    std::string lang_meta_data = this->getHtmlLangMetaData();
+    if (lang_meta_data != "")
+    {
+        headers += "Content-Language: ";
+        headers += lang_meta_data;
+        headers += "\r\n";
+    }
+}
+
+void
 Response::appendContentLengthHeader(std::string& headers)
 {
     headers += "Content-Length: ";
@@ -518,6 +537,7 @@ Response::makeHeaders(Request& request)
     // if chunked 
     // headers += this->makeTransferEncodingHeader();
     // if not chunked
+    this->appendContentLanguageHeader(headers);
     this->appendContentLengthHeader(headers);
     this->appendContentTypeHeader(headers);
 
@@ -537,9 +557,7 @@ Response::makeHeaders(Request& request)
         // this->appendAuthenticateHeader(headers);
     }
     else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
-    {
         this->appendLocationHeader(headers, request);
-    }
     else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
             || status_code.compare("301") == 0)
     {
@@ -637,6 +655,30 @@ Response::getRedirectUri(const Request& request)
 
     Log::trace("< getRedirectUri");
     return (requested_uri);
+}
+
+std::string
+Response::getHtmlLangMetaData() const
+{
+    const std::string& body = this->getBody();
+
+    size_t html_tag_start;
+    size_t html_tag_end;
+    if ((html_tag_start = body.find("<html ")) == std::string::npos)
+        return ("");
+    if ((html_tag_end = body.find(">", html_tag_start)) == std::string::npos)
+        return ("");
+
+    std::string html_tag_block = body.substr(html_tag_start, html_tag_end - html_tag_start + 1);
+
+    size_t lang_meta_data_start;
+    size_t lang_meta_data_end;
+    if ((lang_meta_data_start  = html_tag_block.find("lang=\"")) == std::string::npos)
+        return ("");
+    if ((lang_meta_data_end = html_tag_block.find("\"", lang_meta_data_start + 6)) == std::string::npos)
+        return ("");
+
+    return (html_tag_block.substr(lang_meta_data_start + 6, lang_meta_data_end - (lang_meta_data_start + 6)));
 }
 
 void

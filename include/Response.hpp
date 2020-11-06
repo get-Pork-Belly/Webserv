@@ -76,6 +76,7 @@ public:
     std::string getRedirectStatusCode();
     std::string getRedirectUri(const Request& request);
     std::string getLastModifiedDateTimeOfResource() const;
+    std::string getHtmlLangMetaData() const;
 
     void init();
     void initStatusCodeTable();
@@ -93,6 +94,7 @@ public:
 
     /* Entity header */
     void appendAllowHeader(std::string& headers);
+    void appendContentLanguageHeader(std::string& headers);
     void appendContentLengthHeader(std::string& headers);
     void appendContentLocationHeader(std::string& headers);
     void appendContentTypeHeader(std::string& headers);
