@@ -532,6 +532,14 @@ Server::run(int fd)
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
+            // CLIENT READ==CLEAR
+            // if (CIG)
+            // {
+                // fd는 pipe_out
+                // write(pipe[1], ~, ~);
+                // if data ended data->CGI PROCESS가 자동으로 실행됨
+                // 데이터 넣어주는게 끝난다면, pipe_in을 세워줌
+            // }
             Log::trace(">>> write sequence");
             std::cout << "fd: " << fd << std::endl;
             std::string response_message = this->makeResponseMessage(fd);
@@ -549,9 +557,12 @@ Server::run(int fd)
         {
             try
             {
-                if (this->isCGIPipe(fd))
+                // isCGIPipeIn, isCGIPipeOut 두가지 함수를 만들어야 할 듯
+                if (this->isCGIPipe(fd)) // 여기서 READ할 건 두가지다. 
                 {
-                    this->executeCgiAndReadCgiPipe(fd);
+                    //NOTE: 여기서 READ는 두 경우
+                    // 1. CGI 프로세스가 STDOUT으로 넣어준 데이터를 부모가 READ
+                    // this->executeCgiAndReadCgiPipe(fd);
                     this->_server_manager->fdClr(fd, FdSet::READ);
                 }
                 else if (this->isStaticResource(fd))
@@ -756,7 +767,10 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
         break ;
     case ResType::CGI:
         std::cout << "CGIpipe will be opened" << std::endl;
-        this->openCgiPipe(fd);
+        this->openCgiPipe(fd); //fd: client fd, cgiPipe[2]
+        forkAndExecuteCgi(fd);
+        // write flag -> CGI 프로세스에 스탠다드 인(pipe[1])으로 데이터를 넣어줌.
+        // Client fd에 대해서 clear 해준다.
         break ;
     default:
         break ;
@@ -781,28 +795,41 @@ Server::processResponseBody(int fd)
 }
 
 void
-Server::openCgiPipe(int fd) // client
+Server::openCgiPipe(int fd)
 {
-    this->_responses[fd].openCgiPipe();
-    // int cgi_pipe_fd = this->_responses[fd].getCgiPipeFd();
-    // int cgi_pipe_fd_in = this->_responses[fd].getCgiPipeFdIn();
-    int cgi_pipe_fd = this->_responses[fd].getCgiPipeFdIn();
-    // fcntl(cgi_pipe_fd_in, F_SETFL, O_NONBLOCK);
-    // fcntl(cgi_pipe_fd, F_SETFL, O_NONBLOCK);
-    // this->_server_manager->fdSet(cgi_pipe_fd, FdSet::READ);
-    this->_server_manager->setCGIPipeOnFdTable(cgi_pipe_fd, fd);
-    // this->_server_manager->updateFdMax(cgi_pipe_fd);
+    //NOTE 인자로 들어오는 fd는 client_fd다.
+    Response& response = this->_responses[fd];
+    int pipe_fd[2];
+    if (pipe(pipe_fd) < 0)
+        return ;
+    //NOTE pipeFd[0] -> CGI가 데이터를 읽어올 곳.
+    //NOTE pipeFd[1] -> 메인 프로세스가 데이터를 CGI에 넘겨줄 통로
+    //NOTE CGi 작업이 끝나면, pipeFd[1]로 데이터를 읽어오자.
 
-    executeCgiAndReadCgiPipe(cgi_pipe_fd);
+    response.setPipeIn(pipe_fd[0]);
+    response.setPipeOut(pipe_fd[1]);
+
+    //NOTE fcntl
+    fcntl(pipe_fd[0], F_SETFL, O_NONBLOCK);
+    fcntl(pipe_fd[1], F_SETFL, O_NONBLOCK);
+
+    this->_server_manager->setCGIPipeOnFdTable(pipe_fd[0], fd);
+    this->_server_manager->setCGIPipeOnFdTable(pipe_fd[1], fd);
+    this->_server_manager->updateFdMax(pipe_fd[0]);
+    this->_server_manager->updateFdMax(pipe_fd[1]);
+
+    //NOTE pipe__fd[1]에 write 플래그를 세워주자
+    this->_server_manager->fdSet(pipe_fd[1], FdSet::WRITE);
+
+
+    // executeCgiAndReadCgiPipe(pipe_fd[0]);
 }
 
 char**
-Server::makeCgiEnvp(int fd)
+Server::makeCgiEnvp(int client_fd)
 {
     Log::trace("> makeCgiEnvp");
     char** envp;
-    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
-    int client_fd = fd_table.at(fd).second;
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
     const std::map<std::string, std::string>& location_info =
         this->getLocationConfig().at(this->_responses[client_fd].getRoute());
@@ -897,85 +924,110 @@ Server::makeCgiEnvp(int fd)
 }
 
 char**
-Server::makeCgiArgv(int fd)
+Server::makeCgiArgv(int client_fd)
 {
     Log::trace("> makeCgiArgv");
     char** argv;
-    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
-    int client_fd = fd_table.at(fd).second;
-    // const std::string& body = this->_requests[client_fd].getBodies();
+    Response& response = this->_responses[client_fd];
 
     if (!(argv = (char **)malloc(sizeof(char *) * 3)))
         return (nullptr);
-
     const location_info& location_info =
             this->getLocationConfig().at(this->_responses[client_fd].getRoute());
-
-    //TODO: ft::strdup 만들기
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
         return (nullptr);
-    // if (!(argv[1] = ft::strdup(body)))
-    if (!(argv[1] = ft::strdup("/goinfre/yohlee/Webserv/www/YoupiBanane/youpi.bla")))
+    if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
         return (nullptr);
     argv[2] = nullptr;
-
     Log::trace("< makeCgiArgv");
     return (argv);
 }
 
 void
-Server::executeCgiAndReadCgiPipe(int fd)
+Server::forkAndExecuteCgi(int fd)
 {
-    Log::trace("> executeCgiAndReadCgiPipe");
+    //NOTE 인자로 들어온 fd는 client fd.
+    //1. response, request 객체를 레퍼런스로 가져온다.
+    //2. pipe_in. pipe_out, pid 변수를 만든다.
+    //3. argv, envp를 만든다.
+    //4. fork를 한다.
+    //5. pid == 0이면 dup2를 해준다. 이렇게 하면 CGI 프로세스는 데이터가 들어올 때 까지 블록된다.
+    //6. 부모프로세스에서는 현재 fd에 대해 clear를 해준다.
+
+    Response& response = this->_responses[fd];
+    // Request& request = this->_requests[fd];
+    int pipe_in = response.getPipeIn();
+    int pipe_out = response.getPipeOut();
+    char **argv = this->makeCgiArgv(fd);
+    char **envp = this->makeCgiEnvp(fd);
     pid_t pid;
-    int status;
     int ret;
-    int client_fd = this->_server_manager->getFdTable()[fd].second;
-    int in = this->_responses[client_fd].getCgiPipeFdIn();
-    int out = this->_responses[client_fd].getCgiPipeFdOut();
-    fcntl(out, F_SETFL, O_NONBLOCK);
-    fcntl(in, F_SETFL, O_NONBLOCK);
 
-    char** argv = makeCgiArgv(fd); // 1-> CGI PATH 2-> request body
-    char** envp = makeCgiEnvp(fd);
-    // std::string path(envp[6]);
-
-    pid = fork();
-    // //TODO: signal
-    if (pid < 0)
-        throw strerror(errno);
+    //TODO: Cgi Exception 만들기
+    if ((pid = fork()) < 0)
+        throw ("fork failed");
     else if (pid == 0)
     {
-        //dup2 1번을 CGI fd로 만든다.
-        if (dup2(in, 0) < 0)
-            std::cout << "dup2 0" << std::endl;
-        if (dup2(out, 1) < 0)
-            std::cout << "dup2 1" << std::endl;
-        // close(out);
+        if (dup2(pipe_in, 0) < 0)
+            throw ("dup2 STDIN error");
+        if (dup2(pipe_out, 1) < 0)
+            throw ("dup2 STDOUT error");
         if ((ret = execve(argv[0], argv, envp)) < 0)
         {
+            std::cout << "argv[0]: " << argv[0] << std::endl;
             std::cout << "execve error" << std::endl;
             exit(ret);
         }
         exit(ret);
     }
     else
-    {
-        //TODO: POST인 경우에는 STDIN으로 넣어주고, GET인 경우에는 쿼리로 넣어준다.
-        // waitpid를 해주면 안된다?
-        write(out, this->_requests[client_fd].getBodies().c_str(), this->_requests[client_fd].getBodies().length());
-        // write가 끝난 시점에 waitpid
-        waitpid(pid, &status, 0);
-        char buf[1000];
-        ft::memset((void*)buf, 0, 1000);
-        read(in, buf, 999);
-        std::cout << "buf: " << buf << std::endl;
-    }
-    // 1. pid로 for
-    // 2. 자식 프로세스에서는 cgi path, request_body, 환경변수를 인자로 넘겨서 exeve해야함.
-    // 3. 부모 프로세스에서는 cgi 실행값을 pipe에서 read하여 body에 저장할 것.
-
-    // TODO: cgi execute 끝나면 클라이언트 소켓 WRITE flag 세워주기.
-    this->closeFdAndSetClientOnWriteFdSet(fd);
-    Log::trace("< executeCgiAndReadCgiPipe");
+        this->_server_manager->fdClr(fd, FdSet::READ);
 }
+
+    // Log::trace("> forkAndExecuteCgi");
+    // pid_t pid;
+    // int status;
+    // int ret;
+    // int client_fd = this->_server_manager->getFdTable()[fd].second;
+    // int in = this->_responses[client_fd].getPipeIn();
+    // int out = this->_responses[client_fd].getCgiPipeFdOut();
+    // fcntl(out, F_SETFL, O_NONBLOCK);
+    // fcntl(in, F_SETFL, O_NONBLOCK);
+    // char** argv = makeCgiArgv(fd);
+    // char** envp = makeCgiEnvp(fd);
+
+    // pid = fork();
+    // // //TODO: signal
+    // if (pid < 0)
+    //     throw strerror(errno);
+    // else if (pid == 0)
+    // {
+    //     //dup2 1번을 CGI fd로 만든다.
+    //     if (dup2(in, 0) < 0)
+    //         std::cout << "dup2 0" << std::endl;
+    //     if (dup2(out, 1) < 0)
+    //         std::cout << "dup2 1" << std::endl;
+    //     // close(out);
+    //     if ((ret = execve(argv[0], argv, envp)) < 0)
+    //     {
+    //         std::cout << "argv[0]: " << argv[0] << std::endl;
+    //         std::cout << "execve error" << std::endl;
+    //         exit(ret);
+    //     }
+    //     exit(ret);
+    // }
+    // else
+    // {
+    //     //TODO: POST인 경우에는 STDIN으로 넣어주고, GET인 경우에는 쿼리로 넣어준다.
+    //     // waitpid를 해주면 안된다?
+    //     write(out, this->_requests[client_fd].getBodies().c_str(), this->_requests[client_fd].getBodies().length());
+    //     // write가 끝난 시점에 waitpid
+    //     waitpid(pid, &status, 0);
+    //     char buf[1000];
+    //     ft::memset((void*)buf, 0, 1000);
+    //     read(in, buf, 999);
+    //     std::cout << "buf: " << buf << std::endl;
+    // }
+    // // TODO: cgi execute 끝나면 클라이언트 소켓 WRITE flag 세워주기.
+    // this->closeFdAndSetClientOnWriteFdSet(fd);
+    // Log::trace("< forkAndExecuteCgi");
