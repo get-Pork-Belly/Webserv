@@ -106,7 +106,7 @@ public:
     /* Server run function */
     void acceptClient();
     void openCgiPipe(int fd);
-    void executeCgiAndReadCgiPipe(int fd);
+    void forkAndExecuteCgi(int fd);
     char** makeCgiArgv(int fd);
     char** makeCgiEnvp(int fd);
 
