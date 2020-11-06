@@ -72,6 +72,8 @@ public:
     bool isExtensionInMimeTypeTable(const std::string& extension) const;
     void findAndSetUriExtension();
     bool isRedirection(const std::string& status_code) const;
+    bool isLocationToBeRedirected() const;
+    std::string findRedirectStatusCode();
     std::string getLastModifiedDateTimeOfResource() const;
 
     void init();
@@ -94,6 +96,7 @@ public:
     void appendContentLocationHeader(std::string& headers);
     void appendContentTypeHeader(std::string& headers);
     void appendLastModifiedHeader(std::string& headers);
+    void appendLocationHeader(std::string& headers);
 };
 
 #endif

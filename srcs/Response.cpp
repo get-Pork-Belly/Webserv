@@ -324,17 +324,19 @@ Response::initMimeTypeTable()
 }
 
 //TODO: Response에 상태코드 세팅하게 변경하기.
-void
-Response::applyAndCheckRequest(Request& request, Server* server)
-{
-    Log::trace("> applyAndCheckRequest");
-    if (this->setRouteAndLocationInfo(request.getUri(), server))
-    {
-        if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
-            this->setStatusCode("405");
-    }
-    Log::trace("< applyAndCheckRequest");
-}
+// void
+// Response::applyAndCheckRequest(Request& request, Server* server)
+// {
+//     Log::trace("> applyAndCheckRequest");
+//     if (this->setRouteAndLocationInfo(request.getUri(), server))
+//     {
+//         if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
+//             this->setStatusCode("405");
+//         else if (this->isLocationToBeRedirected())
+//             this->setStatusCode(this->findRedirectStatusCode());
+//     }
+//     Log::trace("< applyAndCheckRequest");
+// }
 
 //NOTE
 bool
@@ -496,6 +498,15 @@ Response::appendLastModifiedHeader(std::string& headers)
     headers += "\r\n";
 }
 
+void
+Response::appendLocationHeader(std::string& headers)
+{
+    headers += "Location: ";
+    headers += "/redirect-uri";
+    // headers += this->getRedirectUri();
+    headers += "\r\n";
+}
+
 std::string
 Response::makeHeaders(Request& request)
 {
@@ -512,6 +523,8 @@ Response::makeHeaders(Request& request)
     this->appendContentLengthHeader(headers);
     this->appendContentTypeHeader(headers);
 
+    Log::printLocationInfo(this->_location_info);
+
     //TODO switch 문 고려
     std::string status_code = this->getStatusCode();
     if (status_code.compare("200") == 0)
@@ -527,12 +540,12 @@ Response::makeHeaders(Request& request)
     }
     else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
     {
-        // this->appendLocationHeader(headers);
+        this->appendLocationHeader(headers);
     }
     else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
             || status_code.compare("301") == 0)
     {
-        // this->appendRetryAfterHeader(headers);
+        // this->appendRetryAfterHeader(headers, status_code);
     }
     
     headers += "\r\n";
@@ -595,6 +608,21 @@ bool
 Response::isRedirection(const std::string& status_code) const
 {
     return (status_code[0] == '3');
+}
+
+bool
+Response::isLocationToBeRedirected() const
+{
+    return (this->_location_info.find("return") != this->_location_info.end());
+}
+
+std::string
+Response::findRedirectStatusCode()
+{
+    std::string& redirection_info = this->_location_info.at("return");
+
+    size_t index = redirection_info.find(" ");
+    return (redirection_info.substr(0, index));
 }
 
 void
