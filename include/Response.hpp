@@ -25,7 +25,11 @@ private:
     struct stat _file_info;
     ResType _resource_type;
     std::string _body;
-    int _cgi_pipe[2];
+
+    // int _cgi_pipe[2];
+    int _pipe_in;
+    int _pipe_out;
+
     std::string _path;
     std::string _uri_extension;
 
@@ -55,8 +59,8 @@ public:
     const std::string& getBody() const;
     const std::string& getPath() const;
     // int getCgiPipeFd() const;
-    int getCgiPipeFdIn() const;
-    int getCgiPipeFdOut() const;
+    int getPipeIn() const;
+    int getPipeOut() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
 
@@ -70,6 +74,10 @@ public:
     void setPath(const std::string& path);
     void setUriExtension(const std::string& extension);
     // void setMessageBody();
+
+    void setPipeIn(const int pipe_in);
+    void setPipeOut(const int pipe_out);
+
     /* Exception */
 public:
     class CannotOpenCgiPipeException : public SendErrorCodeToClientException
@@ -100,7 +108,6 @@ public:
 
     void applyAndCheckRequest(Request& request, Server* server);
 
-    void openCgiPipe();
     void appendBody(char *buf);
 
     /* General header */

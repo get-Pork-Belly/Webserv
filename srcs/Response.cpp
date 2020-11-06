@@ -112,24 +112,6 @@ Response::getBody() const
     return (this->_body);
 }
 
-// int
-// Response::getCgiPipeFd() const
-// {
-//     return (this->_cgi_pipe[1]);
-// }
-
-int
-Response::getCgiPipeFdOut() const
-{
-    return (this->_cgi_pipe[1]);
-}
-
-int
-Response::getCgiPipeFdIn() const
-{
-    return (this->_cgi_pipe[0]);
-}
-
 const std::string&
 Response::getPath() const
 {
@@ -146,6 +128,18 @@ const std::string&
 Response::getUriExtension() const
 {
     return (this->_uri_extension);
+}
+
+int
+Response::getPipeIn() const
+{
+    return (this->_pipe_in);
+}
+
+int
+Response::getPipeOut() const
+{
+    return (this->_pipe_out);
 }
 
 /*============================================================================*/
@@ -205,6 +199,18 @@ void
 Response::setUriExtension(const std::string& extension)
 {
     this->_uri_extension = extension;
+}
+
+void
+Response::setPipeIn(const int pipe_in)
+{
+    this->_pipe_in = pipe_in;
+}
+
+void
+Response::setPipeOut(const int pipe_out)
+{
+    this->_pipe_out = pipe_out;
 }
 
 /*============================================================================*/
@@ -622,14 +628,6 @@ bool
 Response::isRedirection(const std::string& status_code) const
 {
     return (status_code[0] == '3');
-}
-
-void
-Response::openCgiPipe()
-{
-    if (pipe(this->_cgi_pipe) == -1)
-        throw (CannotOpenCgiPipeException(*this));
-    // close(this->_cgi_pipe[1]); // cgi_pipe[0] == cgi_pipe[SIDE_OUT] 이라고 생각하자.. 헷갈리니 메모해둠.
 }
 
 void
