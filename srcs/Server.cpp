@@ -260,15 +260,7 @@ Server::receiveRequestWithoutBody(int fd)
         }
     }
     else if (bytes == 0)
-    {
-        std::cout << "========================================≠" << std::endl;
-        std::cout << "========================================≠" << std::endl;
-        std::cout << "HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-        std::cout << "========================================≠" << std::endl;
-        std::cout << "========================================≠" << std::endl;
-        std::cout << "========================================≠" << std::endl;
         this->closeClientSocket(fd);
-    }
     else
         throw (ReadErrorException());
     Log::trace("< receiveRequestWithoutBody");
@@ -324,6 +316,7 @@ Server::clearRequestBuffer(int fd)
 void
 Server::receiveRequestChunkedBody(int fd)
 {
+    Log::trace("> receiveRequestChunkedBody");
     int bytes;
     char buf[BUFFER_SIZE + 1];
     Request& req = this->_requests[fd];
@@ -338,6 +331,7 @@ Server::receiveRequestChunkedBody(int fd)
         this->closeClientSocket(fd);
     else
         throw (ReadErrorException());
+    Log::trace("< receiveRequestChunkedBody");
 }
 
 void
@@ -405,12 +399,22 @@ Server::sendResponse(const std::string& response_message, int fd)
 bool
 Server::isFdManagedByServer(int fd) const
 {
+    // Log::trace("> isFdManagedByServer");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    // std::cout << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
+    // std::cout << "Fd: " << fd << std::endl;
 
     if (fd_table[fd].first == FdType::CLIENT_SOCKET)
+    {
+        // Log::trace("< isFdManagedByServer");
         return (isClientOfServer(fd));
+    }
     else if (fd_table[fd].first == FdType::RESOURCE || fd_table[fd].first == FdType::PIPE)
+    {
+        // Log::trace("< isFdManagedByServer");
         return (isClientOfServer(fd_table[fd].second));
+    }
+    // Log::trace("< isFdManagedByServer");
     return (false);
 }
 
@@ -424,6 +428,7 @@ Server::isClientOfServer(int fd) const
 bool
 Server::isServerSocket(int fd) const
 {
+    Log::trace("> isServerSocket");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::SERVER_SOCKET)
         return true;
@@ -436,8 +441,11 @@ Server::isClientSocket(int fd) const
     Log::trace("> isClientSocket");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::CLIENT_SOCKET)
+    {
+        Log::trace("< isClientSocket return true");
         return true;
-    Log::trace("< isClientSocket");
+    }
+    Log::trace("< isClientSocket return false");
     return false;
 }
 
@@ -448,10 +456,10 @@ Server::isStaticResource(int fd) const
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::RESOURCE)
     {
-        Log::trace("< isStaticResource");
+        Log::trace("< isStaticResource return true");
         return true;
     }
-    Log::trace("< isStaticResource");
+    Log::trace("< isStaticResource return false");
     return false;
 }
 
@@ -465,7 +473,7 @@ Server::isCGIPipe(int fd) const
         Log::trace("< isCGIPipe return true");
         return true;
     }
-    Log::trace("< isCGIPipe return true");
+    Log::trace("< isCGIPipe return false");
     return false;
 }
 
@@ -503,23 +511,37 @@ Server::isAutoIndexOn(int fd)
 bool
 Server::isCgiUri(int fd, const std::string& extension)
 {
+    Log::trace("> isCgiUri");
+
     if (extension == "")
+    {
+        Log::trace("< isCgiUri return false");
         return (false);
+    }
 
     const location_info& location_info = this->_responses[fd].getLocationInfo();
     location_info::const_iterator it = location_info.find("cgi");
     if (it == location_info.end())
+    {
+        Log::trace("< isCgiUri return false");
         return (false);
+    }
 
     const std::string& cgi = it->second;
     if (cgi.find(extension) == std::string::npos)
+    {
+        Log::trace("< isCgiUri return false");
         return (false);
+    }
+
+    Log::trace("< isCgiUri return true");
     return (true);
 }
 
 void
 Server::acceptClient()
 {
+    Log::trace("> acceptClient");
     int client_socket;
     struct sockaddr_in client_address;
     socklen_t client_len = sizeof(client_address);
@@ -535,21 +557,27 @@ Server::acceptClient()
     }
     else
         std::cerr<<"Accept error"<<std::endl;
+    Log::trace("< acceptClient");
 }
 
 void
 Server::sendDataToCgi(int fd)
 {
     //NOTE: FD는 PIPE_OUT
+    Log::trace("> sendDataToCgi");
+
     int bytes = 0;
     int client_fd = this->_server_manager->getConnectedFd(fd);
+    int content_length;
+    int transfered;
+    char* body;
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
-    int content_length = request.getContentLength();
-    int transfered = request.getTransfered();
-    //NOTE 이 부분에서 문제가 속도 이슈가 생길수도 있음.
-    char* body = ft::strdup(request.getBodies());
 
+    content_length = request.getContentLength();
+    transfered = request.getTransfered();
+    //NOTE 이 부분에서 문제가 속도 이슈가 생길수도 있음.
+    body = ft::strdup(request.getBodies());
     bytes = write(fd, &body[transfered], content_length);
     free(body);
     if (bytes > 0)
@@ -557,66 +585,46 @@ Server::sendDataToCgi(int fd)
         transfered += bytes;
         request.setTransfered(transfered);
         if (transfered == content_length)
-        {
-            this->_server_manager->fdClr(fd, FdSet::WRITE);
-            this->_server_manager->setClosedFdOnFdTable(fd);
-            this->_server_manager->updateFdMax(fd);
-            this->_server_manager->fdSet(response.getPipeIn(), FdSet::READ);
-            close(fd); // pipe_out close
-        }
+            this->closeFdAndSetFd(fd, FdSet::WRITE, response.getPipeIn(), FdSet::READ);
     }
     else if (bytes == 0)
-    {
         throw "write error"; //error 500
-    }
     else
-    {
         throw "write error"; //error 500
-    }
+
+    Log::trace("< sendDataToCgi");
 }
 
 void
 Server::receiveDataFromCgi(int fd)
 {
-    //NOTE: 여기로 들어온 FD는 파이프_인 이지만 실제로 read 할 것은 client_Fd
-    std::cout << "==========================" << std::endl;
-    std::cout << "READ in cgi pipe!!!!!!!!!!!!!!!!!" << std::endl;
-    std::cout << "==========================" << std::endl;
-    //TODO: 변수화
+    Log::trace("> receiveDataFromCgi");
     usleep(30000);
-    int client_fd = this->_server_manager->getConnectedFd(fd);
+    int status;
+    int client_fd;
+    int pipe_in;
+    int bytes;
     char buf[BUFFER_SIZE + 1];
-    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+
+    client_fd = this->_server_manager->getConnectedFd(fd);
     Response& response = this->_responses[client_fd];
-    int pipe_in = response.getPipeIn();
-    int bytes = read(pipe_in, buf, BUFFER_SIZE + 1);
-    std::cout << "==========================" << std::endl;
-    std::cout << "READ " << std::endl;
-    std::cout << "==========================" << std::endl;
+    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+
+    pipe_in = response.getPipeIn();
+    bytes = read(pipe_in, buf, BUFFER_SIZE + 1);
     if (bytes > 0)
     {
-        //NOTE: CLIENT가 바로 끊긴다. 이유 찾자.
         response.setBody(buf);
-        //TODO 파이프에 맞게 수정하기
-        // this->closeFdAndSetClientOnWriteFdSet(pipe_in);
-        this->_server_manager->fdClr(pipe_in, FdSet::READ);
-        this->_server_manager->setClosedFdOnFdTable(pipe_in);
-        this->_server_manager->updateFdMax(pipe_in);
-        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-        //TODO: Write 시점 찾기
-        close(pipe_in);
-        int status;
-        // 매크로함수 써서 그럴듯하게 만들기
+        this->closeFdAndSetFd(pipe_in, FdSet::READ, client_fd, FdSet::WRITE);
         waitpid(response.getCgiPid(), &status, 0);
     }
     else if (bytes == 0)
-    {
         std::cout << "read end!" << std::endl;
-    }
     else
     {
         throw("cgi read error");
     }
+    Log::trace("< receiveDataFromCgi");
 }
 
 void
@@ -633,7 +641,6 @@ Server::run(int fd)
                 sendDataToCgi(fd);
             else
             {
-                std::cout << "fd: " << fd << std::endl;
                 std::string response_message = this->makeResponseMessage(fd);
                 // std::cout << "message: " << response_message << std::endl;
                 // response_message = this->makeResponseMessage(this->_requests[fd], fd);
@@ -650,6 +657,7 @@ Server::run(int fd)
         {
             try
             {
+                std::cout << "Fd: " << fd << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
                 if (this->isCGIPipe(fd)) 
                     receiveDataFromCgi(fd);
                 else if (this->isStaticResource(fd))
@@ -713,18 +721,20 @@ Server::closeFdAndSetClientOnWriteFdSet(int fd)
     close(fd);
 }
 
-// void
-// Server::closeFdAndSetFd(int clear_fd, int set_fd)
-// {
-// 	const FdType& origin_type = this->_server_manager->getFdTable()[clear_fd].first;
-//     Log::closeFd(*this, client_socket, type, fd);
+void
+Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_fd_set)
+{
+    Log::trace("> closeFdAndSetFd");
+    const FdType& type = this->_server_manager->getFdTable()[clear_fd].first;
+    Log::closeFd(*this, set_fd, type, clear_fd);
 
-// 	this->_server_manager->fdClr(clear_fd, FdSet::READ);
-// 	this->_server_manager->setClosedFdOnFdTable(clear_fd);
-// 	this->_server_manager->updateFdMax(clear_fd);
-// 	this->_server_manager->fdSet(set_fd, FdSet::WRITE);
-// 	close(clear_fd);
-// }
+    this->_server_manager->fdClr(clear_fd, clear_fd_set);
+    this->_server_manager->setClosedFdOnFdTable(clear_fd);
+    this->_server_manager->updateFdMax(clear_fd);
+    this->_server_manager->fdSet(set_fd, set_fd_set);
+    close(clear_fd);
+    Log::trace("< closeFdAndSetFd");
+}
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
 void
@@ -734,31 +744,23 @@ Server::findResourceAbsPath(int fd)
     UriParser parser;
     parser.parseUri(this->_requests[fd].getUri());
     const std::string& path = parser.getPath();
-    std::cout << "=========================== " << std::endl;
-    std::cout << "path: " << path << std::endl;
-    std::cout<< "fd: " << fd << std::endl;
-    std::cout << "=========================== " << std::endl;
 
     Response& response = this->_responses[fd];
     response.setPath(path);
     response.setRouteAndLocationInfo(path, this);
 
-    std::cout << "=========================== " << std::endl;
-    std::cout << "route: " << path << std::endl;
-    std::cout<< "fd: " << fd << std::endl;
-    std::cout << "=========================== " << std::endl;
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
-    std::cout<<"in findresourceAbsPath: "<<response.getResourceAbsPath()<<std::endl;
     Log::trace("< findResourceAbsPath");
 }
 
 void 
 Server::readStaticResource(int fd)
 {
+    Log::trace("> readStaticResouce");
     // Log::trace("> readStaticResource");
     char buf[BUFFER_SIZE + 1];
     int bytes;
@@ -781,12 +783,13 @@ Server::readStaticResource(int fd)
         this->closeFdAndSetClientOnWriteFdSet(fd);
         throw (ReadErrorException());
     }
-    // Log::trace("< readStaticResource");
+    Log::trace("< readStaticResource");
 }
 
 void
 Server::openStaticResource(int fd)
 {
+    Log::trace("> openStaticResource");
     int resource_fd;
     const std::string& path = this->_responses[fd].getResourceAbsPath();
     struct stat tmp;
@@ -803,6 +806,7 @@ Server::openStaticResource(int fd)
     }
     else
         throw OpenResourceErrorException(this->_responses[fd], errno);
+    Log::trace("< openStaticResource");
 }
 
 void
@@ -817,7 +821,6 @@ Server::checkAndSetResourceType(int fd)
         response.setResourceType(ResType::CGI);
         return ;
     }
-        
     DIR* dir_ptr;
     if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) == NULL)
     {
@@ -895,6 +898,7 @@ Server::processResponseBody(int fd)
 void
 Server::openCgiPipe(int fd)
 {
+    Log::trace("> openCgiPipe");
     //NOTE 인자로 들어오는 fd는 client_fd다.
     Response& response = this->_responses[fd];
     int pipe_fd[2];
@@ -913,6 +917,7 @@ Server::openCgiPipe(int fd)
     fcntl(pipe_fd[0], F_SETFL, O_NONBLOCK);
     fcntl(pipe_fd[1], F_SETFL, O_NONBLOCK);
 
+
     this->_server_manager->setCGIPipeOnFdTable(pipe_fd[0], fd);
     this->_server_manager->setCGIPipeOnFdTable(pipe_fd[1], fd);
     this->_server_manager->updateFdMax(pipe_fd[0]);
@@ -920,9 +925,7 @@ Server::openCgiPipe(int fd)
 
     //NOTE pipe__fd[1]에 write 플래그를 세워주자
     this->_server_manager->fdSet(pipe_fd[1], FdSet::WRITE);
-
-
-    // executeCgiAndReadCgiPipe(pipe_fd[0]);
+    Log::trace("< openCgiPipe");
 }
 
 char**
@@ -1046,14 +1049,7 @@ Server::makeCgiArgv(int client_fd)
 void
 Server::forkAndExecuteCgi(int fd)
 {
-    //NOTE 인자로 들어온 fd는 client fd.
-    //1. response, request 객체를 레퍼런스로 가져온다.
-    //2. pipe_in. pipe_out, pid 변수를 만든다.
-    //3. argv, envp를 만든다.
-    //4. fork를 한다.
-    //5. pid == 0이면 dup2를 해준다. 이렇게 하면 CGI 프로세스는 데이터가 들어올 때 까지 블록된다.
-    //6. 부모프로세스에서는 현재 fd에 대해 clear를 해준다.
-
+    Log::trace("> forkAndExecuteCgi");
     Response& response = this->_responses[fd];
     // Request& request = this->_requests[fd];
     int pipe_in = response.getPipeIn();
@@ -1087,4 +1083,5 @@ Server::forkAndExecuteCgi(int fd)
         ft::doubleFree(argv);
         ft::doubleFree(envp);
     }
+    Log::trace("< forkAndExecuteCgi");
 }
