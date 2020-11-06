@@ -21,6 +21,7 @@ private:
     ReqInfo _info;
     bool _is_buffer_left;
     std::string _ip_address;
+    int _transfered;
 
 public:
     /* Constructor */
@@ -42,6 +43,8 @@ public:
     const ReqInfo& getReqInfo() const;
     bool getIsBufferLeft() const;
     const std::string& getIpAddress() const;
+    int getContentLength();
+    int getTransfered() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -54,6 +57,7 @@ public:
     void setReqInfo(const ReqInfo& info);
     void setIsBufferLeft(const bool& is_left_buffer);
     void setIpAddress(const std::string& ip_address);
+    void setTransfered(const int transfered);
 
     /* Util */
 
@@ -67,7 +71,6 @@ public:
     bool isChunkedBody() const;
     bool isContentLeftInBuffer() const;
 
-    int getContentLength();
 
     // void initMembers(std::string req_message);
 

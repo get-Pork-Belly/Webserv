@@ -12,14 +12,15 @@
 Request::Request()
 : _method(""), _uri(""), _version(""),
  _protocol(""), _bodies(""), _status_code(""),
- _info(ReqInfo::READY), _ip_address("") {}
+ _info(ReqInfo::READY), _ip_address(""), _transfered(0) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _bodies(other._bodies), 
 _status_code(other._status_code), _info(other._info),
-_is_buffer_left(false), _ip_address(other._ip_address) {}
+_is_buffer_left(false), _ip_address(other._ip_address),
+_transfered(other._transfered) {}
 
 Request&
 Request::operator=(const Request& other)
@@ -34,6 +35,7 @@ Request::operator=(const Request& other)
     this->_info = other._info;
     this->_is_buffer_left = other._is_buffer_left;
     this->_ip_address = other._ip_address;
+    this->_transfered = other._transfered;
     return (*this);
 }
 
@@ -107,6 +109,12 @@ Request::getIpAddress() const
     return (this->_ip_address);
 }
 
+int
+Request::getTransfered() const
+{
+    return (this->_transfered);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -169,6 +177,12 @@ void
 Request::setIpAddress(const std::string& ip_address)
 {
     this->_ip_address = ip_address;
+}
+
+void
+Request::setTransfered(const int transfered)
+{
+    this->_transfered = transfered;
 }
 
 /*============================================================================*/
@@ -394,6 +408,7 @@ Request::clear()
     this->_status_code = "";
     this->_bodies = "";
     this->_is_buffer_left = false;
+    this->_transfered = 0;
     this->setReqInfo(ReqInfo::READY);
 }
 
