@@ -259,6 +259,7 @@ Response::init()
     this->_directory_entry = "";
     this->_pipe_in = 0;
     this->_pipe_out = 0;
+    this->_uri_extension = "";
 }
 
 void
