@@ -556,7 +556,8 @@ Response::makeHeaders(Request& request)
     if (status_code.compare("200") == 0)
     {
         this->appendContentLocationHeader(headers);
-        this->appendLastModifiedHeader(headers);
+        if (this->getResourceType() != ResType::AUTO_INDEX)
+            this->appendLastModifiedHeader(headers);
     }
     else if (status_code.compare("405") == 0)
         this->appendAllowHeader(headers);
