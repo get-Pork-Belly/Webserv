@@ -701,16 +701,7 @@ Server::checkAndSetResourceType(int fd)
     }
 
     DIR* dir_ptr;
-    if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) == NULL)
-    {
-        if (errno == ENOTDIR)
-            response.setResourceType(ResType::STATIC_RESOURCE);
-        else if (errno == EACCES)
-            throw (CannotOpenDirectoryException(this->_responses[fd], "403", errno));
-        else if (errno == ENOENT)
-            throw (CannotOpenDirectoryException(this->_responses[fd], "404", errno));
-    }
-    else
+    if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) != NULL)
     {
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
@@ -718,7 +709,6 @@ Server::checkAndSetResourceType(int fd)
             response.setResourceType(ResType::INDEX_HTML);
         else
         {
-std::cout<<"in checkAndSetResourceType fd:"<<fd<<std::endl;
             if (this->isAutoIndexOn(fd))
             {
                 response.setResourceType(ResType::AUTO_INDEX);
@@ -727,6 +717,15 @@ std::cout<<"in checkAndSetResourceType fd:"<<fd<<std::endl;
             else
                 throw (IndexNoExistException(this->_responses[fd]));
         }
+    }
+    else
+    {
+        if (errno == ENOTDIR)
+            response.setResourceType(ResType::STATIC_RESOURCE);
+        else if (errno == EACCES)
+            throw (CannotOpenDirectoryException(this->_responses[fd], "403", errno));
+        else if (errno == ENOENT)
+            throw (CannotOpenDirectoryException(this->_responses[fd], "404", errno));
     }
 
     Log::trace("< checkAndSetResourceType");
