@@ -381,7 +381,7 @@ Server::makeResponseMessage(int fd)
     //TODO: parsing 할 때 method 허용여부 확인하여 throw, response 꾸미기
     // response.applyAndCheckRequest(request, this);
 
-    if (response.getStatusCode().compare("200") == 0)
+    if (response.getStatusCode().compare("200") != 0)
         response.setResourceType(ResType::ERROR_HTML);
 
     if (response.isRedirection(response.getStatusCode()) == false)
