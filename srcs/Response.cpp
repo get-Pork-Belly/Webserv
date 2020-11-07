@@ -197,6 +197,9 @@ Response::init()
     this->_resource_abs_path = "";
     this->_route = "";
     this->_directory_entry = "";
+    ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
+    this->_resource_type = ResType::NOT_YET_CHECKED;
+    this->_uri_extension = "";
 }
 
 void
@@ -449,6 +452,7 @@ Response::appendAllowHeader(std::string& headers)
 void
 Response::appendContentLanguageHeader(std::string& headers)
 {
+    //TODO html 외 다른 파일들의 메타데이터는 어찌 처리할지 결정할 것.
     //NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면 생략한다.
     std::string extension = this->getUriExtension();
     if (!(this->isExtensionExist(extension) 
@@ -484,13 +488,18 @@ Response::appendContentLocationHeader(std::string& headers)
 void
 Response::appendContentTypeHeader(std::string& headers)
 {
+    Log::trace("> appendContentTypeHeader");
+    std::cout<< Log::resTypeToString(this->getResourceType()) <<std::endl;
     headers += "Content-Type: ";
     std::string extension = this->getUriExtension();
     if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
         headers += this->getMimeTypeTable().at(extension);
+    else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_PAGE)
+        headers += "text/html";
     else
         headers += "application/octet-stream";
     headers += "\r\n";
+    Log::trace("< appendContentTypeHeader");
 }
 
 std::string
