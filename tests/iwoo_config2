@@ -1,6 +1,7 @@
 http { 
     include mime.types;
     root /Users/humblego/Documents/dev/team_webserv/;
+    retry_after_sec 120;
     server {
         server_name first_server;
         listen       8080;
