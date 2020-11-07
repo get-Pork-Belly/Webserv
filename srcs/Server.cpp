@@ -381,11 +381,16 @@ Server::makeResponseMessage(int fd)
     //TODO: parsing 할 때 method 허용여부 확인하여 throw, response 꾸미기
     // response.applyAndCheckRequest(request, this);
 
+    if (response.getStatusCode().compare("200") == 0)
+        response.setResourceType(ResType::ERROR_HTML);
+
     if (response.isRedirection(response.getStatusCode()) == false)
         response.makeBody(request);
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
     Log::trace("< makeResponseMessage");
+    // if (request.getMethod().compare("HEAD") == 0)
+    //     return (status_line + headers);
     return (status_line + headers + response.getBody());
 }
 
@@ -636,7 +641,7 @@ Server::findResourceAbsPath(int fd)
 void 
 Server::readStaticResource(int fd)
 {
-    // Log::trace("> readStaticResource");
+    Log::trace("> readStaticResource");
     char buf[BUFFER_SIZE + 1];
     int bytes;
     int client_socket = this->_server_manager->getFdTable()[fd].second;
@@ -658,7 +663,7 @@ Server::readStaticResource(int fd)
         this->closeFdAndSetClientOnWriteFdSet(fd);
         throw (ReadErrorException());
     }
-    // Log::trace("< readStaticResource");
+    Log::trace("< readStaticResource");
 }
 
 void
@@ -713,7 +718,7 @@ Server::checkAndSetResourceType(int fd)
             response.setResourceType(ResType::INDEX_HTML);
         else
         {
-            std::cout<<"in checkAndSetResourceType fd:"<<fd<<std::endl;
+std::cout<<"in checkAndSetResourceType fd:"<<fd<<std::endl;
             if (this->isAutoIndexOn(fd))
             {
                 response.setResourceType(ResType::AUTO_INDEX);

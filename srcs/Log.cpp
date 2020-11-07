@@ -216,8 +216,8 @@ Log::resTypeToString(const ResType& type)
     case ResType::INDEX_HTML:
         return ("INDEX_HTML");
 
-    case ResType::ERROR_PAGE:
-        return ("ERROR_PAGE");
+    case ResType::ERROR_HTML:
+        return ("ERROR_HTML");
 
     default:
         return ("NOT YET REGISTED IN resTypeToString");

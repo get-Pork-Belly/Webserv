@@ -489,7 +489,6 @@ void
 Response::appendContentTypeHeader(std::string& headers)
 {
     Log::trace("> appendContentTypeHeader");
-    std::cout<< Log::resTypeToString(this->getResourceType()) <<std::endl;
     headers += "Content-Type: ";
     std::string extension = this->getUriExtension();
     if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
