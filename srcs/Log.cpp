@@ -199,6 +199,32 @@ Log::fdTypeToString(const FdType& type)
     }
 }
 
+std::string
+Log::resTypeToString(const ResType& type)
+{
+    switch (type)
+    {
+    case ResType::STATIC_RESOURCE:
+        return ("STATIC_RESOURCE");
+
+    case ResType::CGI:
+        return ("CGI");
+
+    case ResType::AUTO_INDEX:
+        return ("AUTO_INDEX");
+
+    case ResType::INDEX_HTML:
+        return ("INDEX_HTML");
+
+    case ResType::ERROR_PAGE:
+        return ("ERROR_PAGE");
+
+    default:
+        return ("NOT YET REGISTED IN resTypeToString");
+        break;
+    }
+}
+
 void
 Log::printLocationConfig(const std::map<std::string, location_info>& loc_config)
 {
