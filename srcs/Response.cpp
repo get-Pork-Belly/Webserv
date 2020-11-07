@@ -533,6 +533,22 @@ Response::appendLocationHeader(std::string& headers, const Request& request)
     headers += "\r\n";
 }
 
+void
+Response::appendRetryAfterHeader(std::string& headers, const std::string& status_code)
+{
+    Log::trace("> appendRetryAfterHeader");
+    headers += "Retry-After: ";
+    if (status_code.compare("503") == 0)
+    {
+        //NOTE: nginx는 perl script 등을 이용하여 예상복구시간을 동적으로 계산한다. 오버디벨롭이라 판단하여 제외함.
+        headers += ft::getEstimatedUnavailableTime();
+    }
+    else
+        headers += this->getLocationInfo().at("retry_after_sec");
+    headers += "\r\n";
+    Log::trace("< appendRetryAfterHeader");
+}
+
 std::string
 Response::makeHeaders(Request& request)
 {
@@ -570,7 +586,7 @@ Response::makeHeaders(Request& request)
     else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
             || status_code.compare("301") == 0)
     {
-        // this->appendRetryAfterHeader(headers, status_code);
+        this->appendRetryAfterHeader(headers, status_code);
     }
     
     headers += "\r\n";
