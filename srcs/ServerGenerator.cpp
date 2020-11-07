@@ -247,7 +247,7 @@ ServerGenerator::initServerConfig(server_info& server_config, server_info& http_
     if (http_config.find("auth_basic") != ite)
         server_config["auth_basic"] = http_config["auth_basic"];
     if (http_config.find("auth_basic_file") != ite)
-        server_config["auth_baasic_file"] = http_config["auth_basic_file"];
+        server_config["auth_basic_file"] = http_config["auth_basic_file"];
     if (http_config.find("error_page") != ite)
         server_config["error_page"] = http_config["error_page"];
 }
