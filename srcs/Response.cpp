@@ -493,7 +493,7 @@ Response::appendContentTypeHeader(std::string& headers)
     std::string extension = this->getUriExtension();
     if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
         headers += this->getMimeTypeTable().at(extension);
-    else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_PAGE)
+    else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_HTML)
         headers += "text/html";
     else
         headers += "application/octet-stream";
