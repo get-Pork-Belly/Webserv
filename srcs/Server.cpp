@@ -260,15 +260,7 @@ Server::receiveRequestWithoutBody(int fd)
         }
     }
     else if (bytes == 0)
-    {
-        std::cout << "========================================≠" << std::endl;
-        std::cout << "========================================≠" << std::endl;
-        std::cout << "HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-        std::cout << "========================================≠" << std::endl;
-        std::cout << "========================================≠" << std::endl;
-        std::cout << "========================================≠" << std::endl;
         this->closeClientSocket(fd);
-    }
     else
         throw (ReadErrorException());
     Log::trace("< receiveRequestWithoutBody");
@@ -324,6 +316,7 @@ Server::clearRequestBuffer(int fd)
 void
 Server::receiveRequestChunkedBody(int fd)
 {
+    Log::trace("> receiveRequestChunkedBody");
     int bytes;
     char buf[BUFFER_SIZE + 1];
     Request& req = this->_requests[fd];
@@ -338,6 +331,7 @@ Server::receiveRequestChunkedBody(int fd)
         this->closeClientSocket(fd);
     else
         throw (ReadErrorException());
+    Log::trace("< receiveRequestChunkedBody");
 }
 
 void
@@ -405,12 +399,22 @@ Server::sendResponse(const std::string& response_message, int fd)
 bool
 Server::isFdManagedByServer(int fd) const
 {
+    // Log::trace("> isFdManagedByServer");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    // std::cout << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
+    // std::cout << "Fd: " << fd << std::endl;
 
     if (fd_table[fd].first == FdType::CLIENT_SOCKET)
+    {
+        // Log::trace("< isFdManagedByServer");
         return (isClientOfServer(fd));
+    }
     else if (fd_table[fd].first == FdType::RESOURCE || fd_table[fd].first == FdType::PIPE)
+    {
+        // Log::trace("< isFdManagedByServer");
         return (isClientOfServer(fd_table[fd].second));
+    }
+    // Log::trace("< isFdManagedByServer");
     return (false);
 }
 
@@ -424,6 +428,7 @@ Server::isClientOfServer(int fd) const
 bool
 Server::isServerSocket(int fd) const
 {
+    Log::trace("> isServerSocket");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::SERVER_SOCKET)
         return true;
@@ -436,8 +441,11 @@ Server::isClientSocket(int fd) const
     Log::trace("> isClientSocket");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::CLIENT_SOCKET)
+    {
+        Log::trace("< isClientSocket return true");
         return true;
-    Log::trace("< isClientSocket");
+    }
+    Log::trace("< isClientSocket return false");
     return false;
 }
 
@@ -448,10 +456,10 @@ Server::isStaticResource(int fd) const
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::RESOURCE)
     {
-        Log::trace("< isStaticResource");
+        Log::trace("< isStaticResource return true");
         return true;
     }
-    Log::trace("< isStaticResource");
+    Log::trace("< isStaticResource return false");
     return false;
 }
 
@@ -465,7 +473,7 @@ Server::isCGIPipe(int fd) const
         Log::trace("< isCGIPipe return true");
         return true;
     }
-    Log::trace("< isCGIPipe return true");
+    Log::trace("< isCGIPipe return false");
     return false;
 }
 
@@ -503,23 +511,37 @@ Server::isAutoIndexOn(int fd)
 bool
 Server::isCgiUri(int fd, const std::string& extension)
 {
+    Log::trace("> isCgiUri");
+
     if (extension == "")
+    {
+        Log::trace("< isCgiUri return false");
         return (false);
+    }
 
     const location_info& location_info = this->_responses[fd].getLocationInfo();
     location_info::const_iterator it = location_info.find("cgi");
     if (it == location_info.end())
+    {
+        Log::trace("< isCgiUri return false");
         return (false);
+    }
 
     const std::string& cgi = it->second;
     if (cgi.find(extension) == std::string::npos)
+    {
+        Log::trace("< isCgiUri return false");
         return (false);
+    }
+
+    Log::trace("< isCgiUri return true");
     return (true);
 }
 
 void
 Server::acceptClient()
 {
+    Log::trace("> acceptClient");
     int client_socket;
     struct sockaddr_in client_address;
     socklen_t client_len = sizeof(client_address);
@@ -535,6 +557,7 @@ Server::acceptClient()
     }
     else
         std::cerr<<"Accept error"<<std::endl;
+    Log::trace("< acceptClient");
 }
 
 void
@@ -599,7 +622,6 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
         std::cout << "read end!" << std::endl;
     else
         throw("cgi read error");
-
     Log::trace("< receiveDataFromCgi");
 }
 
@@ -617,7 +639,6 @@ Server::run(int fd)
                 sendDataToCgi(fd);
             else
             {
-                std::cout << "fd: " << fd << std::endl;
                 std::string response_message = this->makeResponseMessage(fd);
                 // std::cout << "message: " << response_message << std::endl;
                 // response_message = this->makeResponseMessage(this->_requests[fd], fd);
@@ -634,6 +655,7 @@ Server::run(int fd)
         {
             try
             {
+                std::cout << "Fd: " << fd << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
                 if (this->isCGIPipe(fd)) 
                     receiveDataFromCgi(fd);
                 else if (this->isStaticResource(fd))
@@ -720,31 +742,23 @@ Server::findResourceAbsPath(int fd)
     UriParser parser;
     parser.parseUri(this->_requests[fd].getUri());
     const std::string& path = parser.getPath();
-    std::cout << "=========================== " << std::endl;
-    std::cout << "path: " << path << std::endl;
-    std::cout<< "fd: " << fd << std::endl;
-    std::cout << "=========================== " << std::endl;
 
     Response& response = this->_responses[fd];
     response.setPath(path);
     response.setRouteAndLocationInfo(path, this);
 
-    std::cout << "=========================== " << std::endl;
-    std::cout << "route: " << path << std::endl;
-    std::cout<< "fd: " << fd << std::endl;
-    std::cout << "=========================== " << std::endl;
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
-    std::cout<<"in findresourceAbsPath: "<<response.getResourceAbsPath()<<std::endl;
     Log::trace("< findResourceAbsPath");
 }
 
 void 
 Server::readStaticResource(int fd)
 {
+    Log::trace("> readStaticResouce");
     // Log::trace("> readStaticResource");
     char buf[BUFFER_SIZE + 1];
     int bytes;
@@ -767,12 +781,13 @@ Server::readStaticResource(int fd)
         this->closeFdAndSetClientOnWriteFdSet(fd);
         throw (ReadErrorException());
     }
-    // Log::trace("< readStaticResource");
+    Log::trace("< readStaticResource");
 }
 
 void
 Server::openStaticResource(int fd)
 {
+    Log::trace("> openStaticResource");
     int resource_fd;
     const std::string& path = this->_responses[fd].getResourceAbsPath();
     struct stat tmp;
@@ -789,6 +804,7 @@ Server::openStaticResource(int fd)
     }
     else
         throw OpenResourceErrorException(this->_responses[fd], errno);
+    Log::trace("< openStaticResource");
 }
 
 void
@@ -803,7 +819,6 @@ Server::checkAndSetResourceType(int fd)
         response.setResourceType(ResType::CGI);
         return ;
     }
-        
     DIR* dir_ptr;
     if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) == NULL)
     {
