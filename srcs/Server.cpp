@@ -572,7 +572,7 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     char* body;
 
     bytes = 0;
-    client_fd = this->_server_manager->getConnectedFd(write_fd_to_cgi);
+    client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
     content_length = request.getContentLength();
@@ -606,7 +606,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     int status;
     char buf[BUFFER_SIZE + 1];
 
-    client_fd = this->_server_manager->getConnectedFd(read_fd_from_cgi);
+    client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
 
     ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);

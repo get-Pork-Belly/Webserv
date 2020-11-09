@@ -70,7 +70,7 @@ ServerManager::getFdType(int fd) const
 }
 
 int
-ServerManager::getConnectedFd(int fd) const
+ServerManager::getLinkedFdFromFdTable(int fd) const
 {
     return (this->_fd_table[fd].second);
 }
