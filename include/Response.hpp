@@ -110,8 +110,8 @@ public:
     bool isNeedToBeChunkedBody(const Request& request) const;
     bool isRedirection(const std::string& status_code) const;
     bool isLocationToBeRedirected() const;
-    std::string getRedirectStatusCode();
-    std::string getRedirectUri(const Request& request);
+    std::string getRedirectStatusCode() const;
+    std::string getRedirectUri(const Request& request) const;
     std::string getLastModifiedDateTimeOfResource() const;
     std::string getHtmlLangMetaData() const;
     void encodeChunkedBody();

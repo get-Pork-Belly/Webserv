@@ -628,7 +628,10 @@ Response::appendRetryAfterHeader(std::string& headers, const std::string& status
         headers += ft::getEstimatedUnavailableTime();
     }
     else
+    {
+        //TODO: throw 되지 않도록 예외처리.
         headers += this->getLocationInfo().at("retry_after_sec");
+    }
     headers += "\r\n";
     Log::trace("< appendRetryAfterHeader");
 }
@@ -730,8 +733,7 @@ Response::findAndSetUriExtension()
 bool
 Response::isNeedToBeChunkedBody(const Request& request) const
 {
-    //NOTE: 언젠가 1.1보다 높은 버전이 나오면 아래 조건식이 바뀌어야함.
-    if (request.getVersion().compare("1.1") != 0)
+    if (request.getVersion().compare("1.1") != 0 || request.getVersion().compare("2.0") != 0)
         return (false);
     //NOTE: 아래 기준은 임의로 정한 것임.
     if (this->_file_info.st_size > BUFFER_SIZE)
@@ -754,21 +756,21 @@ Response::isLocationToBeRedirected() const
 }
 
 std::string
-Response::getRedirectStatusCode()
+Response::getRedirectStatusCode() const
 {
-    std::string& redirection_info = this->_location_info.at("return");
+    const std::string& redirection_info = this->_location_info.at("return");
 
     size_t index = redirection_info.find(" ");
     return (redirection_info.substr(0, index));
 }
 
 std::string
-Response::getRedirectUri(const Request& request)
+Response::getRedirectUri(const Request& request) const
 {
     Log::trace("> getRedirectUri");
     //TODO: find 실패하지 않도록 invalid 여부는 처음 서버 만들 때 잘 확인할 것.
 
-    std::string& redirection_info = this->_location_info.at("return");
+    const std::string& redirection_info = this->_location_info.at("return");
     std::string redirect_route = redirection_info.substr(redirection_info.find(" "));
     std::string requested_uri = request.getUri();
     size_t offset = requested_uri.find(this->getRoute());
