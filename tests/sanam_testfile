@@ -1,6 +1,6 @@
 http { 
     include mime.types;
-    root /Users/iwoo/Documents/Webserv/
+    root /Users/sanam/Desktop/Webserv/;
     server {
         server_name first_server;
         listen       8080;
@@ -10,18 +10,11 @@ http {
             autoindex on;
             root /Users/sanam/Desktop/Webserv/;
         }
-    }
-    server {
-        server_name second_server;
-        listen       8081;
-        location /first {
-            index  index.html index.htm;
-        }
-        location /second {
-            root  /user/iwoo;
-            index  html;
-            limit_except PUT POST GET
-            index index.html index.htm index.abc;
-        }
+
+        location /directory {
+            root /Users/sanam/Desktop/Webserv/www/YoupiBanane;
+            index youpi.bad_extension;
+            cgi .bla;
+            cgi_path /Users/sanam/Desktop/Webserv/cgi_tester;
     }
 }

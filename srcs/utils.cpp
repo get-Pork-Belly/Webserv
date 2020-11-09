@@ -234,4 +234,13 @@ inetNtoA(const in_addr_t& client_address)
             + std::to_string((client_address / 256 / 256 / 256)));
 }
 
+void
+doubleFree(char*** target)
+{
+    for (int i = 0; (*target)[i]; i++)
+        free((*target)[i]);
+    free(*target);
+    *target = nullptr;
+}
+
 }

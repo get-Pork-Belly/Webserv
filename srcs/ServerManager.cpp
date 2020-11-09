@@ -10,7 +10,7 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-ServerManager::ServerManager(const char *config_path)
+ServerManager::ServerManager(const char* config_path)
 : _config_file_path(config_path)
 {
     ft::fdZero(&this->_readfds);
@@ -69,6 +69,11 @@ ServerManager::getFdType(int fd) const
     return (pair.first);
 }
 
+int
+ServerManager::getLinkedFdFromFdTable(int fd) const
+{
+    return (this->_fd_table[fd].second);
+}
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/

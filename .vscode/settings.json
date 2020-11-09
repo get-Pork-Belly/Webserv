@@ -65,6 +65,9 @@
         "unordered_map": "cpp",
         "utility": "cpp",
         "vector": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "queue": "cpp",
+        "set": "cpp",
+        "filesystem": "cpp"
     }
 }
