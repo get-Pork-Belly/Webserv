@@ -235,11 +235,12 @@ inetNtoA(const in_addr_t& client_address)
 }
 
 void
-doubleFree(char** target)
+doubleFree(char*** target)
 {
-    for (int i = 0; target[i]; i++)
-        free(target[i]);
-    free(target);
+    for (int i = 0; (*target)[i]; i++)
+        free((*target)[i]);
+    free(*target);
+    *target = nullptr;
 }
 
 }

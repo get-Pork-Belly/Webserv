@@ -1056,8 +1056,8 @@ Server::forkAndExecuteCGI(int client_fd)
     // Request& request = this->_requests[client_fd];
     int stdin_of_cgi = response.getStdinOfCGI();
     int stdout_of_cgi = response.getStdoutOfCGI();
-    char **argv = this->makeCGIArgv(client_fd);
-    char **envp = this->makeCGIEnvp(client_fd);
+    char** argv = this->makeCGIArgv(client_fd);
+    char** envp = this->makeCGIEnvp(client_fd);
     pid_t pid;
     int ret;
 
@@ -1077,8 +1077,8 @@ Server::forkAndExecuteCGI(int client_fd)
     else
     {
         response.setCGIPid(pid);
-        ft::doubleFree(argv);
-        ft::doubleFree(envp);
+        ft::doubleFree(&argv);
+        ft::doubleFree(&envp);
         // NOTE 정상적으로 읽으면 select 알아서 clear 해준다.
         this->_server_manager->fdSet(response.getWriteFdToCGI(), FdSet::WRITE);
     }
