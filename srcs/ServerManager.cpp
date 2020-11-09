@@ -1,6 +1,7 @@
 #include "ServerManager.hpp"
 #include "Server.hpp"
 #include "utils.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -166,6 +167,29 @@ ServerManager::fdIsSet(int fd, FdSet type)
         ft::fdIsSet(fd, &this->_copy_exceptfds));
     }
 }
+
+//NOTE: log 함수 출력을 위한 함수
+bool
+ServerManager::fdIsOriginSet(int fd, FdSet type)
+{
+    switch (type)
+    {
+    case FdSet::READ:
+        return (ft::fdIsSet(fd, &this->_readfds));
+
+    case FdSet::WRITE:
+        return (ft::fdIsSet(fd, &this->_writefds));
+
+    case FdSet::EXCEPT:
+        return (ft::fdIsSet(fd, &this->_exceptfds));
+
+    default:
+        return (ft::fdIsSet(fd, &this->_readfds) ||
+        ft::fdIsSet(fd, &this->_writefds) ||
+        ft::fdIsSet(fd, &this->_exceptfds));
+    }
+}
+
 
 void
 ServerManager::fdClr(int fd, FdSet type)

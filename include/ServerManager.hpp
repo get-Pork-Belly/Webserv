@@ -62,6 +62,7 @@ public:
     /* Exception */
     /* Util */
     bool fdIsSet(int fd, FdSet type);
+    bool fdIsOriginSet(int fd, FdSet type);
     void fdClr(int fd, FdSet type);
     void fdSet(int fd, FdSet type);
 
