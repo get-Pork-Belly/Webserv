@@ -11,15 +11,16 @@
 
 Request::Request()
 : _method(""), _uri(""), _version(""),
- _protocol(""), _bodies(""), _status_code(""),
- _info(ReqInfo::READY), _ip_address(""), _transfered_body_size(0) {}
+_protocol(""), _bodies(""), _status_code(""),
+_info(ReqInfo::READY), _is_buffer_left(false),
+_ip_address(""), _transfered_body_size(0) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
-_protocol(other._protocol), _bodies(other._bodies), 
+_protocol(other._protocol), _bodies(other._bodies),
 _status_code(other._status_code), _info(other._info),
-_is_buffer_left(false), _ip_address(other._ip_address),
+_is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
 _transfered_body_size(other._transfered_body_size) {}
 
 Request&
@@ -398,18 +399,10 @@ Request::parseNormalBodies(char* buf)
 }
 
 void
-Request::clear()
+Request::init()
 {
-    this->_method = "";
-    this->_uri = "";
-    this->_version = "";
-    this->_protocol = "";
-    this->_headers = {{"default", "default"}};
-    this->_status_code = "";
-    this->_bodies = "";
-    this->_is_buffer_left = false;
-    this->_transfered_body_size = 0;
-    this->setReqInfo(ReqInfo::READY);
+    Request temp;
+    *this = temp;
 }
 
 int

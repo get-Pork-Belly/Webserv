@@ -61,7 +61,7 @@ public:
 
     /* Util */
 
-    void clear();
+    void init();
 
     void updateReqInfo();
     bool updateStatusCodeAndReturn(const std::string& status_code, const bool& ret);
