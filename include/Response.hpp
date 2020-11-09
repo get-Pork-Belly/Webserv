@@ -118,7 +118,7 @@ public:
 
     void applyAndCheckRequest(Request& request, Server* server);
 
-    void appendBody(char *buf);
+    void appendBody(char* buf);
 
     /* General header */
     void appendDateHeader(std::string& headers);

@@ -686,7 +686,7 @@ Response::isRedirection(const std::string& status_code) const
 }
 
 void
-Response::appendBody(char *buf)
+Response::appendBody(char* buf)
 {
     std::string tmp = this->getBody();
     std::string tmp2(buf);

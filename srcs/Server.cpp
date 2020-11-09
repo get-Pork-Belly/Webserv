@@ -613,7 +613,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE + 1);
     if (bytes > 0)
     {
-        response.setBody(buf);
+        response.appendBody(buf);
         this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
         //NOTE waitpid의 타이밍을 잘 잡자.
         waitpid(response.getCGIPid(), &status, 0);
