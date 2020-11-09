@@ -1114,6 +1114,8 @@ Server::forkAndExecuteCGI(int client_fd)
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     else if (pid == 0)
     {
+        close(response.getWriteFdToCGI());
+        close(response.getReadFdFromCGI());
         if (dup2(stdin_of_cgi, 0) < 0)
             throw (CgiExecuteErrorException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
@@ -1125,6 +1127,8 @@ Server::forkAndExecuteCGI(int client_fd)
     }
     else
     {
+        close(stdin_of_cgi);
+        close(stdout_of_cgi);
         response.setCGIPid(pid);
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
