@@ -604,6 +604,8 @@ Response::makeBody(Request& request)
         PageGenerator::makeErrorPage(*this);
     else // 일반적인 body
     {
+        if (this->isNeedToBeChunkedBody(request))
+            // this->encodeChunkedBody();
     }
     Log::trace("< makeBody");
 }
@@ -643,6 +645,20 @@ Response::findAndSetUriExtension()
         return ;
     std::string extension = this->getResourceAbsPath().substr(dot);
     this->setUriExtension(extension);
+}
+
+bool
+Response::isNeedToBeChunkedBody(const Request& request) const
+{
+    //NOTE: 언젠가 1.1보다 높은 버전이 나오면 아래 조건식이 바뀌어야함.
+    if (request.getVersion().compare("1.1") != 0)
+        return (false);
+    //NOTE: 아래 기준은 임의로 정한 것임.
+    if (this->_file_info.st_size > BUFFER_SIZE)
+        return (true);
+    if (this->getResourceType() == ResType::CGI)
+        return (true);
+    return (false);
 }
 
 bool

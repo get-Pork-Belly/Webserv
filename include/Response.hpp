@@ -71,12 +71,14 @@ public:
     bool isExtensionExist(const std::string& extension) const;
     bool isExtensionInMimeTypeTable(const std::string& extension) const;
     void findAndSetUriExtension();
+    bool isNeedToBeChunkedBody(const Request& request) const;
     bool isRedirection(const std::string& status_code) const;
     bool isLocationToBeRedirected() const;
     std::string getRedirectStatusCode();
     std::string getRedirectUri(const Request& request);
     std::string getLastModifiedDateTimeOfResource() const;
     std::string getHtmlLangMetaData() const;
+    void encodeChunkedBody();
 
     void init();
     void initStatusCodeTable();
