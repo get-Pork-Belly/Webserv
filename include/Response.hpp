@@ -35,6 +35,7 @@ private:
 
     std::string _uri_path;
     std::string _uri_extension;
+    std::string _transmitting_body;
 
 public:
     /* Constructor */
@@ -106,8 +107,14 @@ public:
     bool isExtensionExist(const std::string& extension) const;
     bool isExtensionInMimeTypeTable(const std::string& extension) const;
     void findAndSetUriExtension();
+    bool isNeedToBeChunkedBody(const Request& request) const;
     bool isRedirection(const std::string& status_code) const;
+    bool isLocationToBeRedirected() const;
+    std::string getRedirectStatusCode() const;
+    std::string getRedirectUri(const Request& request) const;
     std::string getLastModifiedDateTimeOfResource() const;
+    std::string getHtmlLangMetaData() const;
+    void encodeChunkedBody();
 
     void init();
     void initStatusCodeTable();
@@ -116,8 +123,6 @@ public:
     std::string makeHeaders(Request& request);
     std::string makeStatusLine();
 
-    void applyAndCheckRequest(Request& request, Server* server);
-
     void appendBody(char* buf);
 
     /* General header */
@@ -125,11 +130,14 @@ public:
     void appendServerHeader(std::string& headers);
 
     /* Entity header */
-    // void appendAllowHeader();
+    void appendAllowHeader(std::string& headers);
+    void appendContentLanguageHeader(std::string& headers);
     void appendContentLengthHeader(std::string& headers);
     void appendContentLocationHeader(std::string& headers);
     void appendContentTypeHeader(std::string& headers);
     void appendLastModifiedHeader(std::string& headers);
+    void appendLocationHeader(std::string& headers, const Request& request);
+    void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
 };
 
 #endif

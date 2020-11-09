@@ -40,7 +40,7 @@ private:
     int _request_uri_limit_size;
     int _request_header_limit_size;
     int _limit_client_body_size;
-    std::string _default_error_page;
+    std::string _default_error_page; //TODO: delete 고려
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
@@ -127,6 +127,15 @@ public:
         virtual const char* what() const throw();
     };
 public:
+    class MustRedirectException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _res;
+        std::string _msg;
+    public:
+        MustRedirectException(Response& res);
+        virtual const char* what() const throw();
+    };
     class CannotOpenDirectoryException : public SendErrorCodeToClientException
     {
     private:

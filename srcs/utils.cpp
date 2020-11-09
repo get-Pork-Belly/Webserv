@@ -200,6 +200,25 @@ getCurrentDateTime()
     return (buf);
 }
 
+std::string
+getEstimatedUnavailableTime()
+{
+    struct tm time;
+    struct timeval tv;
+    char buf[64];
+    const char* fmt = "%a, %d %b %Y %X GMT";
+    int estimated_unavailable_time = 86400;
+
+    ft::memset(buf, 0, sizeof(buf));
+    gettimeofday(&tv, NULL);
+    tv.tv_sec += estimated_unavailable_time;
+    strptime(std::to_string(estimated_unavailable_time).c_str(), "%s", &time);
+    tv.tv_sec -= getTimeDiffBetweenGMT(time.tm_zone);
+    strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
+    strftime(buf, sizeof(buf), fmt, &time);
+    return (buf);
+}
+
 size_t
 strlen(const char* str)
 {

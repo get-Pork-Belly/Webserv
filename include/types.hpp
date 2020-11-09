@@ -69,10 +69,12 @@ enum class ReqInfo
 
 enum class ResType
 {
+    NOT_YET_CHECKED,
     STATIC_RESOURCE,
     CGI,
     AUTO_INDEX,
-    INDEX_HTML
+    INDEX_HTML,
+    ERROR_HTML,
 };
 
 #endif

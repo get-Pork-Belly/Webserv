@@ -1,6 +1,7 @@
 #include "ServerGenerator.hpp"
 #include "ServerManager.hpp"
 #include "Server.hpp"
+#include "Log.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -229,6 +230,7 @@ ServerGenerator::initHttpConfig(server_info& http_config)
     http_config["index"] = "index.html";
     http_config["autoindex"] = "off";
     http_config["auth_basic"] = "off";
+    http_config["retry_after_sec"] = "180";
 }
 
 void
@@ -247,9 +249,11 @@ ServerGenerator::initServerConfig(server_info& server_config, server_info& http_
     if (http_config.find("auth_basic") != ite)
         server_config["auth_basic"] = http_config["auth_basic"];
     if (http_config.find("auth_basic_file") != ite)
-        server_config["auth_baasic_file"] = http_config["auth_basic_file"];
+        server_config["auth_basic_file"] = http_config["auth_basic_file"];
     if (http_config.find("error_page") != ite)
         server_config["error_page"] = http_config["error_page"];
+    if (http_config.find("retry_after_sec") != ite)
+        server_config["retry_after_sec"] = http_config["retry_after_sec"];
 }
 
 void
@@ -269,7 +273,8 @@ ServerGenerator::initLocationConfig(location_info& location_config, server_info&
         location_config["auth_baasic_file"] = server_config["auth_basic_file"];
     if (server_config.find("error_page") != ite)
         location_config["error_page"] = server_config["error_page"];
-
+    if (server_config.find("retry_after_sec") != ite)
+        location_config["retry_after_sec"] = server_config["retry_after_sec"];
 }
 
 /* 디버깅용 함수 */

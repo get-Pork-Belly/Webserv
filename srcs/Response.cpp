@@ -16,14 +16,12 @@
 */
 
 Response::Response()
-: _status_code("200"), _transfer_type(""), _clients(""),
-_resource_abs_path(""), _route(""), _directory_entry(""),
-_body(""), _stdin_of_cgi(0), _stdout_of_cgi(0),
-_read_fd_from_cgi(0), _write_fd_to_cgi(0), _cgi_pid(0),
-_uri_path(""), _uri_extension("")
+: _status_code("200"), _headers({{"", ""}}), _transfer_type(""), _clients(""),
+_location_info({{"",""}}), _resource_abs_path(""), _route(""),
+_directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
+_stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
+_cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body("")
 {
-    this->_headers = { {"", ""} };
-    this->_location_info = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
     this->initMimeTypeTable();
@@ -39,7 +37,7 @@ _file_info(other._file_info), _resource_type(other._resource_type),
 _body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
 _stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
 _write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
-_uri_path(other._uri_path), _uri_extension(other._uri_extension)
+_uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body)
 {}
 
 /*============================================================================*/
@@ -68,6 +66,7 @@ Response::operator=(const Response& rhs)
     this->_route = rhs._route;
     this->_directory_entry = rhs._directory_entry;
     this->_file_info = rhs._file_info;
+    this->_resource_type = rhs._resource_type;
     this->_body = rhs._body;
     this->_stdin_of_cgi = rhs._stdin_of_cgi;
     this->_stdout_of_cgi = rhs._stdout_of_cgi;
@@ -76,6 +75,7 @@ Response::operator=(const Response& rhs)
     this->_cgi_pid = rhs._cgi_pid;
     this->_uri_path = rhs._uri_path;
     this->_uri_extension = rhs._uri_extension;
+    this->_transmitting_body = rhs._transmitting_body;
     return (*this);
 }
 
@@ -298,8 +298,7 @@ Response::CannotOpenCGIPipeException::what() const throw()
 void
 Response::init()
 {
-    Response temp;
-    *this = temp;
+    *this = Response();
 }
 
 void
@@ -426,19 +425,6 @@ Response::initMimeTypeTable()
     };
 }
 
-//TODO: Response에 상태코드 세팅하게 변경하기.
-void
-Response::applyAndCheckRequest(Request& request, Server* server)
-{
-    Log::trace("> applyAndCheckRequest");
-    if (this->setRouteAndLocationInfo(request.getUri(), server))
-    {
-        if (this->isLimitExceptInLocation() && this->isAllowedMethod(request.getMethod()) == false)
-            this->setStatusCode("405");
-    }
-    Log::trace("< applyAndCheckRequest");
-}
-
 //NOTE
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
@@ -509,28 +495,63 @@ Response::appendServerHeader(std::string& headers)
     headers += "Server: gbp_nginx/0.4\r\n";
 }
 
-// std::string
-// Response::appendAllowHeader(std::string& headers)
-// {
-//     if (this->isLimitExceptInLocation())
-//     {
-//         std::string header = "Allow:";
+void
+Response::appendAllowHeader(std::string& headers)
+{
+    const std::vector<const std::string> implemented_methods = {
+        "GET",
+        // "POST",
+        // "HEAD",
+        // "PUT",
+        // "DELETE",
+        // "CONNECT",
+        // "OPTIONS",
+        // "TRACE",
+        // "PATCH",
+    };
 
-//         for (auto& method : this->_implemented_methods)
-//         {
-//             if (this->isAllowedMethod(method))
-//             {
-//                 header += " ";
-//                 header += method;
-//             }
-//             header += "\r\n";
-//             return (header);
-//         }
-//     }
-//     else
-//         //NOTE: default method
-//         return ("Allow: GET HEAD");
-// }
+    headers += "Allow:";
+    if (this->isLimitExceptInLocation())
+    {
+        for (const std::string& method : implemented_methods)
+        {
+            if (this->isAllowedMethod(method))
+            {
+                headers += " ";
+                headers += method;
+            }
+        }
+    }
+    else
+    {
+        for (const std::string& method : implemented_methods)
+        {
+            headers += " ";
+            headers += method;
+        }
+    }
+    headers += "\r\n";
+}
+
+void
+Response::appendContentLanguageHeader(std::string& headers)
+{
+    //TODO html 외 다른 파일들의 메타데이터는 어찌 처리할지 결정할 것.
+    //NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면 생략한다.
+    std::string extension = this->getUriExtension();
+    if (!(this->isExtensionExist(extension) 
+            && this->isExtensionInMimeTypeTable(extension)
+            && this->getMimeTypeTable().at(extension).compare("text/html") == 0))
+        return ;
+
+    std::string lang_meta_data = this->getHtmlLangMetaData();
+    if (lang_meta_data != "")
+    {
+        headers += "Content-Language: ";
+        headers += lang_meta_data;
+        headers += "\r\n";
+    }
+}
 
 void
 Response::appendContentLengthHeader(std::string& headers)
@@ -551,13 +572,17 @@ Response::appendContentLocationHeader(std::string& headers)
 void
 Response::appendContentTypeHeader(std::string& headers)
 {
+    Log::trace("> appendContentTypeHeader");
     headers += "Content-Type: ";
     std::string extension = this->getUriExtension();
     if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
         headers += this->getMimeTypeTable().at(extension);
+    else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_HTML)
+        headers += "text/html";
     else
         headers += "application/octet-stream";
     headers += "\r\n";
+    Log::trace("< appendContentTypeHeader");
 }
 
 std::string
@@ -584,10 +609,36 @@ Response::appendLastModifiedHeader(std::string& headers)
     headers += "\r\n";
 }
 
+void
+Response::appendLocationHeader(std::string& headers, const Request& request)
+{
+    headers += "Location: ";
+    headers += this->getRedirectUri(request);
+    headers += "\r\n";
+}
+
+void
+Response::appendRetryAfterHeader(std::string& headers, const std::string& status_code)
+{
+    Log::trace("> appendRetryAfterHeader");
+    headers += "Retry-After: ";
+    if (status_code.compare("503") == 0)
+    {
+        //NOTE: nginx는 perl script 등을 이용하여 예상복구시간을 동적으로 계산한다. 오버디벨롭이라 판단하여 제외함.
+        headers += ft::getEstimatedUnavailableTime();
+    }
+    else
+    {
+        //TODO: throw 되지 않도록 예외처리.
+        headers += this->getLocationInfo().at("retry_after_sec");
+    }
+    headers += "\r\n";
+    Log::trace("< appendRetryAfterHeader");
+}
+
 std::string
 Response::makeHeaders(Request& request)
 {
-    (void)request;
     std::string headers;
     
     //TODO 적정 reserve size 구하기
@@ -597,30 +648,32 @@ Response::makeHeaders(Request& request)
     // if chunked 
     // headers += this->makeTransferEncodingHeader();
     // if not chunked
+    this->appendContentLanguageHeader(headers);
     this->appendContentLengthHeader(headers);
-    this->appendContentLocationHeader(headers);
     this->appendContentTypeHeader(headers);
+
+    Log::printLocationInfo(this->_location_info);
 
     //TODO switch 문 고려
     std::string status_code = this->getStatusCode();
     if (status_code.compare("200") == 0)
-        this->appendLastModifiedHeader(headers);
-    else if (status_code.compare("405") == 0)
     {
-        // this->appendAllowHeader(headers);
+        this->appendContentLocationHeader(headers);
+        if (this->getResourceType() != ResType::AUTO_INDEX)
+            this->appendLastModifiedHeader(headers);
     }
+    else if (status_code.compare("405") == 0)
+        this->appendAllowHeader(headers);
     else if (status_code.compare("401") == 0)
     {
         // this->appendAuthenticateHeader(headers);
     }
     else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
-    {
-        // this->appendLocationHeader(headers);
-    }
+        this->appendLocationHeader(headers, request);
     else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
             || status_code.compare("301") == 0)
     {
-        // this->appendRetryAfterHeader(headers);
+        this->appendRetryAfterHeader(headers, status_code);
     }
     
     headers += "\r\n";
@@ -631,14 +684,12 @@ void
 Response::makeBody(Request& request)
 {
     Log::trace("> makeBody");
-    (void)request;
     if (this->getResourceType() == ResType::AUTO_INDEX)
         PageGenerator::makeAutoIndex(*this);
     else if (this->getStatusCode().front() != '2')
         PageGenerator::makeErrorPage(*this);
-    else // 일반적인 body
-    {
-    }
+    else if (this->isNeedToBeChunkedBody(request))
+        this->encodeChunkedBody();
     Log::trace("< makeBody");
 }
 
@@ -680,9 +731,88 @@ Response::findAndSetUriExtension()
 }
 
 bool
+Response::isNeedToBeChunkedBody(const Request& request) const
+{
+    if (request.getVersion().compare("1.1") != 0 || request.getVersion().compare("2.0") != 0)
+        return (false);
+    //NOTE: 아래 기준은 임의로 정한 것임.
+    if (this->_file_info.st_size > BUFFER_SIZE)
+        return (true);
+    if (this->getResourceType() == ResType::CGI)
+        return (true);
+    return (false);
+}
+
+bool
 Response::isRedirection(const std::string& status_code) const
 {
     return (status_code[0] == '3');
+}
+
+bool
+Response::isLocationToBeRedirected() const
+{
+    return (this->_location_info.find("return") != this->_location_info.end());
+}
+
+std::string
+Response::getRedirectStatusCode() const
+{
+    const std::string& redirection_info = this->_location_info.at("return");
+
+    size_t index = redirection_info.find(" ");
+    return (redirection_info.substr(0, index));
+}
+
+std::string
+Response::getRedirectUri(const Request& request) const
+{
+    Log::trace("> getRedirectUri");
+    //TODO: find 실패하지 않도록 invalid 여부는 처음 서버 만들 때 잘 확인할 것.
+
+    const std::string& redirection_info = this->_location_info.at("return");
+    std::string redirect_route = redirection_info.substr(redirection_info.find(" "));
+    std::string requested_uri = request.getUri();
+    size_t offset = requested_uri.find(this->getRoute());
+    requested_uri.replace(offset, this->getRoute().length(), redirect_route);
+
+    Log::trace("< getRedirectUri");
+    return (requested_uri);
+}
+
+std::string
+Response::getHtmlLangMetaData() const
+{
+    const std::string& body = this->getBody();
+
+    size_t html_tag_start;
+    size_t html_tag_end;
+    if ((html_tag_start = body.find("<html ")) == std::string::npos)
+        return ("");
+    if ((html_tag_end = body.find(">", html_tag_start)) == std::string::npos)
+        return ("");
+
+    std::string html_tag_block = body.substr(html_tag_start, html_tag_end - html_tag_start + 1);
+
+    size_t lang_meta_data_start;
+    size_t lang_meta_data_end;
+    if ((lang_meta_data_start  = html_tag_block.find("lang=\"")) == std::string::npos)
+        return ("");
+    if ((lang_meta_data_end = html_tag_block.find("\"", lang_meta_data_start + 6)) == std::string::npos)
+        return ("");
+
+    return (html_tag_block.substr(lang_meta_data_start + 6, lang_meta_data_end - (lang_meta_data_start + 6)));
+}
+
+void
+Response::encodeChunkedBody()
+{
+    // size_t chunked_index = this->getChunkedIndex();
+    // size_t chunked_index = 0;
+
+    // this->setTransmittingBody(ft::rawToChunked(chunked_index));
+
+    // this->setChunkedIndex(chunked_index);
 }
 
 void

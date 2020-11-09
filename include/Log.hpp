@@ -7,6 +7,8 @@
 # include "Server.hpp"
 # include "utils.hpp"
 
+class ServerManager;
+
 class Log
 {
 private:
@@ -22,6 +24,7 @@ public:
     static void serverIsCreated(Server& server);
     static void newClient(Server& server, int client_fd);
     static void closeClient(Server& server, int client_fd);
+    static void openFd(Server& server, int client_socket, const FdType& type, int fd);
     static void closeFd(Server& server, int client_socket, const FdType& type, int fd);
     static void getRequest(Server& server, int fd);
     static void timeLog(int fd);
@@ -34,9 +37,12 @@ public:
     static void trace(const std::string& message);
 
     static std::string fdTypeToString(const FdType& type);
+    static std::string resTypeToString(const ResType& type);
     static void printLocationConfig(const std::map<std::string, location_info>& loc_config);
     static void printLocationInfo(const location_info& loc_info);
 
+    static void printFdCopySets(ServerManager& server_manager);
+    static void printFdSets(ServerManager& server_manager);
 };
 
 #endif

@@ -129,6 +129,18 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
+Server::MustRedirectException::MustRedirectException(Response& res)
+: _res(res), _msg("MustRedirectException: [CODE " + res.getRedirectStatusCode() + "]")
+{
+    this->_res.setStatusCode(res.getRedirectStatusCode());
+}
+
+const char*
+Server::MustRedirectException::what() const throw()
+{
+    return (this->_msg.c_str());
+}
+
 Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num)
 : _res(res), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
 {
@@ -281,6 +293,8 @@ Server::receiveRequestWithoutBody(int fd)
 void
 Server::receiveRequestNormalBody(int fd)
 {
+    Log::trace("> receiveRequestNormalBody");
+
     int bytes;
     Request& req = this->_requests[fd];
 
@@ -292,15 +306,13 @@ Server::receiveRequestNormalBody(int fd)
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
     if ((bytes = recv(fd, buf, content_length, 0)) > 0)
-    {
         req.parseNormalBodies(buf);
-        // TODO cgi를 읽기전에 client의 write 플래그가 세워짐. 다음 select에서 client가 먼저 선택되고 리퀘스트가 초기화 되버림.
-        // this->_server_manager->fdSet(fd, FdSet::WRITE);
-    }
     else if (bytes == 0)
         this->closeClientSocket(fd);
     else
         throw (ReadErrorException());
+
+    Log::trace("< receiveRequestNormalBody");
 }
 
 void
@@ -316,7 +328,6 @@ Server::clearRequestBuffer(int fd)
         if (bytes == BUFFER_SIZE)
             return ;
         req.setReqInfo(ReqInfo::COMPLETE);
-        this->_server_manager->fdSet(fd, FdSet::WRITE);
     }
     else if (bytes == 0)
         this->closeClientSocket(fd);
@@ -334,11 +345,7 @@ Server::receiveRequestChunkedBody(int fd)
     Request& req = this->_requests[fd];
 
     if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
-    {
         req.parseChunkedBody(buf);
-        if (req.getReqInfo() == ReqInfo::COMPLETE)
-            this->_server_manager->fdSet(fd, FdSet::WRITE);
-    }
     else if (bytes == 0)
         this->closeClientSocket(fd);
     else
@@ -350,6 +357,7 @@ void
 Server::receiveRequest(int fd)
 {
     Log::trace("> receiveRequest");
+
     const ReqInfo& req_info = this->_requests[fd].getReqInfo();
 
     switch (req_info)
@@ -373,6 +381,7 @@ Server::receiveRequest(int fd)
     default:
         break ;
     }
+
     Log::trace("< receiveRequest");
 }
 
@@ -386,12 +395,17 @@ Server::makeResponseMessage(int fd)
     std::string status_line;
     std::string headers;
 
-    //TODO: parsing 할 때 method 허용여부 확인하여 throw, response 꾸미기
-    // response.applyAndCheckRequest(request, this);
-    response.makeBody(request);
+    if (response.getStatusCode().compare("200") != 0)
+        response.setResourceType(ResType::ERROR_HTML);
+
+    if (response.isRedirection(response.getStatusCode()) == false)
+        response.makeBody(request);
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
     Log::trace("< makeResponseMessage");
+    // if (request.getMethod().compare("HEAD") == 0)
+    //     return (status_line + headers);
+    // else if (response.isNeedTobeChunkedBody)
     return (status_line + headers + response.getBody());
 }
 
@@ -692,9 +706,9 @@ Server::run(int fd)
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
+                    Log::getRequest(*this, fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                         processResponseBody(fd);
-                    Log::getRequest(*this, fd);
                 }
             }
             catch(const SendErrorCodeToClientException& e)
@@ -787,8 +801,7 @@ Server::findResourceAbsPath(int fd)
 void 
 Server::readStaticResource(int fd)
 {
-    Log::trace("> readStaticResouce");
-    // Log::trace("> readStaticResource");
+    Log::trace("> readStaticResource");
     char buf[BUFFER_SIZE + 1];
     int bytes;
     int client_socket = this->_server_manager->getFdTable()[fd].second;
@@ -830,6 +843,7 @@ Server::openStaticResource(int fd)
         if ((fstat(resource_fd, &tmp)) == -1)
             throw OpenResourceErrorException(this->_responses[fd], errno);
         this->_responses[fd].setFileInfo(tmp);
+        Log::openFd(*this, fd, FdType::RESOURCE, resource_fd);
     }
     else
         throw OpenResourceErrorException(this->_responses[fd], errno);
@@ -849,16 +863,7 @@ Server::checkAndSetResourceType(int fd)
         return ;
     }
     DIR* dir_ptr;
-    if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) == NULL)
-    {
-        if (errno == ENOTDIR)
-            response.setResourceType(ResType::STATIC_RESOURCE);
-        else if (errno == EACCES)
-            throw (CannotOpenDirectoryException(this->_responses[fd], "403", errno));
-        else if (errno == ENOENT)
-            throw (CannotOpenDirectoryException(this->_responses[fd], "404", errno));
-    }
-    else
+    if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) != NULL)
     {
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
@@ -866,15 +871,20 @@ Server::checkAndSetResourceType(int fd)
             response.setResourceType(ResType::INDEX_HTML);
         else
         {
-            std::cout<<"in checkAndSetResourceType fd:"<<fd<<std::endl;
             if (this->isAutoIndexOn(fd))
-            {
                 response.setResourceType(ResType::AUTO_INDEX);
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-            }
             else
                 throw (IndexNoExistException(this->_responses[fd]));
         }
+    }
+    else
+    {
+        if (errno == ENOTDIR)
+            response.setResourceType(ResType::STATIC_RESOURCE);
+        else if (errno == EACCES)
+            throw (CannotOpenDirectoryException(this->_responses[fd], "403", errno));
+        else if (errno == ENOENT)
+            throw (CannotOpenDirectoryException(this->_responses[fd], "404", errno));
     }
 
     Log::trace("< checkAndSetResourceType");
@@ -888,6 +898,7 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
     {
     case ResType::AUTO_INDEX:
         std::cout << "Auto index page will be generated" << std::endl;
+        this->_server_manager->fdSet(fd, FdSet::WRITE);
         break ;
     case ResType::STATIC_RESOURCE:
         std::cout << "Static resource will be opened" << std::endl;
@@ -901,6 +912,7 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
         // Client fd에 대해서 clear 해준다.
         break ;
     default:
+        this->_server_manager->fdSet(fd, FdSet::WRITE);
         break ;
     }
     Log::trace("< preprocessResponseBody");
@@ -913,6 +925,10 @@ Server::processResponseBody(int fd)
 
     std::cout<<"uri: "<<this->_requests[fd].getUri()<<std::endl;
     this->findResourceAbsPath(fd);
+
+    if (this->_responses[fd].isLocationToBeRedirected())
+        throw (MustRedirectException(this->_responses[fd]));
+
     this->checkAndSetResourceType(fd);
     if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
         this->setResourceAbsPathAsIndex(fd);

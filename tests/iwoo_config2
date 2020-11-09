@@ -1,17 +1,18 @@
 http { 
     include mime.types;
-    root /Users/iwoo/Documents/Webserv/;
+    root /Users/humblego/Documents/dev/team_webserv/;
+    retry_after_sec 120;
     server {
         server_name first_server;
         listen       8080;
 
-        location /folder {
+        location /route {
             cgi .bin .cgi .bla;
             autoindex on;
-            root /Users/iwoo/Documents/Webserv/tests/;
+            root /Users/humblego/Documents/dev/team_webserv/tests/;
         }
-        location /old-folder {
-            return 301 /folder;
+        location /old-route {
+            return 301 /route;
         }
     }
     server {
@@ -21,7 +22,7 @@ http {
             index  index.html index.htm;
         }
         location /second {
-            root /Users/humblego/Documents/dev/team_webserv/tests/;
+            root /Users/humblego/Documents/dev/dev/team_webserv/tests/;
             index  html;
             limit_except PUT POST GET
             index index.html index.htm index.abc;

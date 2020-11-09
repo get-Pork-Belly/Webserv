@@ -1,4 +1,5 @@
 #include "Log.hpp"
+#include "ServerManager.hpp"
 
 /*============================================================================*/
 /****************************  Static variables  ******************************/
@@ -102,6 +103,25 @@ Log::closeClient(Server& server, int client_fd)
 }
 
 void
+Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
+{
+    if (DEBUG == 0)
+        return ;
+
+    int server_fd = server.getServerSocket();
+    int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
+
+    std::string line;
+    line = "SERVER(" + std::to_string(server_fd) + ") OPEN " 
+                    + fdTypeToString(type) + "(" + std::to_string(fd) 
+                    + ") which requested by CLIENT(" 
+                    + std::to_string(client_socket) + ")\n";
+
+    Log::timeLog(log_print_fd);
+    write(log_print_fd, line.c_str(), line.length());
+}
+
+void
 Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
 {
     if (DEBUG == 0)
@@ -199,6 +219,32 @@ Log::fdTypeToString(const FdType& type)
     }
 }
 
+std::string
+Log::resTypeToString(const ResType& type)
+{
+    switch (type)
+    {
+    case ResType::STATIC_RESOURCE:
+        return ("STATIC_RESOURCE");
+
+    case ResType::CGI:
+        return ("CGI");
+
+    case ResType::AUTO_INDEX:
+        return ("AUTO_INDEX");
+
+    case ResType::INDEX_HTML:
+        return ("INDEX_HTML");
+
+    case ResType::ERROR_HTML:
+        return ("ERROR_HTML");
+
+    default:
+        return ("NOT YET REGISTED IN resTypeToString");
+        break;
+    }
+}
+
 void
 Log::printLocationConfig(const std::map<std::string, location_info>& loc_config)
 {
@@ -222,4 +268,44 @@ Log::printLocationInfo(const location_info& loc_info)
 
     for(auto& kv : loc_info)
         std::cout<<"| "<<kv.first<<" : "<<kv.second<<std::endl;
+}
+
+void
+Log::printFdCopySets(ServerManager& server_manager)
+{
+    std::cout<<"READ FD COPY SET"<<std::endl;
+    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
+        std::cout<<"| "<<i<<" |";
+    std::cout<<std::endl;
+    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
+        std::cout<<"| "<<server_manager.fdIsSet(i, FdSet::READ)<<" |";
+    std::cout<<std::endl;
+
+    std::cout<<"WRITE FD COPY SET"<<std::endl;
+    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
+        std::cout<<"| "<<i<<" |";
+    std::cout<<std::endl;
+    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
+        std::cout<<"| "<<server_manager.fdIsSet(i, FdSet::WRITE)<<" |";
+    std::cout<<std::endl;
+}
+
+void
+Log::printFdSets(ServerManager& server_manager)
+{
+    std::cout<<"READ ORIGIN FDSET"<<std::endl;
+    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
+        std::cout<<"| "<<i<<" |";
+    std::cout<<std::endl;
+    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
+        std::cout<<"| "<<server_manager.fdIsOriginSet(i, FdSet::READ)<<" |";
+    std::cout<<std::endl;
+
+    std::cout<<"WRITE ORIGIN FDSET"<<std::endl;
+    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
+        std::cout<<"| "<<i<<" |";
+    std::cout<<std::endl;
+    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
+        std::cout<<"| "<<server_manager.fdIsOriginSet(i, FdSet::WRITE)<<" |";
+    std::cout<<std::endl;
 }
