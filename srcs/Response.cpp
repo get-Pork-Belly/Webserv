@@ -131,22 +131,35 @@ Response::getUriExtension() const
 }
 
 int
-Response::getPipeIn() const
-{
-    return (this->_pipe_in);
-}
-
-int
-Response::getPipeOut() const
-{
-    return (this->_pipe_out);
-}
-
-int
 Response::getCgiPid() const
 {
     return (this->_cig_pid);
 }
+
+int
+Response::getStdinOfCGI()
+{
+    return (this->_stdin_of_cgi);
+}
+
+int
+Response::getStdoutOfCGI()
+{
+    return (this->_stdout_of_cgi);
+}
+
+int
+Response::getReadFdFromCGI()
+{
+    return (this->_read_fd_from_cgi);
+}
+
+int
+Response::getWriteFdToCGI()
+{
+    return (this->_write_fd_to_cgi);
+}
+
 
 /*============================================================================*/
 /********************************  Setter  ************************************/
@@ -208,21 +221,33 @@ Response::setUriExtension(const std::string& extension)
 }
 
 void
-Response::setPipeIn(const int pipe_in)
-{
-    this->_pipe_in = pipe_in;
-}
-
-void
-Response::setPipeOut(const int pipe_out)
-{
-    this->_pipe_out = pipe_out;
-}
-
-void
 Response::setCgiPid(const int pid)
 {
     this->_cig_pid = pid;
+}
+
+void
+Response::setStdinOfCGI(int fd)
+{
+    this->_stdin_of_cgi = fd;
+}
+
+void
+Response::setStdoutOfCGI(int fd)
+{
+    this->_stdout_of_cgi = fd;
+}
+
+void
+Response::setReadFdFromCGI(int fd)
+{
+    this->_read_fd_from_cgi = fd;
+}
+
+void
+Response::setWriteFdToCGI(int fd)
+{
+    this->_write_fd_to_cgi = fd;
 }
 
 /*============================================================================*/
@@ -257,8 +282,10 @@ Response::init()
     this->_resource_abs_path = "";
     this->_route = "";
     this->_directory_entry = "";
-    this->_pipe_in = 0;
-    this->_pipe_out = 0;
+    this->_stdin_of_cgi = 0;
+    this->_stdout_of_cgi = 0;
+    this->_read_fd_from_cgi = 0;
+    this->_write_fd_to_cgi = 0;
     this->_uri_extension = "";
 }
 

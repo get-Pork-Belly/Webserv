@@ -538,85 +538,69 @@ Server::acceptClient()
 }
 
 void
-Server::sendDataToCgi(int fd)
+Server::sendDataToCgi(int write_fd_to_cgi)
 {
-    //NOTE: FD는 PIPE_OUT
-    int bytes = 0;
-    int client_fd = this->_server_manager->getConnectedFd(fd);
+    //NOTE: FD는 writeFdToCGI
+    Log::trace("> sendDataToCgi");
+    int bytes;
+    int client_fd;
+    int content_length;
+    int transfered;
+    char* body;
+
+    bytes = 0;
+    client_fd = this->_server_manager->getConnectedFd(write_fd_to_cgi);
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
-    int content_length = request.getContentLength();
-    int transfered = request.getTransfered();
+    content_length = request.getContentLength();
+    transfered = request.getTransfered();
     //NOTE 이 부분에서 문제가 속도 이슈가 생길수도 있음.
-    char* body = ft::strdup(request.getBodies());
-
-    bytes = write(fd, &body[transfered], content_length);
+    body = ft::strdup(request.getBodies());
+    bytes = write(write_fd_to_cgi, &body[transfered], content_length);
     free(body);
+
     if (bytes > 0)
     {
         transfered += bytes;
         request.setTransfered(transfered);
         if (transfered == content_length)
-        {
-            this->_server_manager->fdClr(fd, FdSet::WRITE);
-            this->_server_manager->setClosedFdOnFdTable(fd);
-            this->_server_manager->updateFdMax(fd);
-            this->_server_manager->fdSet(response.getPipeIn(), FdSet::READ);
-            close(fd); // pipe_out close
-        }
+            this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
     }
     else if (bytes == 0)
-    {
         throw "write error"; //error 500
-    }
     else
-    {
         throw "write error"; //error 500
-    }
+
+    Log::trace("< sendDataToCgi");
 }
 
 void
-Server::receiveDataFromCgi(int fd)
+Server::receiveDataFromCgi(int read_fd_from_cgi)
 {
-    //NOTE: 여기로 들어온 FD는 파이프_인 이지만 실제로 read 할 것은 client_Fd
-    std::cout << "==========================" << std::endl;
-    std::cout << "READ in cgi pipe!!!!!!!!!!!!!!!!!" << std::endl;
-    std::cout << "==========================" << std::endl;
-    //TODO: 변수화
-    usleep(30000);
-    int client_fd = this->_server_manager->getConnectedFd(fd);
+    Log::trace("> receiveDataFromCgi");
+    int bytes;
+    int client_fd;
+    int status;
     char buf[BUFFER_SIZE + 1];
-    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+
+    client_fd = this->_server_manager->getConnectedFd(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
-    int pipe_in = response.getPipeIn();
-    int bytes = read(pipe_in, buf, BUFFER_SIZE + 1);
-    std::cout << "==========================" << std::endl;
-    std::cout << "READ " << std::endl;
-    std::cout << "==========================" << std::endl;
+
+    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+    bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE + 1);
     if (bytes > 0)
     {
-        //NOTE: CLIENT가 바로 끊긴다. 이유 찾자.
         response.setBody(buf);
-        //TODO 파이프에 맞게 수정하기
-        // this->closeFdAndSetClientOnWriteFdSet(pipe_in);
-        this->_server_manager->fdClr(pipe_in, FdSet::READ);
-        this->_server_manager->setClosedFdOnFdTable(pipe_in);
-        this->_server_manager->updateFdMax(pipe_in);
-        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-        //TODO: Write 시점 찾기
-        close(pipe_in);
-        int status;
-        // 매크로함수 써서 그럴듯하게 만들기
+        this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
+        //NOTE waitpid의 타이밍을 잘 잡자.
         waitpid(response.getCgiPid(), &status, 0);
     }
     else if (bytes == 0)
-    {
         std::cout << "read end!" << std::endl;
-    }
     else
-    {
         throw("cgi read error");
-    }
+
+    Log::trace("< receiveDataFromCgi");
 }
 
 void
@@ -713,18 +697,20 @@ Server::closeFdAndSetClientOnWriteFdSet(int fd)
     close(fd);
 }
 
-// void
-// Server::closeFdAndSetFd(int clear_fd, int set_fd)
-// {
-// 	const FdType& origin_type = this->_server_manager->getFdTable()[clear_fd].first;
-//     Log::closeFd(*this, client_socket, type, fd);
+void
+Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_fd_set)
+{
+    Log::trace("> closeFdAndSetFd");
+    const FdType& type = this->_server_manager->getFdTable()[clear_fd].first;
+    Log::closeFd(*this, set_fd, type, clear_fd);
 
-// 	this->_server_manager->fdClr(clear_fd, FdSet::READ);
-// 	this->_server_manager->setClosedFdOnFdTable(clear_fd);
-// 	this->_server_manager->updateFdMax(clear_fd);
-// 	this->_server_manager->fdSet(set_fd, FdSet::WRITE);
-// 	close(clear_fd);
-// }
+    this->_server_manager->fdClr(clear_fd, clear_fd_set);
+    this->_server_manager->setClosedFdOnFdTable(clear_fd);
+    this->_server_manager->updateFdMax(clear_fd);
+    this->_server_manager->fdSet(set_fd, set_fd_set);
+    close(clear_fd);
+    Log::trace("< closeFdAndSetFd");
+}
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
 void
@@ -893,36 +879,39 @@ Server::processResponseBody(int fd)
 }
 
 void
-Server::openCgiPipe(int fd)
+Server::openCgiPipe(int client_fd)
 {
-    //NOTE 인자로 들어오는 fd는 client_fd다.
-    Response& response = this->_responses[fd];
-    int pipe_fd[2];
+    Log::trace("> openCgiPipe");
+    Response& response = this->_responses[client_fd];
+    int pipe1[2];
+    int pipe2[2];
 
     //TODO: 예외객체
-    if (pipe(pipe_fd) < 0)
+    if (pipe(pipe1) < 0)
         return ;
-    //NOTE pipeFd[0] -> CGI가 데이터를 읽어올 곳.
-    //NOTE pipeFd[1] -> 메인 프로세스가 데이터를 CGI에 넘겨줄 통로
-    //NOTE CGi 작업이 끝나면, pipeFd[1]로 데이터를 읽어오자.
+    if (pipe(pipe2) < 0)
+        return ;
 
-    response.setPipeIn(pipe_fd[0]);
-    response.setPipeOut(pipe_fd[1]);
+    int stdin_of_cgi = pipe1[0];
+    int stdout_of_cgi = pipe2[1];
+    int read_fd_from_cgi = pipe2[0];
+    int write_fd_to_cgi = pipe1[1];
 
-    //NOTE fcntl
-    fcntl(pipe_fd[0], F_SETFL, O_NONBLOCK);
-    fcntl(pipe_fd[1], F_SETFL, O_NONBLOCK);
+    response.setStdinOfCGI(stdin_of_cgi);
+    response.setStdoutOfCGI(stdout_of_cgi);
+    response.setReadFdFromCGI(read_fd_from_cgi);
+    response.setWriteFdToCGI(write_fd_to_cgi);
 
-    this->_server_manager->setCGIPipeOnFdTable(pipe_fd[0], fd);
-    this->_server_manager->setCGIPipeOnFdTable(pipe_fd[1], fd);
-    this->_server_manager->updateFdMax(pipe_fd[0]);
-    this->_server_manager->updateFdMax(pipe_fd[1]);
+    fcntl(stdin_of_cgi, F_SETFL, O_NONBLOCK);
+    fcntl(stdout_of_cgi, F_SETFL, O_NONBLOCK);
+    fcntl(read_fd_from_cgi, F_SETFL, O_NONBLOCK);
+    fcntl(write_fd_to_cgi, F_SETFL, O_NONBLOCK);
 
-    //NOTE pipe__fd[1]에 write 플래그를 세워주자
-    this->_server_manager->fdSet(pipe_fd[1], FdSet::WRITE);
-
-
-    // executeCgiAndReadCgiPipe(pipe_fd[0]);
+    this->_server_manager->setCGIPipeOnFdTable(read_fd_from_cgi, client_fd);
+    this->_server_manager->setCGIPipeOnFdTable(write_fd_to_cgi, client_fd);
+    this->_server_manager->updateFdMax(read_fd_from_cgi);
+    this->_server_manager->updateFdMax(write_fd_to_cgi);
+    Log::trace("< openCgiPipe");
 }
 
 char**
@@ -1044,22 +1033,16 @@ Server::makeCgiArgv(int client_fd)
 }
 
 void
-Server::forkAndExecuteCgi(int fd)
+Server::forkAndExecuteCgi(int client_fd)
 {
-    //NOTE 인자로 들어온 fd는 client fd.
-    //1. response, request 객체를 레퍼런스로 가져온다.
-    //2. pipe_in. pipe_out, pid 변수를 만든다.
-    //3. argv, envp를 만든다.
-    //4. fork를 한다.
-    //5. pid == 0이면 dup2를 해준다. 이렇게 하면 CGI 프로세스는 데이터가 들어올 때 까지 블록된다.
-    //6. 부모프로세스에서는 현재 fd에 대해 clear를 해준다.
+    Log::trace("> forkAndExecuteCgi");
 
-    Response& response = this->_responses[fd];
-    // Request& request = this->_requests[fd];
-    int pipe_in = response.getPipeIn();
-    int pipe_out = response.getPipeOut();
-    char **argv = this->makeCgiArgv(fd);
-    char **envp = this->makeCgiEnvp(fd);
+    Response& response = this->_responses[client_fd];
+    // Request& request = this->_requests[client_fd];
+    int stdin_of_cgi = response.getStdinOfCGI();
+    int stdout_of_cgi = response.getStdoutOfCGI();
+    char **argv = this->makeCgiArgv(client_fd);
+    char **envp = this->makeCgiEnvp(client_fd);
     pid_t pid;
     int ret;
 
@@ -1068,23 +1051,21 @@ Server::forkAndExecuteCgi(int fd)
         throw ("fork failed");
     else if (pid == 0)
     {
-        if (dup2(pipe_in, 0) < 0)
+        if (dup2(stdin_of_cgi, 0) < 0)
             throw ("dup2 STDIN error");
-        if (dup2(pipe_out, 1) < 0)
+        if (dup2(stdout_of_cgi, 1) < 0)
             throw ("dup2 STDOUT error");
         if ((ret = execve(argv[0], argv, envp)) < 0)
-        {
-            std::cout << "argv[0]: " << argv[0] << std::endl;
-            std::cout << "execve error" << std::endl;
             exit(ret);
-        }
         exit(ret);
     }
     else
     {
         response.setCgiPid(pid);
-        // this->_server_manager->fdClr(fd, FdSet::READ);
         ft::doubleFree(argv);
         ft::doubleFree(envp);
+        // NOTE 정상적으로 읽으면 select 알아서 clear 해준다.
+        this->_server_manager->fdSet(response.getWriteFdToCGI(), FdSet::WRITE);
     }
+    Log::trace("< forkAndExecuteCgi");
 }

@@ -26,9 +26,10 @@ private:
     ResType _resource_type;
     std::string _body;
 
-    // int _cgi_pipe[2];
-    int _pipe_in;
-    int _pipe_out;
+    int _stdin_of_cgi;
+    int _stdout_of_cgi;
+    int _read_fd_from_cgi;
+    int _write_fd_to_cgi;
 
     int _cig_pid;
 
@@ -61,10 +62,12 @@ public:
     const std::string& getBody() const;
     const std::string& getPath() const;
     // int getCgiPipeFd() const;
-    int getPipeIn() const;
-    int getPipeOut() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
+    int getStdinOfCGI();
+    int getStdoutOfCGI();
+    int getReadFdFromCGI();
+    int getWriteFdToCGI();
     int getCgiPid() const;
 
     /* Setter */
@@ -78,8 +81,10 @@ public:
     void setUriExtension(const std::string& extension);
     // void setMessageBody();
 
-    void setPipeIn(const int pipe_in);
-    void setPipeOut(const int pipe_out);
+    void setStdinOfCGI(int fd);
+    void setStdoutOfCGI(int fd);
+    void setReadFdFromCGI(int fd);
+    void setWriteFdToCGI(int fd);
 
     void setCgiPid(const int pid);
 
