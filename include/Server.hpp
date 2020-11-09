@@ -155,6 +155,14 @@ public:
         OpenResourceErrorException(Response& response, int error_num);
         virtual const char* what() const throw();
     };
+    class CgiExecuteErrorException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        CgiExecuteErrorException(Response& response);
+        virtual const char* what() const throw();
+    };
 };
 
 #endif

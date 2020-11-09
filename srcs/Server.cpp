@@ -170,6 +170,18 @@ Server::IndexNoExistException::what() const throw()
     return ("[CODE 403] No index & Autoindex off");
 }
 
+Server::CgiExecuteErrorException::CgiExecuteErrorException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("500");
+}
+
+const char*
+Server::CgiExecuteErrorException::what() const throw()
+{
+    return ("[CODE 500] Server Internal error");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
@@ -587,9 +599,9 @@ Server::sendDataToCGI(int write_fd_to_cgi)
             this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
     }
     else if (bytes == 0)
-        throw "write error"; //error 500
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     else
-        throw "write error"; //error 500
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
 
     Log::trace("< sendDataToCGI");
 }
@@ -611,14 +623,21 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     if (bytes > 0)
     {
         response.appendBody(buf);
-        this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
+
+        //NOTE: BUFFER SIZE보다 읽은 것이 같거나 컸으면, 다시 한 번 버퍼를 확인해 보아야 함.
+        if (bytes < BUFFER_SIZE)
+        {
+            this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
         //NOTE waitpid의 타이밍을 잘 잡자.
-        waitpid(response.getCGIPid(), &status, 0);
+            waitpid(response.getCGIPid(), &status, 0);
+        }
     }
+    //TODO: return 0 확인하기
     else if (bytes == 0)
-        std::cout << "read end!" << std::endl;
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     else
-        throw("cgi read error");
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+
     Log::trace("< receiveDataFromCGI");
 }
 
@@ -631,22 +650,35 @@ Server::run(int fd)
     {
         if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
         {
-            Log::trace(">>> write sequence");
-            if (this->isCGIPipe(fd))
-                sendDataToCGI(fd);
-            else
+            try
             {
-                std::string response_message = this->makeResponseMessage(fd);
-                // std::cout << "message: " << response_message << std::endl;
-                // response_message = this->makeResponseMessage(this->_requests[fd], fd);
-                // TODO: sendResponse error handling
-                if (!(sendResponse(response_message, fd)))
-                    std::cerr<<"Error: sendResponse"<<std::endl;
-                this->_server_manager->fdClr(fd, FdSet::WRITE);
-                this->_requests[fd].clear();
-                this->_responses[fd].init();
+                Log::trace(">>> write sequence");
+                if (this->isCGIPipe(fd))
+                    sendDataToCGI(fd);
+                else
+                {
+                    std::string response_message = this->makeResponseMessage(fd);
+                    // std::cout << "message: " << response_message << std::endl;
+                    // response_message = this->makeResponseMessage(this->_requests[fd], fd);
+                    // TODO: sendResponse error handling
+                    if (!(sendResponse(response_message, fd)))
+                        std::cerr<<"Error: sendResponse"<<std::endl;
+                    this->_server_manager->fdClr(fd, FdSet::WRITE);
+                    this->_requests[fd].init();
+                    this->_responses[fd].init();
+                }
+                Log::trace("<<< write sequence");
             }
-            Log::trace("<<< write sequence");
+            catch(const SendErrorCodeToClientException& e)
+            {
+                int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+                this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+                this->closeFdAndSetFd(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ, client_fd, FdSet::WRITE);
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+            }
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
         {
@@ -697,7 +729,7 @@ Server::closeClientSocket(int fd)
     this->_server_manager->fdClr(fd, FdSet::READ);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
-    this->_requests[fd].clear();
+    this->_requests[fd].init();
     Log::closeClient(*this, fd);
     close(fd);
 }
@@ -900,9 +932,9 @@ Server::openCGIPipe(int client_fd)
 
     //TODO: 예외객체
     if (pipe(pipe1) < 0)
-        return ;
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     if (pipe(pipe2) < 0)
-        return ;
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
 
     int stdin_of_cgi = pipe1[0];
     int stdout_of_cgi = pipe2[1];
@@ -1007,8 +1039,8 @@ Server::makeCGIEnvp(int client_fd)
     {
         if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ this->_requests[client_fd].getMethod())))
             return (nullptr);
-    }
-    if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getUriPath())))
+        }
+        if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getUriPath())))
         return (nullptr);
     if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
         return (nullptr);
@@ -1053,20 +1085,24 @@ Server::forkAndExecuteCGI(int client_fd)
     // Request& request = this->_requests[client_fd];
     int stdin_of_cgi = response.getStdinOfCGI();
     int stdout_of_cgi = response.getStdoutOfCGI();
+    //TODO: 만약 아래의 두 함수가 return False를 한다면 할당 해놓은 자원 모두를 해체하고 throw 500을 하자.
     char** argv = this->makeCGIArgv(client_fd);
     char** envp = this->makeCGIEnvp(client_fd);
+    if (argv == nullptr || envp == nullptr)
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     pid_t pid;
     int ret;
 
     //TODO: CGI Exception 만들기
     if ((pid = fork()) < 0)
-        throw ("fork failed");
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     else if (pid == 0)
     {
         if (dup2(stdin_of_cgi, 0) < 0)
-            throw ("dup2 STDIN error");
+            throw (CgiExecuteErrorException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
-            throw ("dup2 STDOUT error");
+            throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        //TODO: execve실패했을 경우 생각해보기
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
         exit(ret);

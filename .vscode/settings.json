@@ -67,6 +67,7 @@
         "vector": "cpp",
         "iosfwd": "cpp",
         "queue": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "filesystem": "cpp"
     }
 }
