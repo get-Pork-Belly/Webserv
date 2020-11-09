@@ -12,10 +12,11 @@
 /*============================================================================*/
 
 Response::Response()
-: _status_code("200"), _transfer_type(""), _clients(""), _body(""), 
-_uri_extension("")
+: _status_code("200"), _headers({{"", ""}}), _transfer_type(""), _clients(""),
+_location_info({{"",""}}), _resource_abs_path(""), _route(""),
+_directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
+_uri_extension(""), _transmitting_body("")
 {
-    this->_headers = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
     this->initMimeTypeTable();
@@ -24,9 +25,11 @@ _uri_extension("")
 Response::Response(const Response& other)
 : _status_code(other._status_code),  _headers(other._headers),
 _transfer_type(other._transfer_type), _clients(other._clients),
-_status_code_table(other._status_code_table), 
-_mime_type_table(other._mime_type_table), _body(other._body),
-_uri_extension(other._uri_extension) {}
+_location_info(other._location_info),
+_resource_abs_path(other._resource_abs_path), _route(other._route),
+_directory_entry(other._directory_entry), _resource_type(other._resource_type),
+_body(other._body), _uri_extension(other._uri_extension),
+_transmitting_body(other._transmitting_body) {}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -47,10 +50,17 @@ Response::operator=(const Response& rhs)
     this->_headers = rhs._headers;
     this->_transfer_type = rhs._transfer_type;
     this->_clients = rhs._clients;
-    this->_body= rhs._body;
     this->_status_code_table = rhs._status_code_table;
     this->_mime_type_table = rhs._mime_type_table;
+    this->_location_info = rhs._location_info;
+    this->_resource_abs_path = rhs._resource_abs_path;
+    this->_route = rhs._route;
+    this->_directory_entry = rhs._directory_entry;
+    this->_file_info = rhs._file_info;
+    this->_resource_type = rhs._resource_type;
+    this->_body= rhs._body;
     this->_uri_extension = rhs._uri_extension;
+    this->_transmitting_body = rhs._transmitting_body;
     return (*this);
 }
 
@@ -188,18 +198,19 @@ Response::setUriExtension(const std::string& extension)
 void
 Response::init()
 {
-    this->_status_code = "200";
-    this->_headers = { {"", ""} };
-    this->_transfer_type = "";
-    this->_clients = "";
-    this->_body = "";
-    this->_location_info = { {"", ""} };
-    this->_resource_abs_path = "";
-    this->_route = "";
-    this->_directory_entry = "";
-    ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
-    this->_resource_type = ResType::NOT_YET_CHECKED;
-    this->_uri_extension = "";
+    // this->_status_code = "200";
+    // this->_headers = { {"", ""} };
+    // this->_transfer_type = "";
+    // this->_clients = "";
+    // this->_body = "";
+    // this->_location_info = { {"", ""} };
+    // this->_resource_abs_path = "";
+    // this->_route = "";
+    // this->_directory_entry = "";
+    // ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
+    // this->_resource_type = ResType::NOT_YET_CHECKED;
+    // this->_uri_extension = "";
+    *this = Response();
 }
 
 void
@@ -707,11 +718,11 @@ void
 Response::encodeChunkedBody()
 {
     // size_t chunked_index = this->getChunkedIndex();
-    size_t chunked_index = 0;
+    // size_t chunked_index = 0;
 
-    this->setMessageBody(Encoder::rawToChunked(chunked_index));
+    // this->setTransmittingBody(ft::rawToChunked(chunked_index));
 
-    this->setChunkedIndex(chunked_index);
+    // this->setChunkedIndex(chunked_index);
 }
 
 void
