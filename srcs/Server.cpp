@@ -276,6 +276,8 @@ Server::receiveRequestWithoutBody(int fd)
 void
 Server::receiveRequestNormalBody(int fd)
 {
+    Log::trace("> receiveRequestNormalBody");
+
     int bytes;
     Request& req = this->_requests[fd];
 
@@ -287,14 +289,13 @@ Server::receiveRequestNormalBody(int fd)
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
     if ((bytes = recv(fd, buf, content_length, 0)) > 0)
-    {
         req.parseNormalBodies(buf);
-        this->_server_manager->fdSet(fd, FdSet::WRITE);
-    }
     else if (bytes == 0)
         this->closeClientSocket(fd);
     else
         throw (ReadErrorException());
+
+    Log::trace("< receiveRequestNormalBody");
 }
 
 void
@@ -310,7 +311,6 @@ Server::clearRequestBuffer(int fd)
         if (bytes == BUFFER_SIZE)
             return ;
         req.setReqInfo(ReqInfo::COMPLETE);
-        this->_server_manager->fdSet(fd, FdSet::WRITE);
     }
     else if (bytes == 0)
         this->closeClientSocket(fd);
@@ -327,11 +327,7 @@ Server::receiveRequestChunkedBody(int fd)
     Request& req = this->_requests[fd];
 
     if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
-    {
         req.parseChunkedBody(buf);
-        if (req.getReqInfo() == ReqInfo::COMPLETE)
-            this->_server_manager->fdSet(fd, FdSet::WRITE);
-    }
     else if (bytes == 0)
         this->closeClientSocket(fd);
     else
@@ -342,6 +338,7 @@ void
 Server::receiveRequest(int fd)
 {
     Log::trace("> receiveRequest");
+
     const ReqInfo& req_info = this->_requests[fd].getReqInfo();
 
     switch (req_info)
@@ -365,6 +362,7 @@ Server::receiveRequest(int fd)
     default:
         break ;
     }
+
     Log::trace("< receiveRequest");
 }
 
@@ -560,9 +558,9 @@ Server::run(int fd)
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
+                    Log::getRequest(*this, fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                         processResponseBody(fd);
-                    Log::getRequest(*this, fd);
                 }
             }
             catch(const SendErrorCodeToClientException& e)
@@ -680,6 +678,7 @@ Server::openStaticResource(int fd)
         if ((fstat(resource_fd, &tmp)) == -1)
             throw OpenResourceErrorException(this->_responses[fd], errno);
         this->_responses[fd].setFileInfo(tmp);
+        Log::openFd(*this, fd, FdType::RESOURCE, resource_fd);
     }
     else
         throw OpenResourceErrorException(this->_responses[fd], errno);
@@ -708,10 +707,7 @@ Server::checkAndSetResourceType(int fd)
         else
         {
             if (this->isAutoIndexOn(fd))
-            {
                 response.setResourceType(ResType::AUTO_INDEX);
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-            }
             else
                 throw (IndexNoExistException(this->_responses[fd]));
         }
@@ -737,6 +733,7 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
     {
     case ResType::AUTO_INDEX:
         std::cout << "Auto index page will be generated" << std::endl;
+        this->_server_manager->fdSet(fd, FdSet::WRITE);
         break ;
     case ResType::STATIC_RESOURCE:
         std::cout << "Static resource will be opened" << std::endl;
@@ -747,6 +744,7 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
         //TODO: Cgi pipe
         break ;
     default:
+        this->_server_manager->fdSet(fd, FdSet::WRITE);
         break ;
     }
     Log::trace("< preprocessResponseBody");
