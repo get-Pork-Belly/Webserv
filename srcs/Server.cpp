@@ -569,7 +569,7 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     int client_fd;
     int content_length;
     int transfered_body_size;
-    char* body;
+    const char* body;
 
     bytes = 0;
     client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
@@ -577,11 +577,8 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     Response& response = this->_responses[client_fd];
     content_length = request.getContentLength();
     transfered_body_size = request.getTransferedBodySize();
-    //NOTE 이 부분에서 문제가 속도 이슈가 생길수도 있음.
-    body = ft::strdup(request.getBodies());
+    body = request.getBodies().c_str();
     bytes = write(write_fd_to_cgi, &body[transfered_body_size], content_length);
-    free(body);
-
     if (bytes > 0)
     {
         transfered_body_size += bytes;
