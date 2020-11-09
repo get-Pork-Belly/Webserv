@@ -58,13 +58,13 @@ Response::operator=(const Response& rhs)
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
-std::string 
+const std::string&
 Response::getStatusCode() const
 {
     return (this->_status_code);
 }
 
-std::string
+const std::string&
 Response::getStatusMessage(const std::string& code)
 {
     return (this->_status_code_table[code]);
@@ -137,25 +137,25 @@ Response::getCgiPid() const
 }
 
 int
-Response::getStdinOfCGI()
+Response::getStdinOfCGI() const
 {
     return (this->_stdin_of_cgi);
 }
 
 int
-Response::getStdoutOfCGI()
+Response::getStdoutOfCGI() const
 {
     return (this->_stdout_of_cgi);
 }
 
 int
-Response::getReadFdFromCGI()
+Response::getReadFdFromCGI() const
 {
     return (this->_read_fd_from_cgi);
 }
 
 int
-Response::getWriteFdToCGI()
+Response::getWriteFdToCGI() const
 {
     return (this->_write_fd_to_cgi);
 }
@@ -227,25 +227,25 @@ Response::setCgiPid(const int pid)
 }
 
 void
-Response::setStdinOfCGI(int fd)
+Response::setStdinOfCGI(const int fd)
 {
     this->_stdin_of_cgi = fd;
 }
 
 void
-Response::setStdoutOfCGI(int fd)
+Response::setStdoutOfCGI(const int fd)
 {
     this->_stdout_of_cgi = fd;
 }
 
 void
-Response::setReadFdFromCGI(int fd)
+Response::setReadFdFromCGI(const int fd)
 {
     this->_read_fd_from_cgi = fd;
 }
 
 void
-Response::setWriteFdToCGI(int fd)
+Response::setWriteFdToCGI(const int fd)
 {
     this->_write_fd_to_cgi = fd;
 }

@@ -48,8 +48,8 @@ public:
     /* Overload */
     Response& operator=(const Response& rhs);
     /* Getter */
-    std::string getStatusCode() const;
-    std::string getStatusMessage(const std::string& code);
+    const std::string& getStatusCode() const;
+    const std::string& getStatusMessage(const std::string& code);
     const std::string& getRoute() const;
     // std::string getHeaders() const;
     // std::string getTransferType() const;
@@ -64,10 +64,10 @@ public:
     // int getCgiPipeFd() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
-    int getStdinOfCGI();
-    int getStdoutOfCGI();
-    int getReadFdFromCGI();
-    int getWriteFdToCGI();
+    int getStdinOfCGI() const;
+    int getStdoutOfCGI() const;
+    int getReadFdFromCGI() const;
+    int getWriteFdToCGI() const;
     int getCgiPid() const;
 
     /* Setter */
@@ -81,10 +81,10 @@ public:
     void setUriExtension(const std::string& extension);
     // void setMessageBody();
 
-    void setStdinOfCGI(int fd);
-    void setStdoutOfCGI(int fd);
-    void setReadFdFromCGI(int fd);
-    void setWriteFdToCGI(int fd);
+    void setStdinOfCGI(const int fd);
+    void setStdoutOfCGI(const int fd);
+    void setReadFdFromCGI(const int fd);
+    void setWriteFdToCGI(const int fd);
 
     void setCgiPid(const int pid);
 

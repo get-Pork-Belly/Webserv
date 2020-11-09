@@ -49,7 +49,7 @@ Request::~Request() {}
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
-std::string
+const std::string&
 Request::getMethod() const
 {
     return (this->_method);
@@ -61,32 +61,32 @@ Request::getUri() const
     return (this->_uri);
 }
 
-std::string
-Request::getVersion()
+const std::string&
+Request::getVersion() const
 {
     return (this->_version);
 }
 
-std::map<std::string, std::string>
+const std::map<std::string, std::string>&
 Request::getHeaders() const
 {
     return (this->_headers);
 }
 
-std::string
-Request::getProtocol()
+const std::string&
+Request::getProtocol() const
 {
     return (this->_protocol);
 }
 
-std::string
-Request::getBodies()
+const std::string&
+Request::getBodies() const
 {
     return (this->_bodies);
 }
 
-std::string
-Request::getStatusCode()
+const std::string&
+Request::getStatusCode() const
 {
     return (this->_status_code);
 }
@@ -413,9 +413,9 @@ Request::clear()
 }
 
 int
-Request::getContentLength()
+Request::getContentLength() const
 {
-    location_info::iterator it = this->_headers.find("Content-Length");
+    location_info::const_iterator it = this->_headers.find("Content-Length");
     if (it == this->_headers.end())
         throw "Invalid NORMAL_BODY";
         // throw (NoContentLengthException());

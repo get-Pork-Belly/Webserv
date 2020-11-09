@@ -33,17 +33,17 @@ public:
     virtual ~Request();
 
     /* Getter */
-    std::string getMethod() const;
+    const std::string& getMethod() const;
     const std::string& getUri() const;
-    std::string getVersion();
-    std::map<std::string, std::string> getHeaders() const;
-    std::string getProtocol();
-    std::string getBodies();
-    std::string getStatusCode();
+    const std::string& getVersion() const;
+    const std::map<std::string, std::string>& getHeaders() const;
+    const std::string& getProtocol() const;
+    const std::string& getBodies() const;
+    const std::string& getStatusCode() const;
     const ReqInfo& getReqInfo() const;
     bool getIsBufferLeft() const;
     const std::string& getIpAddress() const;
-    int getContentLength();
+    int getContentLength() const;
     int getTransferedBodySize() const;
 
     /* Setter */
