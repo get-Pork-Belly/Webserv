@@ -31,7 +31,7 @@ private:
     int _read_fd_from_cgi;
     int _write_fd_to_cgi;
 
-    int _cig_pid;
+    int _cgi_pid;
 
     std::string _uri_path;
     std::string _uri_extension;

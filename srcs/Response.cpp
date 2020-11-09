@@ -11,22 +11,36 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
+/*
+    ResType _resource_type;
+*/
+
 Response::Response()
-: _status_code("200"), _transfer_type(""), _clients(""), _body(""), 
-_uri_extension("")
+: _status_code("200"), _transfer_type(""), _clients(""),
+_resource_abs_path(""), _route(""), _directory_entry(""),
+_body(""), _stdin_of_cgi(0), _stdout_of_cgi(0),
+_read_fd_from_cgi(0), _write_fd_to_cgi(0), _cgi_pid(0),
+_uri_path(""), _uri_extension("")
 {
     this->_headers = { {"", ""} };
+    this->_location_info = { {"", ""} };
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
     this->initMimeTypeTable();
 }
 
 Response::Response(const Response& other)
-: _status_code(other._status_code),  _headers(other._headers),
+: _status_code(other._status_code), _headers(other._headers),
 _transfer_type(other._transfer_type), _clients(other._clients),
-_status_code_table(other._status_code_table), 
-_mime_type_table(other._mime_type_table), _body(other._body),
-_uri_extension(other._uri_extension) {}
+_status_code_table(other._status_code_table), _mime_type_table(other._mime_type_table),
+_location_info(other._location_info), _resource_abs_path(other._resource_abs_path),
+_route(other._route), _directory_entry(other._directory_entry),
+_file_info(other._file_info), _resource_type(other._resource_type),
+_body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
+_stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
+_write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
+_uri_path(other._uri_path), _uri_extension(other._uri_extension)
+{}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -47,9 +61,20 @@ Response::operator=(const Response& rhs)
     this->_headers = rhs._headers;
     this->_transfer_type = rhs._transfer_type;
     this->_clients = rhs._clients;
-    this->_body= rhs._body;
     this->_status_code_table = rhs._status_code_table;
     this->_mime_type_table = rhs._mime_type_table;
+    this->_location_info = rhs._location_info;
+    this->_resource_abs_path = rhs._resource_abs_path;
+    this->_route = rhs._route;
+    this->_directory_entry = rhs._directory_entry;
+    this->_file_info = rhs._file_info;
+    this->_body = rhs._body;
+    this->_stdin_of_cgi = rhs._stdin_of_cgi;
+    this->_stdout_of_cgi = rhs._stdout_of_cgi;
+    this->_read_fd_from_cgi = rhs._read_fd_from_cgi;
+    this->_write_fd_to_cgi = rhs._write_fd_to_cgi;
+    this->_cgi_pid = rhs._cgi_pid;
+    this->_uri_path = rhs._uri_path;
     this->_uri_extension = rhs._uri_extension;
     return (*this);
 }
@@ -133,7 +158,7 @@ Response::getUriExtension() const
 int
 Response::getCGIPid() const
 {
-    return (this->_cig_pid);
+    return (this->_cgi_pid);
 }
 
 int
@@ -223,7 +248,7 @@ Response::setUriExtension(const std::string& extension)
 void
 Response::setCGIPid(const int pid)
 {
-    this->_cig_pid = pid;
+    this->_cgi_pid = pid;
 }
 
 void
@@ -273,20 +298,8 @@ Response::CannotOpenCGIPipeException::what() const throw()
 void
 Response::init()
 {
-    this->_status_code = "200";
-    this->_headers = { {"", ""} };
-    this->_transfer_type = "";
-    this->_clients = "";
-    this->_body = "";
-    this->_location_info = { {"", ""} };
-    this->_resource_abs_path = "";
-    this->_route = "";
-    this->_directory_entry = "";
-    this->_stdin_of_cgi = 0;
-    this->_stdout_of_cgi = 0;
-    this->_read_fd_from_cgi = 0;
-    this->_write_fd_to_cgi = 0;
-    this->_uri_extension = "";
+    Response temp;
+    *this = temp;
 }
 
 void
