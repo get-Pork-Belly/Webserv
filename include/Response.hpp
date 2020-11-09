@@ -25,6 +25,7 @@ private:
     ResType _resource_type;
     std::string _body;
     std::string _uri_extension;
+    std::string _transmitting_body;
 
 public:
     /* Constructor */

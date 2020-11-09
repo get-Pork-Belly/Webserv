@@ -582,16 +582,12 @@ void
 Response::makeBody(Request& request)
 {
     Log::trace("> makeBody");
-    (void)request;
     if (this->getResourceType() == ResType::AUTO_INDEX)
         PageGenerator::makeAutoIndex(*this);
     else if (this->getStatusCode().front() != '2')
         PageGenerator::makeErrorPage(*this);
-    else // 일반적인 body
-    {
-        if (this->isNeedToBeChunkedBody(request))
-            // this->encodeChunkedBody();
-    }
+    else if (this->isNeedToBeChunkedBody(request))
+        this->encodeChunkedBody();
     Log::trace("< makeBody");
 }
 
@@ -705,6 +701,17 @@ Response::getHtmlLangMetaData() const
         return ("");
 
     return (html_tag_block.substr(lang_meta_data_start + 6, lang_meta_data_end - (lang_meta_data_start + 6)));
+}
+
+void
+Response::encodeChunkedBody()
+{
+    // size_t chunked_index = this->getChunkedIndex();
+    size_t chunked_index = 0;
+
+    this->setMessageBody(Encoder::rawToChunked(chunked_index));
+
+    this->setChunkedIndex(chunked_index);
 }
 
 void

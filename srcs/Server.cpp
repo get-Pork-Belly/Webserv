@@ -377,7 +377,7 @@ Server::makeResponseMessage(int fd)
 
     std::string status_line;
     std::string headers;
-    
+
     if (response.getStatusCode().compare("200") != 0)
         response.setResourceType(ResType::ERROR_HTML);
 
@@ -388,6 +388,7 @@ Server::makeResponseMessage(int fd)
     Log::trace("< makeResponseMessage");
     // if (request.getMethod().compare("HEAD") == 0)
     //     return (status_line + headers);
+    // else if (response.isNeedTobeChunkedBody)
     return (status_line + headers + response.getBody());
 }
 
