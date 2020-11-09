@@ -57,8 +57,8 @@ Request::getUri() const
     return (this->_uri);
 }
 
-std::string
-Request::getVersion()
+const std::string&
+Request::getVersion() const
 {
     return (this->_version);
 }

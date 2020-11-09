@@ -33,7 +33,7 @@ public:
     /* Getter */
     std::string getMethod() const;
     const std::string& getUri() const;
-    std::string getVersion();
+    const std::string& getVersion() const;
     std::map<std::string, std::string> getHeaders() const;
     std::string getProtocol();
     std::string getBodies();
