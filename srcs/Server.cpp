@@ -509,13 +509,13 @@ Server::isAutoIndexOn(int fd)
 }
 
 bool
-Server::isCgiUri(int fd, const std::string& extension)
+Server::isCGIUri(int fd, const std::string& extension)
 {
-    Log::trace("> isCgiUri");
+    Log::trace("> isCGIUri");
 
     if (extension == "")
     {
-        Log::trace("< isCgiUri return false");
+        Log::trace("< isCGIUri return false");
         return (false);
     }
 
@@ -523,18 +523,18 @@ Server::isCgiUri(int fd, const std::string& extension)
     location_info::const_iterator it = location_info.find("cgi");
     if (it == location_info.end())
     {
-        Log::trace("< isCgiUri return false");
+        Log::trace("< isCGIUri return false");
         return (false);
     }
 
     const std::string& cgi = it->second;
     if (cgi.find(extension) == std::string::npos)
     {
-        Log::trace("< isCgiUri return false");
+        Log::trace("< isCGIUri return false");
         return (false);
     }
 
-    Log::trace("< isCgiUri return true");
+    Log::trace("< isCGIUri return true");
     return (true);
 }
 
@@ -561,10 +561,10 @@ Server::acceptClient()
 }
 
 void
-Server::sendDataToCgi(int write_fd_to_cgi)
+Server::sendDataToCGI(int write_fd_to_cgi)
 {
     //NOTE: FD는 writeFdToCGI
-    Log::trace("> sendDataToCgi");
+    Log::trace("> sendDataToCGI");
     int bytes;
     int client_fd;
     int content_length;
@@ -594,13 +594,13 @@ Server::sendDataToCgi(int write_fd_to_cgi)
     else
         throw "write error"; //error 500
 
-    Log::trace("< sendDataToCgi");
+    Log::trace("< sendDataToCGI");
 }
 
 void
-Server::receiveDataFromCgi(int read_fd_from_cgi)
+Server::receiveDataFromCGI(int read_fd_from_cgi)
 {
-    Log::trace("> receiveDataFromCgi");
+    Log::trace("> receiveDataFromCGI");
     int bytes;
     int client_fd;
     int status;
@@ -616,13 +616,13 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
         response.setBody(buf);
         this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
         //NOTE waitpid의 타이밍을 잘 잡자.
-        waitpid(response.getCgiPid(), &status, 0);
+        waitpid(response.getCGIPid(), &status, 0);
     }
     else if (bytes == 0)
         std::cout << "read end!" << std::endl;
     else
         throw("cgi read error");
-    Log::trace("< receiveDataFromCgi");
+    Log::trace("< receiveDataFromCGI");
 }
 
 void
@@ -636,7 +636,7 @@ Server::run(int fd)
         {
             Log::trace(">>> write sequence");
             if (this->isCGIPipe(fd))
-                sendDataToCgi(fd);
+                sendDataToCGI(fd);
             else
             {
                 std::string response_message = this->makeResponseMessage(fd);
@@ -657,7 +657,7 @@ Server::run(int fd)
             {
                 std::cout << "Fd: " << fd << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
                 if (this->isCGIPipe(fd)) 
-                    receiveDataFromCgi(fd);
+                    receiveDataFromCGI(fd);
                 else if (this->isStaticResource(fd))
                     this->readStaticResource(fd);
                 else if (this->isClientSocket(fd))
@@ -814,7 +814,7 @@ Server::checkAndSetResourceType(int fd)
 
     Response& response = this->_responses[fd];
     response.findAndSetUriExtension();
-    if (this->isCgiUri(fd, response.getUriExtension()))
+    if (this->isCGIUri(fd, response.getUriExtension()))
     {
         response.setResourceType(ResType::CGI);
         return ;
@@ -866,8 +866,8 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
         break ;
     case ResType::CGI:
         std::cout << "CGIpipe will be opened" << std::endl;
-        this->openCgiPipe(fd); //fd: client fd, cgiPipe[2]
-        this->forkAndExecuteCgi(fd);
+        this->openCGIPipe(fd); //fd: client fd, cgiPipe[2]
+        this->forkAndExecuteCGI(fd);
         // write flag -> CGI 프로세스에 스탠다드 인(pipe[1])으로 데이터를 넣어줌.
         // Client fd에 대해서 clear 해준다.
         break ;
@@ -894,9 +894,9 @@ Server::processResponseBody(int fd)
 }
 
 void
-Server::openCgiPipe(int client_fd)
+Server::openCGIPipe(int client_fd)
 {
-    Log::trace("> openCgiPipe");
+    Log::trace("> openCGIPipe");
     Response& response = this->_responses[client_fd];
     int pipe1[2];
     int pipe2[2];
@@ -926,13 +926,13 @@ Server::openCgiPipe(int client_fd)
     this->_server_manager->setCGIPipeOnFdTable(write_fd_to_cgi, client_fd);
     this->_server_manager->updateFdMax(read_fd_from_cgi);
     this->_server_manager->updateFdMax(write_fd_to_cgi);
-    Log::trace("< openCgiPipe");
+    Log::trace("< openCGIPipe");
 }
 
 char**
-Server::makeCgiEnvp(int client_fd)
+Server::makeCGIEnvp(int client_fd)
 {
-    Log::trace("> makeCgiEnvp");
+    Log::trace("> makeCGIEnvp");
     char** envp;
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
     const std::map<std::string, std::string>& location_info =
@@ -1023,14 +1023,14 @@ Server::makeCgiEnvp(int client_fd)
         return (nullptr);
     if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
         return (nullptr);
-    Log::trace("< makeCgiEnvp");
+    Log::trace("< makeCGIEnvp");
     return (envp);
 }
 
 char**
-Server::makeCgiArgv(int client_fd)
+Server::makeCGIArgv(int client_fd)
 {
-    Log::trace("> makeCgiArgv");
+    Log::trace("> makeCGIArgv");
     char** argv;
     Response& response = this->_responses[client_fd];
 
@@ -1043,25 +1043,25 @@ Server::makeCgiArgv(int client_fd)
     if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
         return (nullptr);
     argv[2] = nullptr;
-    Log::trace("< makeCgiArgv");
+    Log::trace("< makeCGIArgv");
     return (argv);
 }
 
 void
-Server::forkAndExecuteCgi(int client_fd)
+Server::forkAndExecuteCGI(int client_fd)
 {
-    Log::trace("> forkAndExecuteCgi");
+    Log::trace("> forkAndExecuteCGI");
 
     Response& response = this->_responses[client_fd];
     // Request& request = this->_requests[client_fd];
     int stdin_of_cgi = response.getStdinOfCGI();
     int stdout_of_cgi = response.getStdoutOfCGI();
-    char **argv = this->makeCgiArgv(client_fd);
-    char **envp = this->makeCgiEnvp(client_fd);
+    char **argv = this->makeCGIArgv(client_fd);
+    char **envp = this->makeCGIEnvp(client_fd);
     pid_t pid;
     int ret;
 
-    //TODO: Cgi Exception 만들기
+    //TODO: CGI Exception 만들기
     if ((pid = fork()) < 0)
         throw ("fork failed");
     else if (pid == 0)
@@ -1076,11 +1076,11 @@ Server::forkAndExecuteCgi(int client_fd)
     }
     else
     {
-        response.setCgiPid(pid);
+        response.setCGIPid(pid);
         ft::doubleFree(argv);
         ft::doubleFree(envp);
         // NOTE 정상적으로 읽으면 select 알아서 clear 해준다.
         this->_server_manager->fdSet(response.getWriteFdToCGI(), FdSet::WRITE);
     }
-    Log::trace("< forkAndExecuteCgi");
+    Log::trace("< forkAndExecuteCGI");
 }

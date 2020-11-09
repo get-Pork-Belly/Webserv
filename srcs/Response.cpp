@@ -131,7 +131,7 @@ Response::getUriExtension() const
 }
 
 int
-Response::getCgiPid() const
+Response::getCGIPid() const
 {
     return (this->_cig_pid);
 }
@@ -221,7 +221,7 @@ Response::setUriExtension(const std::string& extension)
 }
 
 void
-Response::setCgiPid(const int pid)
+Response::setCGIPid(const int pid)
 {
     this->_cig_pid = pid;
 }
@@ -254,16 +254,16 @@ Response::setWriteFdToCGI(const int fd)
 /******************************  Exception  ***********************************/
 /*============================================================================*/
 
-Response::CannotOpenCgiPipeException::CannotOpenCgiPipeException(Response& response)
+Response::CannotOpenCGIPipeException::CannotOpenCGIPipeException(Response& response)
 : _response(response)
 {
     this->_response.setStatusCode("500");
 }
 
 const char*
-Response::CannotOpenCgiPipeException::what() const throw()
+Response::CannotOpenCGIPipeException::what() const throw()
 {
-    return ("[CODE 500] Cannot Open Cgi Pipe.");
+    return ("[CODE 500] Cannot Open CGI Pipe.");
 }
 
 /*============================================================================*/

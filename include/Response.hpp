@@ -61,14 +61,14 @@ public:
     const ResType& getResourceType() const;
     const std::string& getBody() const;
     const std::string& getPath() const;
-    // int getCgiPipeFd() const;
+    // int getCGIPipeFd() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
     int getStdinOfCGI() const;
     int getStdoutOfCGI() const;
     int getReadFdFromCGI() const;
     int getWriteFdToCGI() const;
-    int getCgiPid() const;
+    int getCGIPid() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -86,16 +86,16 @@ public:
     void setReadFdFromCGI(const int fd);
     void setWriteFdToCGI(const int fd);
 
-    void setCgiPid(const int pid);
+    void setCGIPid(const int pid);
 
     /* Exception */
 public:
-    class CannotOpenCgiPipeException : public SendErrorCodeToClientException
+    class CannotOpenCGIPipeException : public SendErrorCodeToClientException
     {
     private:
         Response& _response;
     public:
-        CannotOpenCgiPipeException(Response& response);
+        CannotOpenCGIPipeException(Response& response);
         virtual const char* what() const throw();
     };
     /* Util */

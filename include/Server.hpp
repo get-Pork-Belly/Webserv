@@ -94,23 +94,23 @@ public:
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
     bool isAutoIndexOn(int fd);
-    bool isCgiUri(int fd, const std::string& extension);
+    bool isCGIUri(int fd, const std::string& extension);
     void checkAndSetResourceType(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
     void processResponseBody(int fd);
     void preprocessResponseBody(int fd, ResType& res_type);
-    void sendDataToCgi(int fd);
-    void receiveDataFromCgi(int fd);
+    void sendDataToCGI(int fd);
+    void receiveDataFromCGI(int fd);
 
     void readStaticResource(int fd);
 
     /* Server run function */
     void acceptClient();
-    void openCgiPipe(int fd);
-    void forkAndExecuteCgi(int fd);
-    char** makeCgiArgv(int fd);
-    char** makeCgiEnvp(int fd);
+    void openCGIPipe(int fd);
+    void forkAndExecuteCGI(int fd);
+    char** makeCGIArgv(int fd);
+    char** makeCGIEnvp(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception
