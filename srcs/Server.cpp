@@ -568,7 +568,7 @@ Server::sendDataToCgi(int write_fd_to_cgi)
     int bytes;
     int client_fd;
     int content_length;
-    int transfered;
+    int transfered_body_size;
     char* body;
 
     bytes = 0;
@@ -576,17 +576,17 @@ Server::sendDataToCgi(int write_fd_to_cgi)
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
     content_length = request.getContentLength();
-    transfered = request.getTransfered();
+    transfered_body_size = request.getTransferedBodySize();
     //NOTE 이 부분에서 문제가 속도 이슈가 생길수도 있음.
     body = ft::strdup(request.getBodies());
-    bytes = write(write_fd_to_cgi, &body[transfered], content_length);
+    bytes = write(write_fd_to_cgi, &body[transfered_body_size], content_length);
     free(body);
 
     if (bytes > 0)
     {
-        transfered += bytes;
-        request.setTransfered(transfered);
-        if (transfered == content_length)
+        transfered_body_size += bytes;
+        request.setTransferedBodySize(transfered_body_size);
+        if (transfered_body_size == content_length)
             this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
     }
     else if (bytes == 0)

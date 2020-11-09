@@ -21,7 +21,7 @@ private:
     ReqInfo _info;
     bool _is_buffer_left;
     std::string _ip_address;
-    int _transfered;
+    int _transfered_body_size;
 
 public:
     /* Constructor */
@@ -44,7 +44,7 @@ public:
     bool getIsBufferLeft() const;
     const std::string& getIpAddress() const;
     int getContentLength();
-    int getTransfered() const;
+    int getTransferedBodySize() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -57,7 +57,7 @@ public:
     void setReqInfo(const ReqInfo& info);
     void setIsBufferLeft(const bool& is_left_buffer);
     void setIpAddress(const std::string& ip_address);
-    void setTransfered(const int transfered);
+    void setTransferedBodySize(const int transfered_body_size);
 
     /* Util */
 
