@@ -20,6 +20,8 @@ private:
     std::string _status_code;
     ReqInfo _info;
     bool _is_buffer_left;
+    std::string _ip_address;
+    int _transfered_body_size;
 
 public:
     /* Constructor */
@@ -31,15 +33,18 @@ public:
     virtual ~Request();
 
     /* Getter */
-    std::string getMethod() const;
+    const std::string& getMethod() const;
     const std::string& getUri() const;
     const std::string& getVersion() const;
-    std::map<std::string, std::string> getHeaders() const;
-    std::string getProtocol();
-    std::string getBodies();
-    std::string getStatusCode();
+    const std::map<std::string, std::string>& getHeaders() const;
+    const std::string& getProtocol() const;
+    const std::string& getBodies() const;
+    const std::string& getStatusCode() const;
     const ReqInfo& getReqInfo() const;
     bool getIsBufferLeft() const;
+    const std::string& getIpAddress() const;
+    int getContentLength() const;
+    int getTransferedBodySize() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -51,10 +56,12 @@ public:
     void setStatusCode(const std::string& code);
     void setReqInfo(const ReqInfo& info);
     void setIsBufferLeft(const bool& is_left_buffer);
+    void setIpAddress(const std::string& ip_address);
+    void setTransferedBodySize(const int transfered_body_size);
 
     /* Util */
 
-    void clear();
+    void init();
 
     void updateReqInfo();
     bool updateStatusCodeAndReturn(const std::string& status_code, const bool& ret);
@@ -64,7 +71,6 @@ public:
     bool isChunkedBody() const;
     bool isContentLeftInBuffer() const;
 
-    int getContentLength();
 
     // void initMembers(std::string req_message);
 

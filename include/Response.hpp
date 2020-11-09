@@ -5,6 +5,7 @@
 # include <sys/stat.h>
 # include "Request.hpp"
 # include "types.hpp"
+# include "Exception.hpp"
 
 class Server;
 
@@ -24,6 +25,15 @@ private:
     struct stat _file_info;
     ResType _resource_type;
     std::string _body;
+
+    int _stdin_of_cgi;
+    int _stdout_of_cgi;
+    int _read_fd_from_cgi;
+    int _write_fd_to_cgi;
+
+    int _cgi_pid;
+
+    std::string _uri_path;
     std::string _uri_extension;
     std::string _transmitting_body;
 
@@ -39,8 +49,8 @@ public:
     /* Overload */
     Response& operator=(const Response& rhs);
     /* Getter */
-    std::string getStatusCode() const;
-    std::string getStatusMessage(const std::string& code);
+    const std::string& getStatusCode() const;
+    const std::string& getStatusMessage(const std::string& code);
     const std::string& getRoute() const;
     // std::string getHeaders() const;
     // std::string getTransferType() const;
@@ -51,8 +61,15 @@ public:
     const struct stat& getFileInfo() const;
     const ResType& getResourceType() const;
     const std::string& getBody() const;
+    const std::string& getUriPath() const;
+    // int getCGIPipeFd() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
+    int getStdinOfCGI() const;
+    int getStdoutOfCGI() const;
+    int getReadFdFromCGI() const;
+    int getWriteFdToCGI() const;
+    int getCGIPid() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -61,9 +78,27 @@ public:
     void setFileInfo(const struct stat& file_info);
     void setResourceType(const ResType& resource_type);
     void setBody(const std::string& body);
+    void setUriPath(const std::string& path);
     void setUriExtension(const std::string& extension);
     // void setMessageBody();
+
+    void setStdinOfCGI(const int fd);
+    void setStdoutOfCGI(const int fd);
+    void setReadFdFromCGI(const int fd);
+    void setWriteFdToCGI(const int fd);
+
+    void setCGIPid(const int pid);
+
     /* Exception */
+public:
+    class CannotOpenCGIPipeException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        CannotOpenCGIPipeException(Response& response);
+        virtual const char* what() const throw();
+    };
     /* Util */
     // bool isLocationUri(const std::string& uri, Server* server);
     bool setRouteAndLocationInfo(const std::string& uri, Server* server);
@@ -88,7 +123,7 @@ public:
     std::string makeHeaders(Request& request);
     std::string makeStatusLine();
 
-    void appendBody(char *buf);
+    void appendBody(char* buf);
 
     /* General header */
     void appendDateHeader(std::string& headers);

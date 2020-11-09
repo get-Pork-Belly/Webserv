@@ -2,7 +2,6 @@
 # define SERVER_HPP
 
 # include <string>
-# include <string>
 # include <map>
 # include <vector>
 # include <errno.h>
@@ -17,6 +16,7 @@
 # include "types.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
+# include "Exception.hpp"
 
 const int BUFFER_SIZE = 65536;
 
@@ -61,6 +61,8 @@ public:
     const std::map<std::string, location_info>& getLocationConfig();
     int getServerSocket() const;
     Request& getRequest(int fd);
+    const std::string& getHost() const;
+    const std::string& getPort() const;
     /* Setter */
     void setServerSocket();
 
@@ -69,6 +71,7 @@ public:
     /* Util */
     void closeClientSocket(int fd);
     void closeFdAndSetClientOnWriteFdSet(int fd);
+    void closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_fd_set);
     bool isFdManagedByServer(int fd) const;
     bool isServerSocket(int fd) const;
     bool isClientSocket(int fd) const;
@@ -91,18 +94,23 @@ public:
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
     bool isAutoIndexOn(int fd);
-    bool isCgiUri(int fd, const std::string& extension);
+    bool isCGIUri(int fd, const std::string& extension);
     void checkAndSetResourceType(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
     void processResponseBody(int fd);
     void preprocessResponseBody(int fd, ResType& res_type);
+    void sendDataToCGI(int fd);
+    void receiveDataFromCGI(int fd);
 
     void readStaticResource(int fd);
 
     /* Server run function */
     void acceptClient();
-    
+    void openCGIPipe(int fd);
+    void forkAndExecuteCGI(int fd);
+    char** makeCGIArgv(int fd);
+    char** makeCGIEnvp(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception
@@ -119,12 +127,6 @@ public:
         virtual const char* what() const throw();
     };
 public:
-    class SendErrorCodeToClientException : public std::exception
-    {
-    public:
-        SendErrorCodeToClientException();
-        virtual const char* what() const throw();
-    };
     class MustReadirectException : public SendErrorCodeToClientException
     {
     private:
@@ -160,6 +162,14 @@ public:
         std::string _msg;
     public:
         OpenResourceErrorException(Response& response, int error_num);
+        virtual const char* what() const throw();
+    };
+    class CgiExecuteErrorException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        CgiExecuteErrorException(Response& response);
         virtual const char* what() const throw();
     };
 };

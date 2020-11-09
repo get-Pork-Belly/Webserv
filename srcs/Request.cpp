@@ -11,14 +11,17 @@
 
 Request::Request()
 : _method(""), _uri(""), _version(""),
- _protocol(""), _bodies(""), _status_code(""), _info(ReqInfo::READY) {}
+_protocol(""), _bodies(""), _status_code(""),
+_info(ReqInfo::READY), _is_buffer_left(false),
+_ip_address(""), _transfered_body_size(0) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
-_protocol(other._protocol), _bodies(other._bodies), 
+_protocol(other._protocol), _bodies(other._bodies),
 _status_code(other._status_code), _info(other._info),
-_is_buffer_left(false) {}
+_is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
+_transfered_body_size(other._transfered_body_size) {}
 
 Request&
 Request::operator=(const Request& other)
@@ -32,6 +35,8 @@ Request::operator=(const Request& other)
     this->_status_code = other._status_code;
     this->_info = other._info;
     this->_is_buffer_left = other._is_buffer_left;
+    this->_ip_address = other._ip_address;
+    this->_transfered_body_size = other._transfered_body_size;
     return (*this);
 }
 
@@ -45,7 +50,7 @@ Request::~Request() {}
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
-std::string
+const std::string&
 Request::getMethod() const
 {
     return (this->_method);
@@ -63,26 +68,26 @@ Request::getVersion() const
     return (this->_version);
 }
 
-std::map<std::string, std::string>
+const std::map<std::string, std::string>&
 Request::getHeaders() const
 {
     return (this->_headers);
 }
 
-std::string
-Request::getProtocol()
+const std::string&
+Request::getProtocol() const
 {
     return (this->_protocol);
 }
 
-std::string
-Request::getBodies()
+const std::string&
+Request::getBodies() const
 {
     return (this->_bodies);
 }
 
-std::string
-Request::getStatusCode()
+const std::string&
+Request::getStatusCode() const
 {
     return (this->_status_code);
 }
@@ -97,6 +102,18 @@ bool
 Request::getIsBufferLeft() const
 {
     return (this->_is_buffer_left);
+}
+
+const std::string&
+Request::getIpAddress() const
+{
+    return (this->_ip_address);
+}
+
+int
+Request::getTransferedBodySize() const
+{
+    return (this->_transfered_body_size);
 }
 
 /*============================================================================*/
@@ -155,6 +172,18 @@ void
 Request::setIsBufferLeft(const bool& is_left_buffer)
 {
     this->_is_buffer_left = is_left_buffer;
+}
+
+void
+Request::setIpAddress(const std::string& ip_address)
+{
+    this->_ip_address = ip_address;
+}
+
+void
+Request::setTransferedBodySize(const int transfered_body_size)
+{
+    this->_transfered_body_size = transfered_body_size;
 }
 
 /*============================================================================*/
@@ -370,23 +399,16 @@ Request::parseNormalBodies(char* buf)
 }
 
 void
-Request::clear()
+Request::init()
 {
-    this->_method = "";
-    this->_uri = "";
-    this->_version = "";
-    this->_protocol = "";
-    this->_headers = {{"default", "default"}};
-    this->_status_code = "";
-    this->_bodies = "";
-    this->_is_buffer_left = false;
-    this->setReqInfo(ReqInfo::READY);
+    Request temp;
+    *this = temp;
 }
 
 int
-Request::getContentLength()
+Request::getContentLength() const
 {
-    location_info::iterator it = this->_headers.find("Content-Length");
+    location_info::const_iterator it = this->_headers.find("Content-Length");
     if (it == this->_headers.end())
         throw "Invalid NORMAL_BODY";
         // throw (NoContentLengthException());

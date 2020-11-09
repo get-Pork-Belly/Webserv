@@ -11,11 +11,16 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
+/*
+    ResType _resource_type;
+*/
+
 Response::Response()
 : _status_code("200"), _headers({{"", ""}}), _transfer_type(""), _clients(""),
 _location_info({{"",""}}), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
-_uri_extension(""), _transmitting_body("")
+_stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
+_cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body("")
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -23,13 +28,17 @@ _uri_extension(""), _transmitting_body("")
 }
 
 Response::Response(const Response& other)
-: _status_code(other._status_code),  _headers(other._headers),
+: _status_code(other._status_code), _headers(other._headers),
 _transfer_type(other._transfer_type), _clients(other._clients),
-_location_info(other._location_info),
-_resource_abs_path(other._resource_abs_path), _route(other._route),
-_directory_entry(other._directory_entry), _resource_type(other._resource_type),
-_body(other._body), _uri_extension(other._uri_extension),
-_transmitting_body(other._transmitting_body) {}
+_status_code_table(other._status_code_table), _mime_type_table(other._mime_type_table),
+_location_info(other._location_info), _resource_abs_path(other._resource_abs_path),
+_route(other._route), _directory_entry(other._directory_entry),
+_file_info(other._file_info), _resource_type(other._resource_type),
+_body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
+_stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
+_write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
+_uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body)
+{}
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -58,7 +67,13 @@ Response::operator=(const Response& rhs)
     this->_directory_entry = rhs._directory_entry;
     this->_file_info = rhs._file_info;
     this->_resource_type = rhs._resource_type;
-    this->_body= rhs._body;
+    this->_body = rhs._body;
+    this->_stdin_of_cgi = rhs._stdin_of_cgi;
+    this->_stdout_of_cgi = rhs._stdout_of_cgi;
+    this->_read_fd_from_cgi = rhs._read_fd_from_cgi;
+    this->_write_fd_to_cgi = rhs._write_fd_to_cgi;
+    this->_cgi_pid = rhs._cgi_pid;
+    this->_uri_path = rhs._uri_path;
     this->_uri_extension = rhs._uri_extension;
     this->_transmitting_body = rhs._transmitting_body;
     return (*this);
@@ -68,13 +83,13 @@ Response::operator=(const Response& rhs)
 /********************************  Getter  ************************************/
 /*============================================================================*/
 
-std::string 
+const std::string&
 Response::getStatusCode() const
 {
     return (this->_status_code);
 }
 
-std::string
+const std::string&
 Response::getStatusMessage(const std::string& code)
 {
     return (this->_status_code_table[code]);
@@ -122,6 +137,12 @@ Response::getBody() const
     return (this->_body);
 }
 
+const std::string&
+Response::getUriPath() const
+{
+    return (this->_uri_path);
+}
+
 const std::map<std::string, std::string>&
 Response::getMimeTypeTable() const
 {
@@ -133,6 +154,37 @@ Response::getUriExtension() const
 {
     return (this->_uri_extension);
 }
+
+int
+Response::getCGIPid() const
+{
+    return (this->_cgi_pid);
+}
+
+int
+Response::getStdinOfCGI() const
+{
+    return (this->_stdin_of_cgi);
+}
+
+int
+Response::getStdoutOfCGI() const
+{
+    return (this->_stdout_of_cgi);
+}
+
+int
+Response::getReadFdFromCGI() const
+{
+    return (this->_read_fd_from_cgi);
+}
+
+int
+Response::getWriteFdToCGI() const
+{
+    return (this->_write_fd_to_cgi);
+}
+
 
 /*============================================================================*/
 /********************************  Setter  ************************************/
@@ -182,14 +234,62 @@ Response::setBody(const std::string& body)
 }
 
 void
+Response::setUriPath(const std::string& uri_path)
+{
+    this->_uri_path = uri_path;
+}
+
+void
 Response::setUriExtension(const std::string& extension)
 {
     this->_uri_extension = extension;
 }
 
+void
+Response::setCGIPid(const int pid)
+{
+    this->_cgi_pid = pid;
+}
+
+void
+Response::setStdinOfCGI(const int fd)
+{
+    this->_stdin_of_cgi = fd;
+}
+
+void
+Response::setStdoutOfCGI(const int fd)
+{
+    this->_stdout_of_cgi = fd;
+}
+
+void
+Response::setReadFdFromCGI(const int fd)
+{
+    this->_read_fd_from_cgi = fd;
+}
+
+void
+Response::setWriteFdToCGI(const int fd)
+{
+    this->_write_fd_to_cgi = fd;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
+
+Response::CannotOpenCGIPipeException::CannotOpenCGIPipeException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("500");
+}
+
+const char*
+Response::CannotOpenCGIPipeException::what() const throw()
+{
+    return ("[CODE 500] Cannot Open CGI Pipe.");
+}
 
 /*============================================================================*/
 /*********************************  Util  *************************************/
@@ -198,18 +298,6 @@ Response::setUriExtension(const std::string& extension)
 void
 Response::init()
 {
-    // this->_status_code = "200";
-    // this->_headers = { {"", ""} };
-    // this->_transfer_type = "";
-    // this->_clients = "";
-    // this->_body = "";
-    // this->_location_info = { {"", ""} };
-    // this->_resource_abs_path = "";
-    // this->_route = "";
-    // this->_directory_entry = "";
-    // ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
-    // this->_resource_type = ResType::NOT_YET_CHECKED;
-    // this->_uri_extension = "";
     *this = Response();
 }
 
