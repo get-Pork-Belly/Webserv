@@ -87,7 +87,6 @@ public:
     std::string makeHeaders(Request& request);
     std::string makeStatusLine();
 
-    void applyAndCheckRequest(Request& request, Server* server);
     void appendBody(char *buf);
 
     /* General header */

@@ -377,10 +377,7 @@ Server::makeResponseMessage(int fd)
 
     std::string status_line;
     std::string headers;
-
-    //TODO: parsing 할 때 method 허용여부 확인하여 throw, response 꾸미기
-    // response.applyAndCheckRequest(request, this);
-
+    
     if (response.getStatusCode().compare("200") != 0)
         response.setResourceType(ResType::ERROR_HTML);
 
