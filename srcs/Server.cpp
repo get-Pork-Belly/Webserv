@@ -744,7 +744,7 @@ Server::findResourceAbsPath(int fd)
     const std::string& path = parser.getPath();
 
     Response& response = this->_responses[fd];
-    response.setPath(path);
+    response.setUriPath(path);
     response.setRouteAndLocationInfo(path, this);
 
     std::string root = response.getLocationInfo().at("root");
@@ -992,7 +992,7 @@ Server::makeCGIEnvp(int client_fd)
 
     if (!(envp[5] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
         return (nullptr);
-    if (!(envp[6] = ft::strdup("PATH_INFO=" + this->_responses[client_fd].getPath())))
+    if (!(envp[6] = ft::strdup("PATH_INFO=" + this->_responses[client_fd].getUriPath())))
         return (nullptr);
     if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + this->_responses[client_fd].getResourceAbsPath())))
         return (nullptr);
@@ -1011,7 +1011,7 @@ Server::makeCGIEnvp(int client_fd)
         if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ this->_requests[client_fd].getMethod())))
             return (nullptr);
     }
-    if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getPath())))
+    if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getUriPath())))
         return (nullptr);
     if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
         return (nullptr);

@@ -113,9 +113,9 @@ Response::getBody() const
 }
 
 const std::string&
-Response::getPath() const
+Response::getUriPath() const
 {
-    return (this->_path);
+    return (this->_uri_path);
 }
 
 const std::map<std::string, std::string>&
@@ -209,9 +209,9 @@ Response::setBody(const std::string& body)
 }
 
 void
-Response::setPath(const std::string& path)
+Response::setUriPath(const std::string& uri_path)
 {
-    this->_path = path;
+    this->_uri_path = uri_path;
 }
 
 void

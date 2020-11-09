@@ -33,7 +33,7 @@ private:
 
     int _cig_pid;
 
-    std::string _path;
+    std::string _uri_path;
     std::string _uri_extension;
 
 public:
@@ -60,7 +60,7 @@ public:
     const struct stat& getFileInfo() const;
     const ResType& getResourceType() const;
     const std::string& getBody() const;
-    const std::string& getPath() const;
+    const std::string& getUriPath() const;
     // int getCGIPipeFd() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
@@ -77,7 +77,7 @@ public:
     void setFileInfo(const struct stat& file_info);
     void setResourceType(const ResType& resource_type);
     void setBody(const std::string& body);
-    void setPath(const std::string& path);
+    void setUriPath(const std::string& path);
     void setUriExtension(const std::string& extension);
     // void setMessageBody();
 
