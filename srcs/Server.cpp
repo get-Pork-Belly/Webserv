@@ -129,14 +129,14 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
-Server::MustReadirectException::MustReadirectException(Response& res)
-: _res(res), _msg("MustReadirectException: [CODE " + res.getRedirectStatusCode() + "]")
+Server::MustRedirectException::MustRedirectException(Response& res)
+: _res(res), _msg("MustRedirectException: [CODE " + res.getRedirectStatusCode() + "]")
 {
     this->_res.setStatusCode(res.getRedirectStatusCode());
 }
 
 const char*
-Server::MustReadirectException::what() const throw()
+Server::MustRedirectException::what() const throw()
 {
     return (this->_msg.c_str());
 }
@@ -927,7 +927,7 @@ Server::processResponseBody(int fd)
     this->findResourceAbsPath(fd);
 
     if (this->_responses[fd].isLocationToBeRedirected())
-        throw (MustReadirectException(this->_responses[fd]));
+        throw (MustRedirectException(this->_responses[fd]));
 
     this->checkAndSetResourceType(fd);
     if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)

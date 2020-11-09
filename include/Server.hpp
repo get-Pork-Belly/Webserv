@@ -127,13 +127,13 @@ public:
         virtual const char* what() const throw();
     };
 public:
-    class MustReadirectException : public SendErrorCodeToClientException
+    class MustRedirectException : public SendErrorCodeToClientException
     {
     private:
         Response& _res;
         std::string _msg;
     public:
-        MustReadirectException(Response& res);
+        MustRedirectException(Response& res);
         virtual const char* what() const throw();
     };
     class CannotOpenDirectoryException : public SendErrorCodeToClientException
