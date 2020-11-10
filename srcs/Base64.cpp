@@ -1,7 +1,7 @@
 #include "Base64.hpp"
 
 inline void
-Base64::a3Toa4(unsigned char *a4, unsigned char *a3)
+Base64::a3Toa4(unsigned char* a4, unsigned char* a3)
 {
     a4[0] = (a3[0] & 0xfc) >> 2;
     a4[1] = ((a3[0] & 0x03) << 4) + ((a3[1] & 0xf0) >> 4);
@@ -10,7 +10,7 @@ Base64::a3Toa4(unsigned char *a4, unsigned char *a3)
 }
 
 inline void
-Base64::a4Toa3(unsigned char *a3, unsigned char *a4)
+Base64::a4Toa3(unsigned char* a3, unsigned char* a4)
 {
     a3[0] = (a4[0] << 2) + ((a4[1] & 0x30) >> 4);
     a3[1] = ((a4[1] & 0xf) << 4) + ((a4[2] & 0x3c) >> 2);
@@ -20,15 +20,15 @@ Base64::a4Toa3(unsigned char *a3, unsigned char *a4)
 inline unsigned char
 Base64::base64LookUp(unsigned char c)
 {
-    if (c >= 'A' && c <= 'Z')
-        return c - 'A';
-    if (c >= 'a' && c <= 'z')
+    if (c >= 'A' && c <= 'Z') // index: 0 ~ 25 || ascii: 65 ~ 90
+        return c - 65;
+    if (c >= 'a' && c <= 'z') // index: 26 ~ 51 || ascii: 97 ~ 122
         return c - 71;
-    if (c >= '0' && c <= '9')
+    if (c >= '0' && c <= '9') // index: 52 ~ 61 || ascii: 48 ~ 57
         return c + 4;
-    if (c == '+')
+    if (c == '+') // index: 62
         return 62;
-    if (c == '/')
+    if (c == '/') // index: 63
         return 63;
     return 255;
 }

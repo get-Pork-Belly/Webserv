@@ -13,8 +13,8 @@ const char kBase64Alphabet[] = {
 class Base64
 {
 private:
-    static inline void a3Toa4(unsigned char * a4, unsigned char * a3);
-    static inline void a4Toa3(unsigned char * a3, unsigned char * a4);
+    static inline void a3Toa4(unsigned char* a4, unsigned char* a3);
+    static inline void a4Toa3(unsigned char* a3, unsigned char* a4);
     static inline unsigned char base64LookUp(unsigned char c);
 public:
     static bool encode(const std::string& in, std::string& out);
