@@ -116,6 +116,24 @@ Request::getTransferedBodySize() const
     return (this->_transfered_body_size);
 }
 
+const std::string&
+Request::getAuthType() const
+{
+    return (this->_auth_type);
+}
+
+const std::string&
+Request::getRemoteUser() const
+{
+    return (this->_remote_user);
+}
+
+const std::string&
+Request::getRemoteIdent() const
+{
+    return (this->_remote_ident);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -184,6 +202,24 @@ void
 Request::setTransferedBodySize(const int transfered_body_size)
 {
     this->_transfered_body_size = transfered_body_size;
+}
+
+void
+Request::setAuthType(const std::string& auth_type)
+{
+    this->_auth_type = auth_type;
+}
+
+void
+Request::setRemoteUser(const std::string& remote_user)
+{
+    this->_remote_user = remote_user;
+}
+
+void
+Request::setRemoteIdent(const std::string& remote_ident)
+{
+    this->_remote_ident = remote_ident;
 }
 
 /*============================================================================*/
