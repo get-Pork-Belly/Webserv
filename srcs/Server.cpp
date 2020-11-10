@@ -832,7 +832,7 @@ Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
     if (authenticate_info[0] != "Basic") //NOTE: 보안은 Basic 이용
         throw (AuthenticateErrorException(this->_responses[fd], "401"));
     in = authenticate_info[1];
-    Base64::Decode(in, &out);
+    Base64::decode(in, out);
 
     if (id_password == out)
     {

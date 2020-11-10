@@ -8,7 +8,7 @@ DEBUG = -D DEBUG=0
 STDOUT = -D STDOUT=1
 
 # MAIN_FILES = setRouteAndLocationInfo_test
-MAIN_FILES = Cgi_test PageGenerator Log utils ServerManager ServerGenerator Server Response Request UriParser Exception
+MAIN_FILES = Cgi_test PageGenerator Log utils ServerManager ServerGenerator Server Response Request UriParser Exception Base64
 # MAIN_FILES = PageGenerator_test PageGenerator
 
 SRCS_PATH = $(MAIN_FILES)
