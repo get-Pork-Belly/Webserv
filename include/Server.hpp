@@ -105,6 +105,8 @@ public:
 
     void readStaticResource(int fd);
 
+    void checkAuthenticate(int fd);
+
     /* Server run function */
     void acceptClient();
     void openCGIPipe(int fd);
@@ -170,6 +172,15 @@ public:
         Response& _response;
     public:
         CgiExecuteErrorException(Response& response);
+        virtual const char* what() const throw();
+    };
+    class AuthenticateErrorException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _res;
+        std::string _status_code;
+    public:
+        AuthenticateErrorException(Response& res, const std::string& status_code);
         virtual const char* what() const throw();
     };
 };

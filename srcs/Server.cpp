@@ -3,6 +3,7 @@
 #include "ServerManager.hpp"
 #include "Log.hpp"
 #include "UriParser.hpp"
+#include "Base64.hpp"
 #include <iostream>
 #include <signal.h>
 
@@ -192,6 +193,18 @@ const char*
 Server::CgiExecuteErrorException::what() const throw()
 {
     return ("[CODE 500] Server Internal error");
+}
+
+Server::AuthenticateErrorException::AuthenticateErrorException(Response& res, const std::string& status_code)
+: _res(res), _status_code(status_code)
+{
+    this->_res.setStatusCode(this->_status_code);
+}
+
+const char*
+Server::AuthenticateErrorException::what() const throw()
+{
+    return ("");
 }
 
 /*============================================================================*/
@@ -716,6 +729,14 @@ Server::run(int fd)
                         processResponseBody(fd);
                 }
             }
+            catch(const AuthenticateErrorException& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+
+
+            }
             catch(const SendErrorCodeToClientException& e)
             {
                 std::cerr << e.what() << '\n';
@@ -781,6 +802,51 @@ Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_
     close(clear_fd);
     Log::trace("< closeFdAndSetFd");
 }
+//NOTE: 설정 파일에서는 auth_basic_user_file file_paht; 로 있음
+//NOTE: Server Generator에서 메인 반복문을 시작하기 전에
+//NOTE: 설정파일의 auth_basic_user_file을 읽고 미리 decode 해놓자
+//NOTE: 해당 value를 userid:password로 미리 세팅해주자
+void
+Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
+{
+    std::string in;
+    std::string out;
+    Response& response = this->_responses[fd];
+    const std::string& route = response.getRoute();
+    const std::map<std::string, location_info>& location_config = this->getLocationConfig();
+    const location_info& location_info = location_config.at(route);
+    location_info::const_iterator it = location_info.find("auth_basic");
+    if (it == location_info.end())
+        return ;
+    std::string realm = it->second;
+    it = location_info.find("auth_basic_user_file");
+    if (it == location_info.end())
+        return ;
+    std::string id_password = it->second;
+
+    const std::map<std::string, std::string>& headers = this->_requests[fd].getHeaders();
+    it = headers.find("Authorization");
+    if (it == headers.end())
+        throw (AuthenticateErrorException(this->_responses[fd], "401"));
+    std::vector<std::string> authenticate_info = ft::split(it->second, " ");
+    if (authenticate_info[0] != "Basic") //NOTE: 보안은 Basic 이용
+        throw (AuthenticateErrorException(this->_responses[fd], "401"));
+    in = authenticate_info[1];
+    Base64::Decode(in, &out);
+
+    if (id_password == out)
+    {
+        //TODO: id_password[id] -> REMOTE_USER
+        //TODO: pass -> REMOTE_IDENT
+        std::cout << out << std::endl;
+    }
+    else
+    {
+        //NOTE: 이름변경
+        throw (AuthenticateErrorException(this->_responses[fd], "403"));
+    }
+
+}
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
 void
@@ -798,6 +864,7 @@ Server::findResourceAbsPath(int fd)
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
+    checkAuthenticate(fd);
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
     Log::trace("< findResourceAbsPath");
