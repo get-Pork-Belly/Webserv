@@ -19,6 +19,9 @@ http {
             cgi .bin .cgi .bla;
             autoindex on;
             root /goinfre/yohlee/Webserv/;
+
+            auth_basic yohlee;
+            auth_basic_user_file yohlee:123123;
         }
 
         location /directory {
