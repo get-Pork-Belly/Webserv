@@ -812,6 +812,7 @@ Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
     std::string in;
     std::string out;
     Response& response = this->_responses[fd];
+    Request& request = this->_requests[fd];
     const std::string& route = response.getRoute();
     const std::map<std::string, location_info>& location_config = this->getLocationConfig();
     const location_info& location_info = location_config.at(route);
@@ -833,19 +834,16 @@ Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
         throw (AuthenticateErrorException(this->_responses[fd], "401"));
     in = authenticate_info[1];
     Base64::decode(in, out);
-
-    if (id_password == out)
-    {
-        //TODO: id_password[id] -> REMOTE_USER
-        //TODO: pass -> REMOTE_IDENT
-        std::cout << out << std::endl;
-    }
-    else
+    if (id_password != out)
     {
         //NOTE: 이름변경
         throw (AuthenticateErrorException(this->_responses[fd], "403"));
     }
-
+    request.setAuthType(authenticate_info[0]);
+    size_t pos = out.find(":");
+    request.setRemoteUser(out.substr(0, pos));
+    request.setRemoteIdent(out.substr(pos + 1));
+    std::cout << out << std::endl;
 }
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
@@ -1073,14 +1071,16 @@ Server::makeCGIEnvp(int client_fd)
     }
     else
     {
-        if (!(envp[0] = ft::strdup("AUTH_TYPE=")))
+        if (!(envp[0] = ft::strdup("AUTH_TYPE=" + this->_requests[client_fd].getAuthType())))
             return (nullptr);
     }
-        // REMOTE_USER; 1
-    if (!(envp[1] = ft::strdup("REMOTE_USER=")))
+    // TODO: Authorization있을때만 해야하는 지 확인할 것
+    // REMOTE_USER; 1
+    if (!(envp[1] = ft::strdup("REMOTE_USER=" + this->_requests[client_fd].getRemoteUser())))
         return (nullptr);
-        // REMOTE_IDENT 2
-    if (!(envp[2] = ft::strdup("REMOTE_IDENT=")))
+    // TODO: Authorization있을때만 해야하는 지 확인할 것
+    // REMOTE_IDENT 2
+    if (!(envp[2] = ft::strdup("REMOTE_IDENT=" + this->_requests[client_fd].getRemoteIdent())))
         return (nullptr);
 
     it = headers.find("Content-Length");
