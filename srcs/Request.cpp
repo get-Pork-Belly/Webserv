@@ -410,8 +410,7 @@ Request::getContentLength() const
 {
     location_info::const_iterator it = this->_headers.find("Content-Length");
     if (it == this->_headers.end())
-        throw "Invalid NORMAL_BODY";
-        // throw (NoContentLengthException());
+        return (0);
     return (std::stoi(it->second));
 }
 
