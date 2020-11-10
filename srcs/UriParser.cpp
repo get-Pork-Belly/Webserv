@@ -64,6 +64,12 @@ UriParser::getPaths() const
     return (this->_paths);
 }
 
+const std::string&
+UriParser::getQuery() const
+{
+    return (this->_query);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -135,6 +141,12 @@ UriParser::setPaths()
         this->_paths[i].append("/");
 }
 
+void
+UriParser::setQuery(const std::string& query)
+{
+    this->_query = query;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -161,7 +173,7 @@ UriParser::parseUri(const std::string& uri)
         this->setPath(this->findPath());
         this->setPaths();
     }
-    // this->_path.insert(this->_path.begin(), '/');
+    this->findAndSetQuery(this->getPath());
 }
 
 std::string
@@ -211,6 +223,19 @@ UriParser::findPath()
 }
 
 void
+UriParser::findAndSetQuery(const std::string& path)
+{
+    size_t index = path.find("?");
+    if (index == std::string::npos)
+        this->setQuery("");
+    else
+    {
+        this->setQuery(path.substr(index));
+        this->setPath(path.substr(0, index));
+    }
+}
+
+void
 UriParser::init()
 {
     this->setIndex(0);
@@ -219,6 +244,7 @@ UriParser::init()
     this->_host.clear();
     this->_port.clear();
     this->_path.clear();
+    this->_query.clear();
     this->_paths.clear();
 }
 
@@ -229,6 +255,5 @@ UriParser::print()
     std::cout << "host: " << this->getHost() << std::endl;
     std::cout << "port: " << this->getPort() << std::endl;
     std::cout << "path: " << this->getPath() << std::endl;
-    for (auto& s : this->getPaths())
-        std::cout << "paths: " << s << std::endl;
+    std::cout << "query: " << this->getQuery() << std::endl;
 }
