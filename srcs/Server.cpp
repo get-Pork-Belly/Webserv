@@ -602,6 +602,11 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
     content_length = request.getContentLength();
+    if (content_length == 0 || request.getMethod() != "POST")
+    {
+        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
+        return ;
+    }
     transfered_body_size = request.getTransferedBodySize();
     body = request.getBodies().c_str();
     bytes = write(write_fd_to_cgi, &body[transfered_body_size], content_length);
