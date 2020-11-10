@@ -11,7 +11,7 @@
 
 Request::Request()
 : _method(""), _uri(""), _version(""),
-_protocol(""), _bodies(""), _status_code(""),
+_protocol(""), _bodies(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0) {}
 
