@@ -185,6 +185,11 @@ Response::getWriteFdToCGI() const
     return (this->_write_fd_to_cgi);
 }
 
+size_t
+Response::getAlreadyEncodedSize() const
+{
+    return (this->_already_encoded_size);
+}
 
 /*============================================================================*/
 /********************************  Setter  ************************************/
@@ -273,6 +278,18 @@ void
 Response::setWriteFdToCGI(const int fd)
 {
     this->_write_fd_to_cgi = fd;
+}
+
+void
+Response::setTransmittingBody(const std::string& transmitting_body)
+{
+    this->_transmitting_body = transmitting_body;
+}
+
+void
+Response::setAlreadyEncodedSize(const size_t already_encoded_size)
+{
+    this->_already_encoded_size = already_encoded_size;
 }
 
 /*============================================================================*/
@@ -683,12 +700,13 @@ Response::makeHeaders(Request& request)
 void
 Response::makeBody(Request& request)
 {
-    Log::trace("> makeBody");
-    if (this->getResourceType() == ResType::AUTO_INDEX)
-        PageGenerator::makeAutoIndex(*this);
-    else if (this->getStatusCode().front() != '2')
-        PageGenerator::makeErrorPage(*this);
-    else if (this->isNeedToBeChunkedBody(request))
+    (void)request;
+    // Log::trace("> makeBody");
+    // if (this->getResourceType() == ResType::AUTO_INDEX)
+    //     PageGenerator::makeAutoIndex(*this);
+    // else if (this->getStatusCode().front() != '2')
+    //     PageGenerator::makeErrorPage(*this);
+    // else if (this->isNeedToBeChunkedBody(request))
         this->encodeChunkedBody();
     Log::trace("< makeBody");
 }
@@ -738,8 +756,8 @@ Response::isNeedToBeChunkedBody(const Request& request) const
     //NOTE: 아래 기준은 임의로 정한 것임.
     if (this->_file_info.st_size > BUFFER_SIZE)
         return (true);
-    if (this->getResourceType() == ResType::CGI)
-        return (true);
+    // if (this->getResourceType() == ResType::CGI)
+    //     return (true);
     return (false);
 }
 
@@ -807,12 +825,36 @@ Response::getHtmlLangMetaData() const
 void
 Response::encodeChunkedBody()
 {
-    // size_t chunked_index = this->getChunkedIndex();
-    // size_t chunked_index = 0;
+    Log::trace("> encodeChunkedBody");
 
-    // this->setTransmittingBody(ft::rawToChunked(chunked_index));
+    const std::string& raw_body = this->getBody(); // raw_body
+    size_t already_encoded_size = this->getAlreadyEncodedSize(); // 지금까지 인코딩한 사이즈
+    std::string chunked_body; // 청크처리되어 이번에 송신될 body.
+    size_t target_size; // 이번 청크처리에서 청크처리할 사이즈.
+    size_t raw_body_size = raw_body.length(); // 전체 Body의 사이즈
+    size_t substring_size;
+    if (raw_body_size - already_encoded_size > BUFFER_SIZE)
+        target_size = already_encoded_size + BUFFER_SIZE;
+    else
+        target_size = raw_body_size;
+    while (already_encoded_size < target_size)
+    {
+        if (already_encoded_size + 8192 > target_size)
+            substring_size = target_size - already_encoded_size;
+        else
+            substring_size = 8192;
+        chunked_body += ft::itosHex(substring_size);
+        chunked_body += "\r\n";
+        chunked_body += raw_body.substr(already_encoded_size, substring_size);
+        chunked_body += "\r\n";
+        already_encoded_size += substring_size;
+    }
+    if (already_encoded_size == raw_body_size)
+        chunked_body += "0\r\n\r\n";
+    this->setAlreadyEncodedSize(already_encoded_size);
+    this->setTransmittingBody(chunked_body);
 
-    // this->setChunkedIndex(chunked_index);
+    Log::trace("< encodeChunkedBody");
 }
 
 void

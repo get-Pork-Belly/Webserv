@@ -37,6 +37,9 @@ private:
     std::string _uri_extension;
     std::string _transmitting_body;
 
+    //TODO: 생성자에 추가하기.
+    size_t _already_encoded_size;
+
 public:
     /* Constructor */
     Response();
@@ -71,6 +74,8 @@ public:
     int getWriteFdToCGI() const;
     int getCGIPid() const;
 
+    size_t getAlreadyEncodedSize() const;
+
     /* Setter */
     void setStatusCode(const std::string& status_code);
     void setResourceAbsPath(const std::string& path);
@@ -88,6 +93,8 @@ public:
     void setWriteFdToCGI(const int fd);
 
     void setCGIPid(const int pid);
+
+    void setAlreadyEncodedSize(const size_t already_encoded_size);
 
     /* Exception */
 public:
@@ -114,6 +121,8 @@ public:
     std::string getRedirectUri(const Request& request) const;
     std::string getLastModifiedDateTimeOfResource() const;
     std::string getHtmlLangMetaData() const;
+
+    void setTransmittingBody(const std::string& chunked_body);
     void encodeChunkedBody();
 
     void init();
@@ -138,6 +147,9 @@ public:
     void appendLastModifiedHeader(std::string& headers);
     void appendLocationHeader(std::string& headers, const Request& request);
     void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
+
+
+
 };
 
 #endif
