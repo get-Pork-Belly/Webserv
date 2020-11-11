@@ -615,6 +615,9 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
     content_length = request.getContentLength();
+    //TODO: 만약 Content_length가 0 이 아니면서 GET, HEAD로 온 요청이라면
+    // 이미 앞에서 걸러질것이므로 if의 조건에 != "POST" 가 있을 필요가 없다.
+    // 확실하게 앞에서 걸러 진다면 TODO를 지우자.
     if (content_length == 0 || request.getMethod() != "POST")
     {
         this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
