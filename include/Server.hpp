@@ -184,9 +184,9 @@ public:
     class CgiCannotMakeEnvpException: public SendErrorCodeToClientException
     {
     private:
-        Request& _request;
+        Response& _response;
     public:
-        CgiCannotMakeEnvpException(Request& request);
+        CgiCannotMakeEnvpException(Response& response);
         virtual const char* what() const throw();
     };
     class AuthenticateErrorException : public SendErrorCodeToClientException
