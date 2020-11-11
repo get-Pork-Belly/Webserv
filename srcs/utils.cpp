@@ -283,7 +283,7 @@ nbrlenHex(unsigned int n)
 std::string
 itosHex(unsigned int n)
 {
-    const char* base = "0123456789abcdef";
+    const char* base = "0123456789ABCDEF";
     size_t len = ft::nbrlenHex(n);
     std::string result;
 
