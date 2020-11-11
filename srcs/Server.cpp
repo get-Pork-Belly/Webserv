@@ -732,14 +732,6 @@ Server::run(int fd)
                         processResponseBody(fd);
                 }
             }
-            catch(const AuthenticateErrorException& e)
-            {
-                std::cerr << e.what() << '\n';
-                this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-
-
-            }
             catch(const SendErrorCodeToClientException& e)
             {
                 std::cerr << e.what() << '\n';
