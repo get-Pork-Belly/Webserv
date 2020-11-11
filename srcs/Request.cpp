@@ -11,7 +11,7 @@
 
 Request::Request()
 : _method(""), _uri(""), _version(""),
-_protocol(""), _bodies(""), _status_code(""),
+_protocol(""), _bodies(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0) {}
 
@@ -116,6 +116,24 @@ Request::getTransferedBodySize() const
     return (this->_transfered_body_size);
 }
 
+const std::string&
+Request::getAuthType() const
+{
+    return (this->_auth_type);
+}
+
+const std::string&
+Request::getRemoteUser() const
+{
+    return (this->_remote_user);
+}
+
+const std::string&
+Request::getRemoteIdent() const
+{
+    return (this->_remote_ident);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -186,6 +204,24 @@ Request::setTransferedBodySize(const int transfered_body_size)
     this->_transfered_body_size = transfered_body_size;
 }
 
+void
+Request::setAuthType(const std::string& auth_type)
+{
+    this->_auth_type = auth_type;
+}
+
+void
+Request::setRemoteUser(const std::string& remote_user)
+{
+    this->_remote_user = remote_user;
+}
+
+void
+Request::setRemoteIdent(const std::string& remote_ident)
+{
+    this->_remote_ident = remote_ident;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -232,13 +268,13 @@ Request::updateReqInfo()
     if (this->getReqInfo() == ReqInfo::COMPLETE)
         return ;
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
-        setReqInfo(ReqInfo::READY);
+        this->setReqInfo(ReqInfo::READY);
     else if (this->isBodyUnnecessary())
-        setReqInfo(ReqInfo::MUST_CLEAR);
+        this->setReqInfo(ReqInfo::MUST_CLEAR);
     else if (this->isNormalBody())
-        setReqInfo(ReqInfo::NORMAL_BODY);
+        this->setReqInfo(ReqInfo::NORMAL_BODY);
     else if (this->isChunkedBody())
-        setReqInfo(ReqInfo::CHUNKED_BODY);
+        this->setReqInfo(ReqInfo::CHUNKED_BODY);
     Log::trace("< updateReqInfo");
 }
 
@@ -296,14 +332,14 @@ Request::parseRequestWithoutBody(char* buf)
         throw (RequestFormatException(*this, "400"));
     else
     {
-        if (parseRequestLine(line) == false)
+        if (this->parseRequestLine(line) == false)
             throw (RequestFormatException(*this));
     }
     if (ft::substr(line, req_message, "\r\n\r\n") == false)
         throw (RequestFormatException(*this, "400"));
     else
     {
-        if (parseHeaders(line) == false)
+        if (this->parseHeaders(line) == false)
             throw (RequestFormatException(*this));
     }
     this->updateReqInfo();
@@ -316,7 +352,7 @@ Request::parseRequestLine(std::string& req_message)
     Log::trace("> parseRequestLine");
     std::vector<std::string> request_line = ft::split(req_message, " ");
     
-    if (isValidLine(request_line) == false)
+    if (this->isValidLine(request_line) == false)
         return (false);
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
@@ -336,17 +372,17 @@ Request::parseHeaders(std::string& req_message)
     while (ft::substr(line, req_message, "\r\n") && !req_message.empty())
     {
         if (ft::substr(key, line, ":") == false)
-            return (updateStatusCodeAndReturn("400", false));
+            return (this->updateStatusCodeAndReturn("400", false));
         value = ft::ltrim(line, " ");
         if (this->isValidHeaders(key, value) == false)
-            return (updateStatusCodeAndReturn("400", false));
+            return (this->updateStatusCodeAndReturn("400", false));
         this->setHeaders(key, value);
     }
     if (ft::substr(key, line, ":") == false)
-        return (updateStatusCodeAndReturn("400", false));
+        return (this->updateStatusCodeAndReturn("400", false));
     value = ft::ltrim(line, " ");
     if (this->isValidHeaders(key, value) == false)
-        return (updateStatusCodeAndReturn("400", false));
+        return (this->updateStatusCodeAndReturn("400", false));
     this->setHeaders(key, value);
     Log::trace("< parseHeaders");
     return (true);
@@ -410,8 +446,7 @@ Request::getContentLength() const
 {
     location_info::const_iterator it = this->_headers.find("Content-Length");
     if (it == this->_headers.end())
-        throw "Invalid NORMAL_BODY";
-        // throw (NoContentLengthException());
+        return (0);
     return (std::stoi(it->second));
 }
 
@@ -442,7 +477,7 @@ Request::isValidMethod(const std::string& method)
         method.compare("TRACE") == 0 ||
         method.compare("CONNECT") == 0)
         return (true);
-    return (updateStatusCodeAndReturn("501", false));
+    return (this->updateStatusCodeAndReturn("501", false));
 }
 
 //TODO: uri 유효성 검사 부분 더 알아보기.
@@ -451,7 +486,7 @@ Request::isValidUri(const std::string& uri)
 {
     if (uri[0] == '/' || uri[0] == 'w')
         return (true);
-    return (updateStatusCodeAndReturn("400", false));
+    return (this->updateStatusCodeAndReturn("400", false));
 }
 
 bool
@@ -459,7 +494,7 @@ Request::isValidVersion(const std::string& version)
 {
     if (version.compare("HTTP/1.1") == 0 || version.compare("HTTP/1.0") == 0)
         return (true);
-    return (updateStatusCodeAndReturn("400", false));
+    return (this->updateStatusCodeAndReturn("400", false));
 }
 
 bool

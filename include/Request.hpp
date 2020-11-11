@@ -22,6 +22,9 @@ private:
     bool _is_buffer_left;
     std::string _ip_address;
     int _transfered_body_size;
+    std::string _remote_user;
+    std::string _remote_ident;
+    std::string _auth_type;
 
 public:
     /* Constructor */
@@ -45,6 +48,10 @@ public:
     const std::string& getIpAddress() const;
     int getContentLength() const;
     int getTransferedBodySize() const;
+    const std::string& getAuthType() const;
+    const std::string& getRemoteUser() const;
+    const std::string& getRemoteIdent() const;
+
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -58,6 +65,10 @@ public:
     void setIsBufferLeft(const bool& is_left_buffer);
     void setIpAddress(const std::string& ip_address);
     void setTransferedBodySize(const int transfered_body_size);
+    void setAuthType(const std::string& auth_type);
+    void setRemoteUser(const std::string& remote_user);
+    void setRemoteIdent(const std::string& remote_ident);
+
 
     /* Util */
 

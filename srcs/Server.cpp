@@ -3,6 +3,7 @@
 #include "ServerManager.hpp"
 #include "Log.hpp"
 #include "UriParser.hpp"
+#include "Base64.hpp"
 #include <iostream>
 #include <signal.h>
 
@@ -192,6 +193,18 @@ const char*
 Server::CgiExecuteErrorException::what() const throw()
 {
     return ("[CODE 500] Server Internal error");
+}
+
+Server::AuthenticateErrorException::AuthenticateErrorException(Response& res, const std::string& status_code)
+: _res(res), _status_code(status_code)
+{
+    this->_res.setStatusCode(this->_status_code);
+}
+
+const char*
+Server::AuthenticateErrorException::what() const throw()
+{
+    return ("");
 }
 
 /*============================================================================*/
@@ -503,13 +516,6 @@ Server::isCGIPipe(int fd) const
     return false;
 }
 
-
-bool
-Server::isFileUri(const Request& request) const
-{
-    return (request.getUri().back() != '/');
-}
-
 bool
 Server::isIndexFileExist(int fd)
 {
@@ -602,6 +608,14 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
     content_length = request.getContentLength();
+    //TODO: 만약 Content_length가 0 이 아니면서 GET, HEAD로 온 요청이라면
+    // 이미 앞에서 걸러질것이므로 if의 조건에 != "POST" 가 있을 필요가 없다.
+    // 확실하게 앞에서 걸러 진다면 TODO를 지우자.
+    if (content_length == 0 || request.getMethod() != "POST")
+    {
+        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
+        return ;
+    }
     transfered_body_size = request.getTransferedBodySize();
     body = request.getBodies().c_str();
     bytes = write(write_fd_to_cgi, &body[transfered_body_size], content_length);
@@ -668,7 +682,7 @@ Server::run(int fd)
             {
                 Log::trace(">>> write sequence");
                 if (this->isCGIPipe(fd))
-                    sendDataToCGI(fd);
+                    this->sendDataToCGI(fd);
                 else
                 {
                     std::string response_message = this->makeResponseMessage(fd);
@@ -700,7 +714,7 @@ Server::run(int fd)
             {
                 std::cout << "Fd: " << fd << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
                 if (this->isCGIPipe(fd)) 
-                    receiveDataFromCGI(fd);
+                    this->receiveDataFromCGI(fd);
                 else if (this->isStaticResource(fd))
                     this->readStaticResource(fd);
                 else if (this->isClientSocket(fd))
@@ -708,7 +722,7 @@ Server::run(int fd)
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
-                        processResponseBody(fd);
+                        this->processResponseBody(fd);
                 }
             }
             catch(const SendErrorCodeToClientException& e)
@@ -775,6 +789,43 @@ Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_
     this->_server_manager->fdSet(set_fd, set_fd_set);
     close(clear_fd);
     Log::trace("< closeFdAndSetFd");
+}
+//NOTE: 설정 파일에서는 auth_basic_user_file file_paht; 로 있음
+//NOTE: Server Generator에서 메인 반복문을 시작하기 전에
+//NOTE: 설정파일의 auth_basic_user_file을 읽고 미리 decode 해놓자
+//NOTE: 해당 value를 userid:password로 미리 세팅해주자
+void
+Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
+{
+    std::string before_decode;
+    std::string after_decode;
+    Response& response = this->_responses[fd];
+    Request& request = this->_requests[fd];
+    const std::string& route = response.getRoute();
+    const std::map<std::string, location_info>& location_config = this->getLocationConfig();
+    const location_info& location_info = location_config.at(route);
+    location_info::const_iterator it = location_info.find("auth_basic");
+    if (it == location_info.end())
+        return ;
+    it = location_info.find("auth_basic_user_file");
+    if (it == location_info.end())
+        return ;
+    const std::string& id_password = it->second;
+    const std::map<std::string, std::string>& headers = this->_requests[fd].getHeaders();
+    it = headers.find("Authorization");
+    if (it == headers.end())
+        throw (AuthenticateErrorException(this->_responses[fd], "401"));
+    std::vector<std::string> authenticate_info = ft::split(it->second, " ");
+    if (authenticate_info[0] != "Basic") //NOTE: 보안은 Basic 이용
+        throw (AuthenticateErrorException(this->_responses[fd], "401"));
+    before_decode = authenticate_info[1];
+    Base64::decode(before_decode, after_decode);
+    if (id_password != after_decode)
+        throw (AuthenticateErrorException(this->_responses[fd], "403"));
+    request.setAuthType(authenticate_info[0]);
+    size_t pos = after_decode.find(":");
+    request.setRemoteUser(after_decode.substr(0, pos));
+    request.setRemoteIdent(after_decode.substr(pos + 1));
 }
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
@@ -906,10 +957,8 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
         break ;
     case ResType::CGI:
         std::cout << "CGIpipe will be opened" << std::endl;
-        this->openCGIPipe(fd); //fd: client fd, cgiPipe[2]
+        this->openCGIPipe(fd);
         this->forkAndExecuteCGI(fd);
-        // write flag -> CGI 프로세스에 스탠다드 인(pipe[1])으로 데이터를 넣어줌.
-        // Client fd에 대해서 clear 해준다.
         break ;
     default:
         this->_server_manager->fdSet(fd, FdSet::WRITE);
@@ -925,16 +974,14 @@ Server::processResponseBody(int fd)
 
     std::cout<<"uri: "<<this->_requests[fd].getUri()<<std::endl;
     this->findResourceAbsPath(fd);
-
+    this->checkAuthenticate(fd);
     if (this->_responses[fd].isLocationToBeRedirected())
         throw (MustRedirectException(this->_responses[fd]));
-
     this->checkAndSetResourceType(fd);
     if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
         this->setResourceAbsPathAsIndex(fd);
     ResType res_type = this->_responses[fd].getResourceType();
-    preprocessResponseBody(fd, res_type);
-
+    this->preprocessResponseBody(fd, res_type);
     Log::trace("< processResopnseBody");
 }
 
@@ -1001,14 +1048,16 @@ Server::makeCGIEnvp(int client_fd)
     }
     else
     {
-        if (!(envp[0] = ft::strdup("AUTH_TYPE=")))
+        if (!(envp[0] = ft::strdup("AUTH_TYPE=" + this->_requests[client_fd].getAuthType())))
             return (nullptr);
     }
-        // REMOTE_USER; 1
-    if (!(envp[1] = ft::strdup("REMOTE_USER=")))
+    // TODO: Authorization있을때만 해야하는 지 확인할 것
+    // REMOTE_USER; 1
+    if (!(envp[1] = ft::strdup("REMOTE_USER=" + this->_requests[client_fd].getRemoteUser())))
         return (nullptr);
-        // REMOTE_IDENT 2
-    if (!(envp[2] = ft::strdup("REMOTE_IDENT=")))
+    // TODO: Authorization있을때만 해야하는 지 확인할 것
+    // REMOTE_IDENT 2
+    if (!(envp[2] = ft::strdup("REMOTE_IDENT=" + this->_requests[client_fd].getRemoteIdent())))
         return (nullptr);
 
     it = headers.find("Content-Length");
@@ -1114,6 +1163,8 @@ Server::forkAndExecuteCGI(int client_fd)
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     else if (pid == 0)
     {
+        close(response.getWriteFdToCGI());
+        close(response.getReadFdFromCGI());
         if (dup2(stdin_of_cgi, 0) < 0)
             throw (CgiExecuteErrorException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
@@ -1125,6 +1176,8 @@ Server::forkAndExecuteCGI(int client_fd)
     }
     else
     {
+        close(stdin_of_cgi);
+        close(stdout_of_cgi);
         response.setCGIPid(pid);
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
