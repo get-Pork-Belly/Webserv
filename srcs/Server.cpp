@@ -1191,8 +1191,8 @@ Server::makeCGIEnvp(int client_fd)
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     for (int i = 0; i < 18; i++)
         envp[i] = nullptr;
-    if (!makeEnvpUsingRequest(envp, client_fd) || !makeEnvpUsingResponse(envp, client_fd)
-        || !makeEnvpUsingHeaders(envp, client_fd) || !makeEnvpUsingEtc(envp, client_fd))
+    if (!this->makeEnvpUsingRequest(envp, client_fd) || !this->makeEnvpUsingResponse(envp, client_fd)
+        || !this->makeEnvpUsingHeaders(envp, client_fd) || !this->makeEnvpUsingEtc(envp, client_fd))
     {
         ft::doubleFreeSize(&envp, 18);
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
