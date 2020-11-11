@@ -682,7 +682,7 @@ Server::run(int fd)
             {
                 Log::trace(">>> write sequence");
                 if (this->isCGIPipe(fd))
-                    sendDataToCGI(fd);
+                    this->sendDataToCGI(fd);
                 else
                 {
                     std::string response_message = this->makeResponseMessage(fd);
@@ -714,7 +714,7 @@ Server::run(int fd)
             {
                 std::cout << "Fd: " << fd << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
                 if (this->isCGIPipe(fd)) 
-                    receiveDataFromCGI(fd);
+                    this->receiveDataFromCGI(fd);
                 else if (this->isStaticResource(fd))
                     this->readStaticResource(fd);
                 else if (this->isClientSocket(fd))
@@ -722,7 +722,7 @@ Server::run(int fd)
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
-                        processResponseBody(fd);
+                        this->processResponseBody(fd);
                 }
             }
             catch(const SendErrorCodeToClientException& e)
@@ -811,7 +811,6 @@ Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
     if (it == location_info.end())
         return ;
     const std::string& id_password = it->second;
-
     const std::map<std::string, std::string>& headers = this->_requests[fd].getHeaders();
     it = headers.find("Authorization");
     if (it == headers.end())
@@ -827,7 +826,6 @@ Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
     size_t pos = after_decode.find(":");
     request.setRemoteUser(after_decode.substr(0, pos));
     request.setRemoteIdent(after_decode.substr(pos + 1));
-    std::cout << after_decode << std::endl;
 }
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
@@ -959,10 +957,8 @@ Server::preprocessResponseBody(int fd, ResType& res_type)
         break ;
     case ResType::CGI:
         std::cout << "CGIpipe will be opened" << std::endl;
-        this->openCGIPipe(fd); //fd: client fd, cgiPipe[2]
+        this->openCGIPipe(fd);
         this->forkAndExecuteCGI(fd);
-        // write flag -> CGI 프로세스에 스탠다드 인(pipe[1])으로 데이터를 넣어줌.
-        // Client fd에 대해서 clear 해준다.
         break ;
     default:
         this->_server_manager->fdSet(fd, FdSet::WRITE);
@@ -978,16 +974,14 @@ Server::processResponseBody(int fd)
 
     std::cout<<"uri: "<<this->_requests[fd].getUri()<<std::endl;
     this->findResourceAbsPath(fd);
-    checkAuthenticate(fd);
+    this->checkAuthenticate(fd);
     if (this->_responses[fd].isLocationToBeRedirected())
         throw (MustRedirectException(this->_responses[fd]));
-
     this->checkAndSetResourceType(fd);
     if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
         this->setResourceAbsPathAsIndex(fd);
     ResType res_type = this->_responses[fd].getResourceType();
-    preprocessResponseBody(fd, res_type);
-
+    this->preprocessResponseBody(fd, res_type);
     Log::trace("< processResopnseBody");
 }
 
