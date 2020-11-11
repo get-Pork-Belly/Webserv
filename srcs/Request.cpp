@@ -268,13 +268,13 @@ Request::updateReqInfo()
     if (this->getReqInfo() == ReqInfo::COMPLETE)
         return ;
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
-        setReqInfo(ReqInfo::READY);
+        this->setReqInfo(ReqInfo::READY);
     else if (this->isBodyUnnecessary())
-        setReqInfo(ReqInfo::MUST_CLEAR);
+        this->setReqInfo(ReqInfo::MUST_CLEAR);
     else if (this->isNormalBody())
-        setReqInfo(ReqInfo::NORMAL_BODY);
+        this->setReqInfo(ReqInfo::NORMAL_BODY);
     else if (this->isChunkedBody())
-        setReqInfo(ReqInfo::CHUNKED_BODY);
+        this->setReqInfo(ReqInfo::CHUNKED_BODY);
     Log::trace("< updateReqInfo");
 }
 
@@ -332,14 +332,14 @@ Request::parseRequestWithoutBody(char* buf)
         throw (RequestFormatException(*this, "400"));
     else
     {
-        if (parseRequestLine(line) == false)
+        if (this->parseRequestLine(line) == false)
             throw (RequestFormatException(*this));
     }
     if (ft::substr(line, req_message, "\r\n\r\n") == false)
         throw (RequestFormatException(*this, "400"));
     else
     {
-        if (parseHeaders(line) == false)
+        if (this->parseHeaders(line) == false)
             throw (RequestFormatException(*this));
     }
     this->updateReqInfo();
@@ -352,7 +352,7 @@ Request::parseRequestLine(std::string& req_message)
     Log::trace("> parseRequestLine");
     std::vector<std::string> request_line = ft::split(req_message, " ");
     
-    if (isValidLine(request_line) == false)
+    if (this->isValidLine(request_line) == false)
         return (false);
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
@@ -372,17 +372,17 @@ Request::parseHeaders(std::string& req_message)
     while (ft::substr(line, req_message, "\r\n") && !req_message.empty())
     {
         if (ft::substr(key, line, ":") == false)
-            return (updateStatusCodeAndReturn("400", false));
+            return (this->updateStatusCodeAndReturn("400", false));
         value = ft::ltrim(line, " ");
         if (this->isValidHeaders(key, value) == false)
-            return (updateStatusCodeAndReturn("400", false));
+            return (this->updateStatusCodeAndReturn("400", false));
         this->setHeaders(key, value);
     }
     if (ft::substr(key, line, ":") == false)
-        return (updateStatusCodeAndReturn("400", false));
+        return (this->updateStatusCodeAndReturn("400", false));
     value = ft::ltrim(line, " ");
     if (this->isValidHeaders(key, value) == false)
-        return (updateStatusCodeAndReturn("400", false));
+        return (this->updateStatusCodeAndReturn("400", false));
     this->setHeaders(key, value);
     Log::trace("< parseHeaders");
     return (true);
@@ -477,7 +477,7 @@ Request::isValidMethod(const std::string& method)
         method.compare("TRACE") == 0 ||
         method.compare("CONNECT") == 0)
         return (true);
-    return (updateStatusCodeAndReturn("501", false));
+    return (this->updateStatusCodeAndReturn("501", false));
 }
 
 //TODO: uri 유효성 검사 부분 더 알아보기.
@@ -486,7 +486,7 @@ Request::isValidUri(const std::string& uri)
 {
     if (uri[0] == '/' || uri[0] == 'w')
         return (true);
-    return (updateStatusCodeAndReturn("400", false));
+    return (this->updateStatusCodeAndReturn("400", false));
 }
 
 bool
@@ -494,7 +494,7 @@ Request::isValidVersion(const std::string& version)
 {
     if (version.compare("HTTP/1.1") == 0 || version.compare("HTTP/1.0") == 0)
         return (true);
-    return (updateStatusCodeAndReturn("400", false));
+    return (this->updateStatusCodeAndReturn("400", false));
 }
 
 bool
