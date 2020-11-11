@@ -108,6 +108,56 @@ Server::setResourceAbsPathAsIndex(int fd)
     }
 }
 
+void
+Server::setAuthBasic(const std::string& auth_basic, const std::string& route)
+{
+    this->_location_config[route]["auth_basic"] = auth_basic;
+}
+
+void
+Server::setAuthBasicUserFile(const std::string& decoded_id_password, const std::string& route)
+{
+    this->_location_config[route]["auth_basic_user_file"] = decoded_id_password;
+}
+
+void
+Server::setAuthenticateRealm()
+{
+    int fd;
+    char temp[1024];
+    std::string before_decode;
+    std::string after_decode;
+    const std::map<std::string, location_info>& locations = this->getLocationConfig();
+    for (auto& location: locations)
+    {
+        const location_info& location_info = location.second;
+        if (location_info.at("auth_basic") != "off")
+        {
+            const location_info::const_iterator& it = location_info.find("auth_basic_user_file");
+            if (it != location_info.end())
+            {
+                fd = open(it->second.c_str(), O_RDONLY, 0644);
+                if (fd < 0)
+                    setAuthBasic("off", location.first);
+                else
+                {
+                    ft::memset(reinterpret_cast<void *>(temp), 0, 1024);
+                    int bytes = read(fd, temp, 1024);
+                    if (bytes >= 0)
+                    {
+                        before_decode = std::string(temp);
+                        Base64::decode(before_decode, after_decode);
+                        this->setAuthBasicUserFile(after_decode, location.first);
+                    }
+                    else
+                        this->setAuthBasic("off", location.first);
+                }
+            }
+        }
+    }
+}
+
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -216,8 +266,6 @@ Server::init()
 {
     for (auto& conf: this->_server_config)
     {
-        // if (conf.first == "server_name")
-        //     this->_server_name = conf.second;
         if (conf.first == "host")
             this->_host = conf.second;
         else if (conf.first == "listen")
@@ -225,6 +273,7 @@ Server::init()
     }
     this->_requests = std::vector<Request>(1024);
     this->_responses = std::vector<Response>(1024);
+    this->setAuthenticateRealm();
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
@@ -805,7 +854,7 @@ Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
     const std::map<std::string, location_info>& location_config = this->getLocationConfig();
     const location_info& location_info = location_config.at(route);
     location_info::const_iterator it = location_info.find("auth_basic");
-    if (it == location_info.end())
+    if (it->second == "off")
         return ;
     it = location_info.find("auth_basic_user_file");
     if (it == location_info.end())

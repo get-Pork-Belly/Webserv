@@ -65,6 +65,8 @@ public:
     const std::string& getPort() const;
     /* Setter */
     void setServerSocket();
+    void setAuthBasic(const std::string& auth_basic, const std::string& route);
+    void setAuthBasicUserFile(const std::string& decoded_id_password, const std::string& route);
 
     /* Exception */
 
@@ -105,6 +107,8 @@ public:
     void readStaticResource(int fd);
 
     void checkAuthenticate(int fd);
+
+    void setAuthenticateRealm();
 
     /* Server run function */
     void acceptClient();
