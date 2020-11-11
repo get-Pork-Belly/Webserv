@@ -805,7 +805,7 @@ Response::findAndSetUriExtension()
 bool
 Response::isNeedToBeChunkedBody(const Request& request) const
 {
-    if (request.getVersion().compare("HTTP/1.1") != 0 && request.getVersion().compare("HTTP2.0") != 0)
+    if (request.getVersion().compare("HTTP/1.1") != 0 && request.getVersion().compare("HTTP/2.0") != 0)
         return (false);
 
     //NOTE: 아래 기준은 임의로 정한 것임.
