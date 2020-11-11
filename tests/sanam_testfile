@@ -9,6 +9,8 @@ http {
             cgi .bin .cgi .bla;
             autoindex on;
             root /Users/sanam/Desktop/Webserv/;
+            auth_basic sanam;
+            auth_basic_user_file sanam:123123;
         }
 
         location /directory {
