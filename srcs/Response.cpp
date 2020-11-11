@@ -20,7 +20,8 @@ Response::Response()
 _location_info({{"",""}}), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
-_cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body("")
+_cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
+_already_encoded_size(0), _send_progress(SendProgress::DEFAULT)
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -37,7 +38,8 @@ _file_info(other._file_info), _resource_type(other._resource_type),
 _body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
 _stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
 _write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
-_uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body)
+_uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body),
+_already_encoded_size(other._already_encoded_size), _send_progress(other._send_progress)
 {}
 
 /*============================================================================*/
@@ -76,6 +78,8 @@ Response::operator=(const Response& rhs)
     this->_uri_path = rhs._uri_path;
     this->_uri_extension = rhs._uri_extension;
     this->_transmitting_body = rhs._transmitting_body;
+    this->_already_encoded_size = rhs._already_encoded_size;
+    this->_send_progress = rhs._send_progress;
     return (*this);
 }
 
@@ -197,6 +201,12 @@ Response::getTransmittingBody() const
     return (this->_transmitting_body);
 }
 
+const SendProgress&
+Response::getSendProgress() const
+{
+    return (this->_send_progress);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -296,6 +306,12 @@ void
 Response::setAlreadyEncodedSize(const size_t already_encoded_size)
 {
     this->_already_encoded_size = already_encoded_size;
+}
+
+void
+Response::setSendProgress(const SendProgress send_progress)
+{
+    this->_send_progress = send_progress;
 }
 
 /*============================================================================*/
@@ -718,6 +734,7 @@ void
 Response::makeBody(Request& request)
 {
     Log::trace("> makeBody");
+
     if (this->getResourceType() == ResType::AUTO_INDEX)
         PageGenerator::makeAutoIndex(*this);
     else if (this->getStatusCode().front() != '2')
@@ -725,7 +742,8 @@ Response::makeBody(Request& request)
     else if (this->isNeedToBeChunkedBody(request))
         this->encodeChunkedBody();
     else
-        this->setTransmittingBody(this->getBody());
+        this->setTransmittingBody(this->getBody() + "\r\n");
+
     Log::trace("< makeBody");
 }
 
@@ -868,8 +886,16 @@ Response::encodeChunkedBody()
         chunked_body += "\r\n";
         already_encoded_size += substring_size;
     }
+    
+    if (this->getSendProgress() == SendProgress::DEFAULT)
+        this->setSendProgress(SendProgress::CHUNK_START);
+    else if (this->getSendProgress() == SendProgress::CHUNK_START)
+        this->setSendProgress(SendProgress::CHUNK_PROGRESS);
     if (already_encoded_size == raw_body_size)
+    {
         chunked_body += "0\r\n\r\n";
+        this->setSendProgress(SendProgress::FINISH);
+    }
     this->setAlreadyEncodedSize(already_encoded_size);
     this->setTransmittingBody(chunked_body);
 
