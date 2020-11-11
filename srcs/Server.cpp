@@ -516,13 +516,6 @@ Server::isCGIPipe(int fd) const
     return false;
 }
 
-
-bool
-Server::isFileUri(const Request& request) const
-{
-    return (request.getUri().back() != '/');
-}
-
 bool
 Server::isIndexFileExist(int fd)
 {

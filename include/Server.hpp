@@ -90,7 +90,6 @@ public:
     std::string makeResponseMessage(int fd);
     bool sendResponse(const std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
-    bool isFileUri(const Request& request) const;
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
     bool isAutoIndexOn(int fd);
