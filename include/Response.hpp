@@ -73,6 +73,7 @@ public:
     int getReadFdFromCGI() const;
     int getWriteFdToCGI() const;
     int getCGIPid() const;
+    const std::string& getTransmittingBody() const;
 
     size_t getAlreadyEncodedSize() const;
 
@@ -147,6 +148,7 @@ public:
     void appendLastModifiedHeader(std::string& headers);
     void appendLocationHeader(std::string& headers, const Request& request);
     void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
+    void appendTransferEncodingHeader(std::string& headers);
 
 
 

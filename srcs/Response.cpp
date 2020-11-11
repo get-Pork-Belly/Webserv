@@ -191,6 +191,12 @@ Response::getAlreadyEncodedSize() const
     return (this->_already_encoded_size);
 }
 
+const std::string&
+Response::getTransmittingBody() const
+{
+    return (this->_transmitting_body);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -574,7 +580,7 @@ void
 Response::appendContentLengthHeader(std::string& headers)
 {
     headers += "Content-Length: ";
-    headers += std::to_string(this->getBody().length());
+    headers += std::to_string(this->getTransmittingBody().length());
     headers += "\r\n";
 }
 
@@ -653,6 +659,14 @@ Response::appendRetryAfterHeader(std::string& headers, const std::string& status
     Log::trace("< appendRetryAfterHeader");
 }
 
+void
+Response::appendTransferEncodingHeader(std::string& headers)
+{
+    Log::trace("> appendTransferEncodingHeader");
+    headers += "Transfer-Encoding: chunked\r\n";
+    Log::trace("< appendTransferEncodingHeader");
+}
+
 std::string
 Response::makeHeaders(Request& request)
 {
@@ -660,16 +674,19 @@ Response::makeHeaders(Request& request)
     
     //TODO 적정 reserve size 구하기
     headers.reserve(200);
+    // General headers
     this->appendDateHeader(headers);
     this->appendServerHeader(headers);
-    // if chunked 
-    // headers += this->makeTransferEncodingHeader();
-    // if not chunked
-    this->appendContentLanguageHeader(headers);
-    this->appendContentLengthHeader(headers);
-    this->appendContentTypeHeader(headers);
 
-    Log::printLocationInfo(this->_location_info);
+    // Entity headers
+    this->appendContentLanguageHeader(headers);
+    this->appendContentTypeHeader(headers);
+    if (this->isNeedToBeChunkedBody(request))
+        this->appendTransferEncodingHeader(headers);
+    else
+        this->appendContentLengthHeader(headers);
+
+    // Log::printLocationInfo(this->_location_info);
 
     //TODO switch 문 고려
     std::string status_code = this->getStatusCode();
@@ -700,14 +717,15 @@ Response::makeHeaders(Request& request)
 void
 Response::makeBody(Request& request)
 {
-    (void)request;
-    // Log::trace("> makeBody");
-    // if (this->getResourceType() == ResType::AUTO_INDEX)
-    //     PageGenerator::makeAutoIndex(*this);
-    // else if (this->getStatusCode().front() != '2')
-    //     PageGenerator::makeErrorPage(*this);
-    // else if (this->isNeedToBeChunkedBody(request))
+    Log::trace("> makeBody");
+    if (this->getResourceType() == ResType::AUTO_INDEX)
+        PageGenerator::makeAutoIndex(*this);
+    else if (this->getStatusCode().front() != '2')
+        PageGenerator::makeErrorPage(*this);
+    else if (this->isNeedToBeChunkedBody(request))
         this->encodeChunkedBody();
+    else
+        this->setTransmittingBody(this->getBody());
     Log::trace("< makeBody");
 }
 
@@ -751,8 +769,9 @@ Response::findAndSetUriExtension()
 bool
 Response::isNeedToBeChunkedBody(const Request& request) const
 {
-    if (request.getVersion().compare("1.1") != 0 || request.getVersion().compare("2.0") != 0)
+    if (request.getVersion().compare("HTTP/1.1") != 0 && request.getVersion().compare("HTTP2.0") != 0)
         return (false);
+
     //NOTE: 아래 기준은 임의로 정한 것임.
     if (this->_file_info.st_size > BUFFER_SIZE)
         return (true);

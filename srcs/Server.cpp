@@ -406,7 +406,8 @@ Server::makeResponseMessage(int fd)
     // if (request.getMethod().compare("HEAD") == 0)
     //     return (status_line + headers);
     // else if (response.isNeedTobeChunkedBody)
-    return (status_line + headers + response.getBody());
+    // return (status_line + headers + response.getBody());
+    return (status_line + headers + response.getTransmittingBody());
 }
 
 bool
