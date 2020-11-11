@@ -466,6 +466,7 @@ Server::makeResponseMessage(int client_fd)
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
 
+    //TODO: refactoring
     const SendProgress& send_progress = response.getSendProgress();
     switch (send_progress)
     {
@@ -495,7 +496,6 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     Log::trace("> sendResponse");
     std::string tmp;
     tmp += response_message;
-    // tmp += "\r\n";
     std::cout<<tmp<<std::endl;
     write(client_fd, tmp.c_str(), tmp.length()); 
     Log::trace("< sendResponse");
@@ -753,28 +753,15 @@ Server::run(int fd)
                 else
                 {
                     std::string response_message = this->makeResponseMessage(fd);
-                    // std::cout << "message: " << response_message << std::endl;
-                    // response_message = this->makeResponseMessage(this->_requests[fd], fd);
                     // TODO: sendResponse error handling
                     if (!(sendResponse(response_message, fd)))
                         std::cerr<<"Error: sendResponse"<<std::endl;
-                    // if (this->_responses[fd].getIsFinished())
                     if (this->isResponseAllSended(fd))
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
                         this->_requests[fd].init();
                         this->_responses[fd].init();
                     }
-                    //NOTE: 원래 있던애들
-                    // std::string response_message = this->makeResponseMessage(fd);
-                    // // std::cout << "message: " << response_message << std::endl;
-                    // // response_message = this->makeResponseMessage(this->_requests[fd], fd);
-                    // // TODO: sendResponse error handling
-                    // if (!(sendResponse(response_message, fd)))
-                    //     std::cerr<<"Error: sendResponse"<<std::endl;
-                    // this->_server_manager->fdClr(fd, FdSet::WRITE);
-                    // this->_requests[fd].init();
-                    // this->_responses[fd].init();
                 }
                 Log::trace("<<< write sequence");
             }
@@ -790,6 +777,7 @@ Server::run(int fd)
             }
             catch(const char* e)
             {
+                //TODO: 에러객체 던지도록 수정
                 std::cerr << e << '\n';
             }
         }
