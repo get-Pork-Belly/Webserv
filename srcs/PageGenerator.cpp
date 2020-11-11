@@ -13,7 +13,7 @@ PageGenerator::makeErrorPage(Response& res)
        "</title>\n\t</head>" + "\n\t<body>\n\t\t<center>\n\t\t\t<h1>" +
        code + " " + message + "</h1>\n\t\t</center>" +
         "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
-    res.setBody(body);
+    res.setTransmittingBody(body);
 }
 
 void
@@ -31,5 +31,5 @@ PageGenerator::makeAutoIndex(Response& res)
     for (auto& s : files)
         body += "\n\t\t\t<a href=\""+ s +"\">" + s + "</a>";
     body += "\n\t\t</pre>\n\t\t<hr>\n\t</body>\n</html>";
-    res.setBody(body);
+    res.setTransmittingBody(body);
 }
