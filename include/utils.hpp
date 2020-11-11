@@ -9,6 +9,7 @@
 # include <cstring>
 # include <unistd.h>
 # include <map>
+# include <algorithm>
 
 namespace ft
 {
@@ -38,6 +39,7 @@ namespace ft
     char* strdup(const std::string& s);
     std::string inetNtoA(const in_addr_t& client_address);
     void doubleFree(char*** target);
+    std::string itosHex(unsigned int n);
 }
 
 #endif
