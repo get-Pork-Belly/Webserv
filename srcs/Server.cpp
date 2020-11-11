@@ -822,11 +822,10 @@ Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
     location_info::const_iterator it = location_info.find("auth_basic");
     if (it == location_info.end())
         return ;
-    std::string realm = it->second;
     it = location_info.find("auth_basic_user_file");
     if (it == location_info.end())
         return ;
-    std::string id_password = it->second;
+    const std::string& id_password = it->second;
 
     const std::map<std::string, std::string>& headers = this->_requests[fd].getHeaders();
     it = headers.find("Authorization");
@@ -865,7 +864,6 @@ Server::findResourceAbsPath(int fd)
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
-    checkAuthenticate(fd);
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
     Log::trace("< findResourceAbsPath");
@@ -998,7 +996,7 @@ Server::processResponseBody(int fd)
 
     std::cout<<"uri: "<<this->_requests[fd].getUri()<<std::endl;
     this->findResourceAbsPath(fd);
-
+    checkAuthenticate(fd);
     if (this->_responses[fd].isLocationToBeRedirected())
         throw (MustRedirectException(this->_responses[fd]));
 
