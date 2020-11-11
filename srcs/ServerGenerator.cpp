@@ -236,7 +236,7 @@ ServerGenerator::initHttpConfig(server_info& http_config)
 void
 ServerGenerator::initServerConfig(server_info& server_config, server_info& http_config)
 {
-    std::map<std::string, std::string>::iterator ite = http_config.end();
+    const std::map<std::string, std::string>::iterator& ite = http_config.end();
 
     server_config["listen"] = std::to_string(8080);
     server_config["client_max_body_size"] = std::string("1m");
@@ -248,8 +248,8 @@ ServerGenerator::initServerConfig(server_info& server_config, server_info& http_
         server_config["autoindex"] = http_config["autoindex"];
     if (http_config.find("auth_basic") != ite)
         server_config["auth_basic"] = http_config["auth_basic"];
-    if (http_config.find("auth_basic_file") != ite)
-        server_config["auth_basic_file"] = http_config["auth_basic_file"];
+    if (http_config.find("auth_basic_user_file") != ite)
+        server_config["auth_basic_user_file"] = http_config["auth_basic_file"];
     if (http_config.find("error_page") != ite)
         server_config["error_page"] = http_config["error_page"];
     if (http_config.find("retry_after_sec") != ite)
@@ -259,7 +259,7 @@ ServerGenerator::initServerConfig(server_info& server_config, server_info& http_
 void
 ServerGenerator::initLocationConfig(location_info& location_config, server_info& server_config)
 {
-    std::map<std::string, std::string>::iterator ite = server_config.end();
+    const std::map<std::string, std::string>::iterator& ite = server_config.end();
 
     if (server_config.find("root") != ite)
         location_config["root"] = server_config["root"];
@@ -269,8 +269,8 @@ ServerGenerator::initLocationConfig(location_info& location_config, server_info&
         location_config["autoindex"] = server_config["autoindex"];
     if (server_config.find("auth_basic") != ite)
         location_config["auth_basic"] = server_config["auth_basic"];
-    if (server_config.find("auth_basic_file") != ite)
-        location_config["auth_baasic_file"] = server_config["auth_basic_file"];
+    if (server_config.find("auth_basic_user_file") != ite)
+        location_config["auth_basic_user_file"] = server_config["auth_basic_file"];
     if (server_config.find("error_page") != ite)
         location_config["error_page"] = server_config["error_page"];
     if (server_config.find("retry_after_sec") != ite)
