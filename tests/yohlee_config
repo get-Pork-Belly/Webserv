@@ -13,12 +13,23 @@ http {
             root /goinfre/yohlee/Webserv/tests/;
         }
 
+        location / {
+            cgi_path /goinfre/yohlee/Webserv/cgi_tester;
+
+            cgi .bin .cgi .bla;
+            autoindex on;
+            root /goinfre/yohlee/Webserv/;
+
+            auth_basic yohlee;
+            auth_basic_user_file yohlee:123123;
+        }
+
         location /directory {
             root 		/goinfre/yohlee/Webserv/www/YoupiBanane;
             index 		youpi.bad_extension;
             cgi 		.bla;
             cgi_path    /goinfre/yohlee/Webserv/cgi_tester;
-    }
+        }
     }
     
     server {
