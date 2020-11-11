@@ -812,8 +812,8 @@ Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_
 void
 Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
 {
-    std::string in;
-    std::string out;
+    std::string before_decode;
+    std::string after_decode;
     Response& response = this->_responses[fd];
     Request& request = this->_requests[fd];
     const std::string& route = response.getRoute();
@@ -834,18 +834,15 @@ Server::checkAuthenticate(int fd) //NOTE: fd: client_fd
     std::vector<std::string> authenticate_info = ft::split(it->second, " ");
     if (authenticate_info[0] != "Basic") //NOTE: 보안은 Basic 이용
         throw (AuthenticateErrorException(this->_responses[fd], "401"));
-    in = authenticate_info[1];
-    Base64::decode(in, out);
-    if (id_password != out)
-    {
-        //NOTE: 이름변경
+    before_decode = authenticate_info[1];
+    Base64::decode(before_decode, after_decode);
+    if (id_password != after_decode)
         throw (AuthenticateErrorException(this->_responses[fd], "403"));
-    }
     request.setAuthType(authenticate_info[0]);
-    size_t pos = out.find(":");
-    request.setRemoteUser(out.substr(0, pos));
-    request.setRemoteIdent(out.substr(pos + 1));
-    std::cout << out << std::endl;
+    size_t pos = after_decode.find(":");
+    request.setRemoteUser(after_decode.substr(0, pos));
+    request.setRemoteIdent(after_decode.substr(pos + 1));
+    std::cout << after_decode << std::endl;
 }
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
