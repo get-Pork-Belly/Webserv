@@ -790,6 +790,13 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
+                if (this->_responses[fd].getWriteFdToCGI() != 0 ||
+                        this->_responses[fd].getReadFdFromCGI() != 0)
+                {
+                    Response& response = this->_responses[fd];
+                    this->closeFdAndSetFd(response.getReadFdFromCGI(), FdSet::READ, fd, FdSet::WRITE);
+                    this->closeFdAndSetFd(response.getWriteFdToCGI(), FdSet::READ, fd, FdSet::WRITE);
+                }
             }
             catch(const Request::RequestFormatException& e)
             {
@@ -1181,7 +1188,7 @@ Server::makeCGIEnvp(int client_fd)
     Log::trace("> makeCGIEnvp");
     char** envp;
     if (!(envp = (char **)malloc(sizeof(char *) * 18)))
-        return (nullptr);
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     for (int i = 0; i < 18; i++)
         envp[i] = nullptr;
     if (!makeEnvpUsingRequest(envp, client_fd) || !makeEnvpUsingResponse(envp, client_fd)
@@ -1201,14 +1208,27 @@ Server::makeCGIArgv(int client_fd)
     Response& response = this->_responses[client_fd];
 
     if (!(argv = (char **)malloc(sizeof(char *) * 3)))
-        return (nullptr);
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     const location_info& location_info =
             this->getLocationConfig().at(this->_responses[client_fd].getRoute());
+    for (int i = 0; i < 3; i++)
+        argv[i] = nullptr;
+    location_info::const_iterator it = location_info.find("cgi_path");
+    if (it == location_info.end())
+    {
+        ft::doubleFree(&argv);
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+    }
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
-        return (nullptr);
+    {
+        ft::doubleFree(&argv);
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+    }
     if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
-        return (nullptr);
-    argv[2] = nullptr;
+    {
+        ft::doubleFree(&argv);
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+    }
     Log::trace("< makeCGIArgv");
     return (argv);
 }
@@ -1218,18 +1238,28 @@ Server::forkAndExecuteCGI(int client_fd)
 {
     Log::trace("> forkAndExecuteCGI");
 
-    Response& response = this->_responses[client_fd];
-    int stdin_of_cgi = response.getStdinOfCGI();
-    int stdout_of_cgi = response.getStdoutOfCGI();
-    //TODO: 만약 아래의 두 함수가 return False를 한다면 할당 해놓은 자원 모두를 해체하고 throw 500을 하자.
-    char** argv = this->makeCGIArgv(client_fd);
-    char** envp = this->makeCGIEnvp(client_fd);
-    if (argv == nullptr || envp == nullptr)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     pid_t pid;
     int ret;
+    int stdin_of_cgi;
+    int stdout_of_cgi;
+    char** argv;
+    char** envp;
+    Response& response = this->_responses[client_fd];
 
-    //TODO: CGI Exception 만들기
+    stdin_of_cgi = response.getStdinOfCGI();
+    stdout_of_cgi = response.getStdoutOfCGI();
+    if (!(argv = this->makeCGIArgv(client_fd)))
+    {
+        ft::doubleFreeSize(&argv, 3);
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+    }
+    if (!(envp = this->makeCGIEnvp(client_fd)))
+    {
+        ft::doubleFreeSize(&argv, 3);
+        ft::doubleFreeSize(&envp, 18);
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+    }
+
     if ((pid = fork()) < 0)
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     else if (pid == 0)
@@ -1240,7 +1270,6 @@ Server::forkAndExecuteCGI(int client_fd)
             throw (CgiExecuteErrorException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
             throw (CgiExecuteErrorException(this->_responses[client_fd]));
-        //TODO: execve실패했을 경우 생각해보기
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
         exit(ret);
