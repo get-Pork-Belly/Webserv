@@ -116,6 +116,10 @@ public:
     void forkAndExecuteCGI(int fd);
     char** makeCGIArgv(int fd);
     char** makeCGIEnvp(int fd);
+    bool makeEnvpUsingRequest(char** envp, int fd);
+    bool makeEnvpUsingResponse(char** envp, int fd);
+    bool makeEnvpUsingHeaders(char** envp, int fd);
+    bool makeEnvpUsingEtc(char** envp, int fd);
 
 public:
     class PayloadTooLargeException : public std::exception
@@ -175,6 +179,14 @@ public:
         Response& _response;
     public:
         CgiExecuteErrorException(Response& response);
+        virtual const char* what() const throw();
+    };
+    class CgiCannotMakeEnvpException: public SendErrorCodeToClientException
+    {
+    private:
+        Request& _request;
+    public:
+        CgiCannotMakeEnvpException(Request& request);
         virtual const char* what() const throw();
     };
     class AuthenticateErrorException : public SendErrorCodeToClientException

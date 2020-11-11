@@ -245,6 +245,18 @@ Server::CgiExecuteErrorException::what() const throw()
     return ("[CODE 500] Server Internal error");
 }
 
+Server::CgiCannotMakeEnvpException::CgiCannotMakeEnvpException(Request& request)
+: _request(request)
+{
+    this->_request.setStatusCode("500");
+}
+
+const char*
+Server::CgiCannotMakeEnvpException::what() const throw()
+{
+    return ("[CODE 400] Can not make envp");
+}
+
 Server::AuthenticateErrorException::AuthenticateErrorException(Response& res, const std::string& status_code)
 : _res(res), _status_code(status_code)
 {
@@ -1067,103 +1079,108 @@ Server::openCGIPipe(int client_fd)
     Log::trace("< openCGIPipe");
 }
 
-char**
-Server::makeCGIEnvp(int client_fd)
+bool
+Server::makeEnvpUsingRequest(char** envp, int client_fd)
 {
-    Log::trace("> makeCGIEnvp");
-    char** envp;
+    Request& request = this->_requests[client_fd];
+    if (!(envp[0] = ft::strdup("AUTH_TYPE=" + request.getAuthType())))
+        return (false);
+    if (!(envp[1] = ft::strdup("REMOTE_USER=" + request.getRemoteUser())))
+        return (false);
+    if (!(envp[2] = ft::strdup("REMOTE_IDENT=" + request.getRemoteIdent())))
+        return (false);
+    if (!(envp[9] = ft::strdup("REMOTE_ADDR=" + request.getIpAddress())))
+        return (false);
+    if (!(request.getMethod() == "GET" || request.getMethod() == "POST" ||
+                    request.getMethod() == "HEAD"))
+        throw (CgiCannotMakeEnvpException(request));
+    if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ request.getMethod())))
+        return (false);
+    std::cout << "envp10: " << envp[10] << std::endl;
+    return (true);
+}
+
+bool
+Server::makeEnvpUsingResponse(char** envp, int client_fd)
+{
+    const Response& response = this->_responses[client_fd];
+    
+    if (!(envp[6] = ft::strdup("PATH_INFO=" + response.getUriPath())))
+        return (false);
+    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + response.getResourceAbsPath())))
+        return (false);
+    if (!(envp[11] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
+        return (false);
+    return (true);
+}
+
+bool
+Server::makeEnvpUsingHeaders(char** envp, int client_fd)
+{
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
-    const std::map<std::string, std::string>& location_info =
-        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
-
-    // 각각에 대한 it
-    if (!(envp = (char **)malloc(sizeof(char *) * 18)))
-        return (nullptr);
-    for (int i = 0; i < 18; i++)
-        envp[i] = nullptr;
-
-    std::map<std::string, std::string>::const_iterator it = headers.find("Authorization");
-    // AUTH_TYPE // Request_Headers의 Authorization value 공백 앞부분
-    // REMOTE_IDENT & REMOTE_USER // Request_Headers의 Authorization value 공백 뒷부분
-    // AUTH_TYPE
-    it = headers.find("Authorization");
-    if (it == headers.end())
-    {
-        if (!(envp[0] = ft::strdup("AUTH_TYPE=")))
-            return (nullptr);
-    }
-    else
-    {
-        if (!(envp[0] = ft::strdup("AUTH_TYPE=" + this->_requests[client_fd].getAuthType())))
-            return (nullptr);
-    }
-    // TODO: Authorization있을때만 해야하는 지 확인할 것
-    // REMOTE_USER; 1
-    if (!(envp[1] = ft::strdup("REMOTE_USER=" + this->_requests[client_fd].getRemoteUser())))
-        return (nullptr);
-    // TODO: Authorization있을때만 해야하는 지 확인할 것
-    // REMOTE_IDENT 2
-    if (!(envp[2] = ft::strdup("REMOTE_IDENT=" + this->_requests[client_fd].getRemoteIdent())))
-        return (nullptr);
+    std::map<std::string, std::string>::const_iterator it;
 
     it = headers.find("Content-Length");
     if (it == headers.end())
     {
         if (!(envp[3] = ft::strdup("CONTENT_LENGTH=")))
-            return (nullptr);
+            return (false);
     }
     else
     {
         if (!(envp[3] = ft::strdup("CONTENT_LENGTH=" + it->second)))
-            return (nullptr);
+            return (false);
     }
-
     it = headers.find("Content-Type");
     if (it == headers.end())
     {
         if (!(envp[4] = ft::strdup("CONTENT_TYPE=text/html")))
-            return (nullptr);
+            return (false);
     }
     else
     {
         if (!(envp[4] = ft::strdup("CONTENT_TYPE=" + it->second)))
-            return (nullptr);
+            return (false);
     }
+    return (true);
+}
 
+bool
+Server::makeEnvpUsingEtc(char** envp, int client_fd)
+{
+    Request& request = this->_requests[client_fd];
+    const std::map<std::string, std::string>& location_info =
+        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
     if (!(envp[5] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
-        return (nullptr);
-    if (!(envp[6] = ft::strdup("PATH_INFO=" + this->_responses[client_fd].getUriPath())))
-        return (nullptr);
-    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + this->_responses[client_fd].getResourceAbsPath())))
-        return (nullptr);
-    //TODO: GET일 때는 QUERY를 여기로 넣어주기
-    if (!(envp[8] = ft::strdup("QUERY_STRING=")))
-        return (nullptr);
-    if (!(envp[9] = ft::strdup("REMOTE_ADDR=" + this->_requests[client_fd].getIpAddress())))
-        return (nullptr);
-    //TODO: get/head <-> post 구조 다르게 가져가야함.  REQUEST_METHOD : Location info의 limit_except or GET/POST/HEAD
-    if (!(this->_requests[client_fd].getMethod() == "GET" ||
-            this->_requests[client_fd].getMethod() == "POST" ||
-            this->_requests[client_fd].getMethod() == "HEAD"))
-        return (nullptr);
-    else
-    {
-        if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ this->_requests[client_fd].getMethod())))
-            return (nullptr);
-        }
-        if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getUriPath())))
-        return (nullptr);
+        return (false);
     if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
-        return (nullptr);
+        throw (CgiCannotMakeEnvpException(request));
     if (!(envp[13] = ft::strdup("SERVER_NAME=" + this->getHost())))
-        return (nullptr);
+        return (false);
     if (!(envp[14] = ft::strdup("SERVER_PORT=" + this->getPort())))
-        return (nullptr);
+        return (false);
     if (!(envp[15] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
-        return (nullptr);
+        return (false);
     if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
+        return (false);
+    if (!(envp[8] = ft::strdup("QUERY_STRING=")))
+        return (false);
+    return (true);
+}
+
+char**
+Server::makeCGIEnvp(int client_fd)
+{
+    Log::trace("> makeCGIEnvp");
+    char** envp;
+    if (!(envp = (char **)malloc(sizeof(char *) * 18)))
         return (nullptr);
-    Log::trace("< makeCGIEnvp");
+    for (int i = 0; i < 18; i++)
+        envp[i] = nullptr;
+    makeEnvpUsingRequest(envp, client_fd);
+    makeEnvpUsingResponse(envp, client_fd);
+    makeEnvpUsingHeaders(envp, client_fd);
+    makeEnvpUsingEtc(envp, client_fd);
     return (envp);
 }
 
@@ -1193,7 +1210,6 @@ Server::forkAndExecuteCGI(int client_fd)
     Log::trace("> forkAndExecuteCGI");
 
     Response& response = this->_responses[client_fd];
-    // Request& request = this->_requests[client_fd];
     int stdin_of_cgi = response.getStdinOfCGI();
     int stdout_of_cgi = response.getStdoutOfCGI();
     //TODO: 만약 아래의 두 함수가 return False를 한다면 할당 해놓은 자원 모두를 해체하고 throw 500을 하자.
