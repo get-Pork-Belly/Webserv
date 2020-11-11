@@ -683,6 +683,20 @@ Response::appendTransferEncodingHeader(std::string& headers)
     Log::trace("< appendTransferEncodingHeader");
 }
 
+void
+Response::appendAuthenticateHeader(std::string& headers)
+{
+    const location_info& location = this->getLocationInfo();
+    const std::string& realm = location.at("auth_basic");
+    const std::string auth_type = "Basic ";
+
+    headers += "WWW-Authenticate: ";
+    headers += auth_type;
+    headers += "realm=";
+    headers += realm;
+    headers += "\r\n";
+}
+
 std::string
 Response::makeHeaders(Request& request)
 {
@@ -716,8 +730,12 @@ Response::makeHeaders(Request& request)
         this->appendAllowHeader(headers);
     else if (status_code.compare("401") == 0)
     {
-        // this->appendAuthenticateHeader(headers);
+        this->appendAuthenticateHeader(headers);
     }
+    // else if (status_code.compare("403") == 0)
+    // {
+
+    // }
     else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
         this->appendLocationHeader(headers, request);
     else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 

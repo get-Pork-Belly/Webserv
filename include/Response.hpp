@@ -153,9 +153,7 @@ public:
     void appendLocationHeader(std::string& headers, const Request& request);
     void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
     void appendTransferEncodingHeader(std::string& headers);
-
-
-
+    void appendAuthenticateHeader(std::string& headers);
 };
 
 #endif

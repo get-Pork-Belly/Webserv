@@ -9,6 +9,8 @@ http {
             cgi .bin .cgi .bla;
             autoindex on;
             root /Users/sanam/Desktop/Webserv/;
+            auth_basic sanam;
+            auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpasswd;
         }
 
         location /directory {
@@ -16,5 +18,7 @@ http {
             index youpi.bad_extension;
             cgi .bla;
             cgi_path /Users/sanam/Desktop/Webserv/cgi_tester;
+            auth_basic sanam;
+            auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpasswd;
     }
 }

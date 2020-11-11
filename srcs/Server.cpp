@@ -3,6 +3,7 @@
 #include "ServerManager.hpp"
 #include "Log.hpp"
 #include "UriParser.hpp"
+#include "Base64.hpp"
 #include <iostream>
 #include <signal.h>
 
@@ -107,6 +108,56 @@ Server::setResourceAbsPathAsIndex(int fd)
     }
 }
 
+void
+Server::setAuthBasic(const std::string& auth_basic, const std::string& route)
+{
+    this->_location_config[route]["auth_basic"] = auth_basic;
+}
+
+void
+Server::setAuthBasicUserFile(const std::string& decoded_id_password, const std::string& route)
+{
+    this->_location_config[route]["auth_basic_user_file"] = decoded_id_password;
+}
+
+void
+Server::setAuthenticateRealm()
+{
+    int fd;
+    char temp[1024];
+    std::string before_decode;
+    std::string after_decode;
+    const std::map<std::string, location_info>& locations = this->getLocationConfig();
+    for (auto& location: locations)
+    {
+        const location_info& location_info = location.second;
+        if (location_info.at("auth_basic") != "off")
+        {
+            const location_info::const_iterator& it = location_info.find("auth_basic_user_file");
+            if (it != location_info.end())
+            {
+                fd = open(it->second.c_str(), O_RDONLY, 0644);
+                if (fd < 0)
+                    setAuthBasic("off", location.first);
+                else
+                {
+                    ft::memset(reinterpret_cast<void *>(temp), 0, 1024);
+                    int bytes = read(fd, temp, 1024);
+                    if (bytes >= 0)
+                    {
+                        before_decode = std::string(temp);
+                        Base64::decode(before_decode, after_decode);
+                        this->setAuthBasicUserFile(after_decode, location.first);
+                    }
+                    else
+                        this->setAuthBasic("off", location.first);
+                }
+            }
+        }
+    }
+}
+
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -194,6 +245,18 @@ Server::CgiExecuteErrorException::what() const throw()
     return ("[CODE 500] Server Internal error");
 }
 
+Server::AuthenticateErrorException::AuthenticateErrorException(Response& res, const std::string& status_code)
+: _res(res), _status_code(status_code)
+{
+    this->_res.setStatusCode(this->_status_code);
+}
+
+const char*
+Server::AuthenticateErrorException::what() const throw()
+{
+    return ("");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
@@ -203,8 +266,6 @@ Server::init()
 {
     for (auto& conf: this->_server_config)
     {
-        // if (conf.first == "server_name")
-        //     this->_server_name = conf.second;
         if (conf.first == "host")
             this->_host = conf.second;
         else if (conf.first == "listen")
@@ -212,6 +273,7 @@ Server::init()
     }
     this->_requests = std::vector<Request>(1024);
     this->_responses = std::vector<Response>(1024);
+    this->setAuthenticateRealm();
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
@@ -238,13 +300,13 @@ Server::init()
 }
 
 void
-Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
+Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
 {
     Log::trace("> readBufferUntilHeaders");
     int bytes;
-    Request& req = this->_requests[fd];
+    Request& req = this->_requests[client_fd];
 
-    if ((bytes = read(fd, buf, header_end_pos + 4)) > 0)
+    if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
         req.parseRequestWithoutBody(buf);
     else if (bytes == 0)
         throw (Request::RequestFormatException(req, "400"));
@@ -254,16 +316,16 @@ Server::readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos)
 }
 
 void
-Server::receiveRequestWithoutBody(int fd)
+Server::receiveRequestWithoutBody(int client_fd)
 {
     Log::trace("> receiveRequestWithoutBody");
     int bytes;
     char buf[BUFFER_SIZE + 1];
     size_t header_end_pos = 0;
-    Request& req = this->_requests[fd];
+    Request& req = this->_requests[client_fd];
 
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-    if ((bytes = recv(fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
+    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
         if ((header_end_pos = std::string(buf).find("\r\n\r\n")) != std::string::npos)
         {
@@ -274,7 +336,7 @@ Server::receiveRequestWithoutBody(int fd)
             }
             else
                 req.setIsBufferLeft(true);
-            this->readBufferUntilHeaders(fd, buf, header_end_pos);
+            this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
         }
         else
         {
@@ -284,19 +346,19 @@ Server::receiveRequestWithoutBody(int fd)
         }
     }
     else if (bytes == 0)
-        this->closeClientSocket(fd);
+        this->closeClientSocket(client_fd);
     else
         throw (ReadErrorException());
     Log::trace("< receiveRequestWithoutBody");
 }
 
 void
-Server::receiveRequestNormalBody(int fd)
+Server::receiveRequestNormalBody(int client_fd)
 {
     Log::trace("> receiveRequestNormalBody");
 
     int bytes;
-    Request& req = this->_requests[fd];
+    Request& req = this->_requests[client_fd];
 
     int content_length = req.getContentLength();
     if (content_length > this->_limit_client_body_size)
@@ -305,10 +367,10 @@ Server::receiveRequestNormalBody(int fd)
     char buf[BUFFER_SIZE + 1];
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
-    if ((bytes = recv(fd, buf, content_length, 0)) > 0)
+    if ((bytes = recv(client_fd, buf, content_length, 0)) > 0)
         req.parseNormalBodies(buf);
     else if (bytes == 0)
-        this->closeClientSocket(fd);
+        this->closeClientSocket(client_fd);
     else
         throw (ReadErrorException());
 
@@ -316,66 +378,66 @@ Server::receiveRequestNormalBody(int fd)
 }
 
 void
-Server::clearRequestBuffer(int fd)
+Server::clearRequestBuffer(int client_fd)
 {
     Log::trace("> clearRequestBuffer");
     int bytes;
     char buf[BUFFER_SIZE + 1];
-    Request& req = this->_requests[fd];
+    Request& req = this->_requests[client_fd];
 
-    if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
+    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
         if (bytes == BUFFER_SIZE)
             return ;
         req.setReqInfo(ReqInfo::COMPLETE);
     }
     else if (bytes == 0)
-        this->closeClientSocket(fd);
+        this->closeClientSocket(client_fd);
     else
         throw (ReadErrorException());
     Log::trace("< clearRequestBuffer");
 }
 
 void
-Server::receiveRequestChunkedBody(int fd)
+Server::receiveRequestChunkedBody(int client_fd)
 {
     Log::trace("> receiveRequestChunkedBody");
     int bytes;
     char buf[BUFFER_SIZE + 1];
-    Request& req = this->_requests[fd];
+    Request& req = this->_requests[client_fd];
 
-    if ((bytes = recv(fd, buf, BUFFER_SIZE, 0)) > 0)
+    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
         req.parseChunkedBody(buf);
     else if (bytes == 0)
-        this->closeClientSocket(fd);
+        this->closeClientSocket(client_fd);
     else
         throw (ReadErrorException());
     Log::trace("< receiveRequestChunkedBody");
 }
 
 void
-Server::receiveRequest(int fd)
+Server::receiveRequest(int client_fd)
 {
     Log::trace("> receiveRequest");
 
-    const ReqInfo& req_info = this->_requests[fd].getReqInfo();
+    const ReqInfo& req_info = this->_requests[client_fd].getReqInfo();
 
     switch (req_info)
     {
     case ReqInfo::READY:
-        this->receiveRequestWithoutBody(fd);
+        this->receiveRequestWithoutBody(client_fd);
         break ;
 
     case ReqInfo::NORMAL_BODY:
-        this->receiveRequestNormalBody(fd);
+        this->receiveRequestNormalBody(client_fd);
         break ;
 
     case ReqInfo::CHUNKED_BODY:
-        this->receiveRequestChunkedBody(fd);
+        this->receiveRequestChunkedBody(client_fd);
         break ;
 
     case ReqInfo::MUST_CLEAR:
-        this->clearRequestBuffer(fd);
+        this->clearRequestBuffer(client_fd);
         break ;
 
     default:
@@ -386,11 +448,11 @@ Server::receiveRequest(int fd)
 }
 
 std::string
-Server::makeResponseMessage(int fd)
+Server::makeResponseMessage(int client_fd)
 {
     Log::trace("> makeResponseMessage");
-    Request& request = this->_requests[fd];
-    Response& response = this->_responses[fd];
+    Request& request = this->_requests[client_fd];
+    Response& response = this->_responses[client_fd];
 
     std::string status_line;
     std::string headers;
@@ -428,14 +490,14 @@ Server::makeResponseMessage(int fd)
 }
 
 bool
-Server::sendResponse(const std::string& response_message, int fd)
+Server::sendResponse(const std::string& response_message, int client_fd)
 {
     Log::trace("> sendResponse");
     std::string tmp;
     tmp += response_message;
     // tmp += "\r\n";
     std::cout<<tmp<<std::endl;
-    write(fd, tmp.c_str(), tmp.length()); 
+    write(client_fd, tmp.c_str(), tmp.length()); 
     Log::trace("< sendResponse");
     return (true);
 }
@@ -521,18 +583,11 @@ Server::isCGIPipe(int fd) const
     return false;
 }
 
-
 bool
-Server::isFileUri(const Request& request) const
+Server::isIndexFileExist(int client_fd)
 {
-    return (request.getUri().back() != '/');
-}
-
-bool
-Server::isIndexFileExist(int fd)
-{
-    const std::string& dir_entry = this->_responses[fd].getDirectoryEntry();
-    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    const std::string& dir_entry = this->_responses[client_fd].getDirectoryEntry();
+    const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
     for (std::string& index : indexs)
     {
@@ -543,9 +598,9 @@ Server::isIndexFileExist(int fd)
 }
 
 bool
-Server::isAutoIndexOn(int fd)
+Server::isAutoIndexOn(int client_fd)
 {
-    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     Log::printLocationInfo(location_info);
     if (location_info.at("autoindex") == "on")
         return (true);
@@ -553,7 +608,7 @@ Server::isAutoIndexOn(int fd)
 }
 
 bool
-Server::isCGIUri(int fd, const std::string& extension)
+Server::isCGIUri(int client_fd, const std::string& extension)
 {
     Log::trace("> isCGIUri");
 
@@ -563,7 +618,7 @@ Server::isCGIUri(int fd, const std::string& extension)
         return (false);
     }
 
-    const location_info& location_info = this->_responses[fd].getLocationInfo();
+    const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     location_info::const_iterator it = location_info.find("cgi");
     if (it == location_info.end())
     {
@@ -620,6 +675,14 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
     content_length = request.getContentLength();
+    //TODO: 만약 Content_length가 0 이 아니면서 GET, HEAD로 온 요청이라면
+    // 이미 앞에서 걸러질것이므로 if의 조건에 != "POST" 가 있을 필요가 없다.
+    // 확실하게 앞에서 걸러 진다면 TODO를 지우자.
+    if (content_length == 0 || request.getMethod() != "POST")
+    {
+        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
+        return ;
+    }
     transfered_body_size = request.getTransferedBodySize();
     body = request.getBodies().c_str();
     bytes = write(write_fd_to_cgi, &body[transfered_body_size], content_length);
@@ -686,7 +749,7 @@ Server::run(int fd)
             {
                 Log::trace(">>> write sequence");
                 if (this->isCGIPipe(fd))
-                    sendDataToCGI(fd);
+                    this->sendDataToCGI(fd);
                 else
                 {
                     std::string response_message = this->makeResponseMessage(fd);
@@ -736,7 +799,7 @@ Server::run(int fd)
             {
                 std::cout << "Fd: " << fd << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
                 if (this->isCGIPipe(fd)) 
-                    receiveDataFromCGI(fd);
+                    this->receiveDataFromCGI(fd);
                 else if (this->isStaticResource(fd))
                     this->readStaticResource(fd);
                 else if (this->isClientSocket(fd))
@@ -744,7 +807,7 @@ Server::run(int fd)
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
-                        processResponseBody(fd);
+                        this->processResponseBody(fd);
                 }
             }
             catch(const SendErrorCodeToClientException& e)
@@ -774,14 +837,14 @@ Server::run(int fd)
 }
 
 void
-Server::closeClientSocket(int fd)
+Server::closeClientSocket(int client_fd)
 {
-    this->_server_manager->fdClr(fd, FdSet::READ);
-    this->_server_manager->setClosedFdOnFdTable(fd);
-    this->_server_manager->updateFdMax(fd);
-    this->_requests[fd].init();
-    Log::closeClient(*this, fd);
-    close(fd);
+    this->_server_manager->fdClr(client_fd, FdSet::READ);
+    this->_server_manager->setClosedFdOnFdTable(client_fd);
+    this->_server_manager->updateFdMax(client_fd);
+    this->_requests[client_fd].init();
+    Log::closeClient(*this, client_fd);
+    close(client_fd);
 }
 
 void
@@ -813,16 +876,50 @@ Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_
     Log::trace("< closeFdAndSetFd");
 }
 
+void
+Server::checkAuthenticate(int client_fd)
+{
+    std::string before_decode;
+    std::string after_decode;
+    Response& response = this->_responses[client_fd];
+    Request& request = this->_requests[client_fd];
+    const std::string& route = response.getRoute();
+    const std::map<std::string, location_info>& location_config = this->getLocationConfig();
+    const location_info& location_info = location_config.at(route);
+    location_info::const_iterator it = location_info.find("auth_basic");
+    if (it->second == "off")
+        return ;
+    it = location_info.find("auth_basic_user_file");
+    if (it == location_info.end())
+        return ;
+    const std::string& id_password = it->second;
+    const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
+    it = headers.find("Authorization");
+    if (it == headers.end())
+        throw (AuthenticateErrorException(this->_responses[client_fd], "401"));
+    std::vector<std::string> authenticate_info = ft::split(it->second, " ");
+    if (authenticate_info[0] != "Basic")
+        throw (AuthenticateErrorException(this->_responses[client_fd], "401"));
+    before_decode = authenticate_info[1];
+    Base64::decode(before_decode, after_decode);
+    if (id_password != after_decode)
+        throw (AuthenticateErrorException(this->_responses[client_fd], "403"));
+    request.setAuthType(authenticate_info[0]);
+    size_t pos = after_decode.find(":");
+    request.setRemoteUser(after_decode.substr(0, pos));
+    request.setRemoteIdent(after_decode.substr(pos + 1));
+}
+
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
 void
-Server::findResourceAbsPath(int fd)
+Server::findResourceAbsPath(int client_fd)
 {
     Log::trace("> findResourceAbsPath");
     UriParser parser;
-    parser.parseUri(this->_requests[fd].getUri());
+    parser.parseUri(this->_requests[client_fd].getUri());
     const std::string& path = parser.getPath();
 
-    Response& response = this->_responses[fd];
+    Response& response = this->_responses[client_fd];
     response.setUriPath(path);
     response.setRouteAndLocationInfo(path, this);
 
@@ -835,65 +932,65 @@ Server::findResourceAbsPath(int fd)
 }
 
 void 
-Server::readStaticResource(int fd)
+Server::readStaticResource(int resource_fd)
 {
     Log::trace("> readStaticResource");
     char buf[BUFFER_SIZE + 1];
     int bytes;
-    int client_socket = this->_server_manager->getFdTable()[fd].second;
+    int client_socket = this->_server_manager->getFdTable()[resource_fd].second;
 
     ft::memset(buf, 0, BUFFER_SIZE + 1);
-    if ((bytes = read(fd, buf, BUFFER_SIZE)) > 0)
+    if ((bytes = read(resource_fd, buf, BUFFER_SIZE)) > 0)
     {
         this->_responses[client_socket].appendBody(buf);
         if (bytes < BUFFER_SIZE)
-            this->closeFdAndSetClientOnWriteFdSet(fd);
+            this->closeFdAndSetClientOnWriteFdSet(resource_fd);
     }
     else if (bytes == 0)
     {
-        this->closeFdAndSetClientOnWriteFdSet(fd);
+        this->closeFdAndSetClientOnWriteFdSet(resource_fd);
         throw (ReadErrorException());
     }
     else
     {
-        this->closeFdAndSetClientOnWriteFdSet(fd);
+        this->closeFdAndSetClientOnWriteFdSet(resource_fd);
         throw (ReadErrorException());
     }
     Log::trace("< readStaticResource");
 }
 
 void
-Server::openStaticResource(int fd)
+Server::openStaticResource(int client_fd)
 {
     Log::trace("> openStaticResource");
     int resource_fd;
-    const std::string& path = this->_responses[fd].getResourceAbsPath();
+    const std::string& path = this->_responses[client_fd].getResourceAbsPath();
     struct stat tmp;
 
     if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
     {
         fcntl(resource_fd, F_SETFL, O_NONBLOCK);
         this->_server_manager->fdSet(resource_fd, FdSet::READ);
-        this->_server_manager->setResourceOnFdTable(resource_fd, fd);
+        this->_server_manager->setResourceOnFdTable(resource_fd, client_fd);
         this->_server_manager->updateFdMax(resource_fd);
         if ((fstat(resource_fd, &tmp)) == -1)
-            throw OpenResourceErrorException(this->_responses[fd], errno);
-        this->_responses[fd].setFileInfo(tmp);
-        Log::openFd(*this, fd, FdType::RESOURCE, resource_fd);
+            throw OpenResourceErrorException(this->_responses[client_fd], errno);
+        this->_responses[client_fd].setFileInfo(tmp);
+        Log::openFd(*this, client_fd, FdType::RESOURCE, resource_fd);
     }
     else
-        throw OpenResourceErrorException(this->_responses[fd], errno);
+        throw OpenResourceErrorException(this->_responses[client_fd], errno);
     Log::trace("< openStaticResource");
 }
 
 void
-Server::checkAndSetResourceType(int fd)
+Server::checkAndSetResourceType(int client_fd)
 {
     Log::trace("> checkAndSetResourceType");
 
-    Response& response = this->_responses[fd];
+    Response& response = this->_responses[client_fd];
     response.findAndSetUriExtension();
-    if (this->isCGIUri(fd, response.getUriExtension()))
+    if (this->isCGIUri(client_fd, response.getUriExtension()))
     {
         response.setResourceType(ResType::CGI);
         return ;
@@ -903,14 +1000,14 @@ Server::checkAndSetResourceType(int fd)
     {
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
-        if (this->isIndexFileExist(fd))
+        if (this->isIndexFileExist(client_fd))
             response.setResourceType(ResType::INDEX_HTML);
         else
         {
-            if (this->isAutoIndexOn(fd))
+            if (this->isAutoIndexOn(client_fd))
                 response.setResourceType(ResType::AUTO_INDEX);
             else
-                throw (IndexNoExistException(this->_responses[fd]));
+                throw (IndexNoExistException(this->_responses[client_fd]));
         }
     }
     else
@@ -918,59 +1015,55 @@ Server::checkAndSetResourceType(int fd)
         if (errno == ENOTDIR)
             response.setResourceType(ResType::STATIC_RESOURCE);
         else if (errno == EACCES)
-            throw (CannotOpenDirectoryException(this->_responses[fd], "403", errno));
+            throw (CannotOpenDirectoryException(this->_responses[client_fd], "403", errno));
         else if (errno == ENOENT)
-            throw (CannotOpenDirectoryException(this->_responses[fd], "404", errno));
+            throw (CannotOpenDirectoryException(this->_responses[client_fd], "404", errno));
     }
 
     Log::trace("< checkAndSetResourceType");
 }
 
 void
-Server::preprocessResponseBody(int fd, ResType& res_type)
+Server::preprocessResponseBody(int client_fd, ResType& res_type)
 {
     Log::trace("> preprocessResponseBody");
     switch (res_type)
     {
     case ResType::AUTO_INDEX:
         std::cout << "Auto index page will be generated" << std::endl;
-        this->_server_manager->fdSet(fd, FdSet::WRITE);
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
         break ;
     case ResType::STATIC_RESOURCE:
         std::cout << "Static resource will be opened" << std::endl;
-        this->openStaticResource(fd);
+        this->openStaticResource(client_fd);
         break ;
     case ResType::CGI:
         std::cout << "CGIpipe will be opened" << std::endl;
-        this->openCGIPipe(fd); //fd: client fd, cgiPipe[2]
-        this->forkAndExecuteCGI(fd);
-        // write flag -> CGI 프로세스에 스탠다드 인(pipe[1])으로 데이터를 넣어줌.
-        // Client fd에 대해서 clear 해준다.
+        this->openCGIPipe(client_fd);
+        this->forkAndExecuteCGI(client_fd);
         break ;
     default:
-        this->_server_manager->fdSet(fd, FdSet::WRITE);
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
         break ;
     }
     Log::trace("< preprocessResponseBody");
 }
 
 void
-Server::processResponseBody(int fd)
+Server::processResponseBody(int client_fd)
 {
     Log::trace("> processResopnseBody");
 
-    std::cout<<"uri: "<<this->_requests[fd].getUri()<<std::endl;
-    this->findResourceAbsPath(fd);
-
-    if (this->_responses[fd].isLocationToBeRedirected())
-        throw (MustRedirectException(this->_responses[fd]));
-
-    this->checkAndSetResourceType(fd);
-    if (this->_responses[fd].getResourceType() == ResType::INDEX_HTML)
-        this->setResourceAbsPathAsIndex(fd);
-    ResType res_type = this->_responses[fd].getResourceType();
-    preprocessResponseBody(fd, res_type);
-
+    std::cout<<"uri: "<<this->_requests[client_fd].getUri()<<std::endl;
+    this->findResourceAbsPath(client_fd);
+    this->checkAuthenticate(client_fd);
+    if (this->_responses[client_fd].isLocationToBeRedirected())
+        throw (MustRedirectException(this->_responses[client_fd]));
+    this->checkAndSetResourceType(client_fd);
+    if (this->_responses[client_fd].getResourceType() == ResType::INDEX_HTML)
+        this->setResourceAbsPathAsIndex(client_fd);
+    ResType res_type = this->_responses[client_fd].getResourceType();
+    this->preprocessResponseBody(client_fd, res_type);
     Log::trace("< processResopnseBody");
 }
 
@@ -1037,14 +1130,16 @@ Server::makeCGIEnvp(int client_fd)
     }
     else
     {
-        if (!(envp[0] = ft::strdup("AUTH_TYPE=")))
+        if (!(envp[0] = ft::strdup("AUTH_TYPE=" + this->_requests[client_fd].getAuthType())))
             return (nullptr);
     }
-        // REMOTE_USER; 1
-    if (!(envp[1] = ft::strdup("REMOTE_USER=")))
+    // TODO: Authorization있을때만 해야하는 지 확인할 것
+    // REMOTE_USER; 1
+    if (!(envp[1] = ft::strdup("REMOTE_USER=" + this->_requests[client_fd].getRemoteUser())))
         return (nullptr);
-        // REMOTE_IDENT 2
-    if (!(envp[2] = ft::strdup("REMOTE_IDENT=")))
+    // TODO: Authorization있을때만 해야하는 지 확인할 것
+    // REMOTE_IDENT 2
+    if (!(envp[2] = ft::strdup("REMOTE_IDENT=" + this->_requests[client_fd].getRemoteIdent())))
         return (nullptr);
 
     it = headers.find("Content-Length");
@@ -1156,6 +1251,8 @@ Server::forkAndExecuteCGI(int client_fd)
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     else if (pid == 0)
     {
+        close(response.getWriteFdToCGI());
+        close(response.getReadFdFromCGI());
         if (dup2(stdin_of_cgi, 0) < 0)
             throw (CgiExecuteErrorException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
@@ -1167,6 +1264,8 @@ Server::forkAndExecuteCGI(int client_fd)
     }
     else
     {
+        close(stdin_of_cgi);
+        close(stdout_of_cgi);
         response.setCGIPid(pid);
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);

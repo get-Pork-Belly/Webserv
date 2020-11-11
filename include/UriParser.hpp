@@ -19,6 +19,7 @@ private:
     std::string _host;
     std::string _port;
     std::string _path;
+    std::string _query;
     std::vector<std::string> _paths;
         
 public:
@@ -37,6 +38,7 @@ public:
     const std::string& getPort() const;
     const std::string& getPath() const;
     const std::vector<std::string>& getPaths() const;
+    const std::string& getQuery() const;
     /* Setter */
     void setIndex(int index);
     void setUri(const std::string& uri);
@@ -45,6 +47,7 @@ public:
     void setPort(const std::string& port);
     void setPath(const std::string& path);
     void setHostAndPort(const std::string& host_port);
+    void setQuery(const std::string& query);
     void setPaths();
     /* Exception */
     /* Util */
@@ -55,6 +58,8 @@ public:
     std::string findHostAndPort();
     std::string findPath();
     void print();
+    void findAndSetQuery(const std::string& path);
+
 };
 
 #endif

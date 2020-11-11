@@ -18,7 +18,7 @@
 # include "Response.hpp"
 # include "Exception.hpp"
 
-const int BUFFER_SIZE = 500;
+const int BUFFER_SIZE = 65534;
 
 class ServerManager;
 class Request;
@@ -65,6 +65,8 @@ public:
     const std::string& getPort() const;
     /* Setter */
     void setServerSocket();
+    void setAuthBasic(const std::string& auth_basic, const std::string& route);
+    void setAuthBasicUserFile(const std::string& decoded_id_password, const std::string& route);
 
     /* Exception */
 
@@ -90,7 +92,6 @@ public:
     std::string makeResponseMessage(int fd);
     bool sendResponse(const std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
-    bool isFileUri(const Request& request) const;
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
     bool isAutoIndexOn(int fd);
@@ -104,6 +105,10 @@ public:
     void receiveDataFromCGI(int fd);
 
     void readStaticResource(int fd);
+
+    void checkAuthenticate(int fd);
+
+    void setAuthenticateRealm();
 
     /* Server run function */
     void acceptClient();
@@ -171,6 +176,15 @@ public:
         Response& _response;
     public:
         CgiExecuteErrorException(Response& response);
+        virtual const char* what() const throw();
+    };
+    class AuthenticateErrorException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _res;
+        std::string _status_code;
+    public:
+        AuthenticateErrorException(Response& res, const std::string& status_code);
         virtual const char* what() const throw();
     };
 };
