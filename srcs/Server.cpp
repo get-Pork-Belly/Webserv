@@ -1094,7 +1094,10 @@ Server::makeEnvpUsingRequest(char** envp, int client_fd)
         return (false);
     if (!(request.getMethod() == "GET" || request.getMethod() == "POST" ||
                     request.getMethod() == "HEAD"))
+    {
+        ft::doubleFreeSize(&envp, 18);
         throw (CgiCannotMakeEnvpException(response));
+    }
     if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ request.getMethod())))
         return (false);
     std::cout << "envp10: " << envp[10] << std::endl;
@@ -1155,7 +1158,10 @@ Server::makeEnvpUsingEtc(char** envp, int client_fd)
     if (!(envp[5] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
         return (false);
     if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
+    {
+        ft::doubleFreeSize(&envp, 18);
         throw (CgiCannotMakeEnvpException(response));
+    }
     if (!(envp[13] = ft::strdup("SERVER_NAME=" + this->getHost())))
         return (false);
     if (!(envp[14] = ft::strdup("SERVER_PORT=" + this->getPort())))
@@ -1178,10 +1184,12 @@ Server::makeCGIEnvp(int client_fd)
         return (nullptr);
     for (int i = 0; i < 18; i++)
         envp[i] = nullptr;
-    makeEnvpUsingRequest(envp, client_fd);
-    makeEnvpUsingResponse(envp, client_fd);
-    makeEnvpUsingHeaders(envp, client_fd);
-    makeEnvpUsingEtc(envp, client_fd);
+    if (!makeEnvpUsingRequest(envp, client_fd) || !makeEnvpUsingResponse(envp, client_fd)
+        || !makeEnvpUsingHeaders(envp, client_fd) || !makeEnvpUsingEtc(envp, client_fd))
+    {
+        ft::doubleFreeSize(&envp, 18);
+        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+    }
     return (envp);
 }
 
