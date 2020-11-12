@@ -665,13 +665,19 @@ Response::appendContentTypeHeader(std::string& headers)
 {
     Log::trace("> appendContentTypeHeader");
     headers += "Content-Type: ";
-    std::string extension = this->getUriExtension();
-    if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
-        headers += this->getMimeTypeTable().at(extension);
-    else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_HTML)
-        headers += "text/html";
+
+    if (this->getHeaders().find("Content-Type") != this->getHeaders().end())
+        headers += this->getHeaders().at("Content-Type");
     else
-        headers += "application/octet-stream";
+    {
+        std::string extension = this->getUriExtension();
+        if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
+            headers += this->getMimeTypeTable().at(extension);
+        else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_HTML)
+            headers += "text/html";
+        else
+            headers += "application/octet-stream";
+    }
     headers += "\r\n";
     Log::trace("< appendContentTypeHeader");
 }
@@ -704,7 +710,10 @@ void
 Response::appendLocationHeader(std::string& headers, const Request& request)
 {
     headers += "Location: ";
-    headers += this->getRedirectUri(request);
+    if (this->getHeaders().find("Location") != this->getHeaders().end())
+        headers += this->getHeaders().at("Location");
+    else
+        headers += this->getRedirectUri(request);
     headers += "\r\n";
 }
 
@@ -775,7 +784,8 @@ Response::makeHeaders(Request& request)
     if (status_code.compare("200") == 0)
     {
         this->appendContentLocationHeader(headers);
-        if (this->getResourceType() != ResType::AUTO_INDEX)
+        if (this->getResourceType() == ResType::STATIC_RESOURCE || 
+            this->getResourceType() == ResType::INDEX_HTML)
             this->appendLastModifiedHeader(headers);
     }
     else if (status_code.compare("405") == 0)
