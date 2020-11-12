@@ -100,6 +100,7 @@ public:
     bool isAutoIndexOn(int fd);
     bool isCGIUri(int fd, const std::string& extension);
     void checkAndSetResourceType(int fd);
+    void checkCgiMethod(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
     void processResponseBody(int fd);
@@ -175,6 +176,14 @@ public:
         std::string _msg;
     public:
         OpenResourceErrorException(Response& response, int error_num);
+        virtual const char* what() const throw();
+    };
+    class CgiMethodErrorException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        CgiMethodErrorException(Response& response);
         virtual const char* what() const throw();
     };
     class CgiInternalServerException : public SendErrorCodeToClientException

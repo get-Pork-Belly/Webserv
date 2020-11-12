@@ -233,6 +233,18 @@ Server::IndexNoExistException::what() const throw()
     return ("[CODE 403] No index & Autoindex off");
 }
 
+Server::CgiMethodErrorException::CgiMethodErrorException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("400");
+}
+
+const char*
+Server::CgiMethodErrorException::what() const throw()
+{
+    return ("[CODE 400] CGI can handle only GET HEAD POST");
+}
+
 Server::CgiInternalServerException::CgiInternalServerException(Response& response)
 : _response(response)
 {
@@ -988,6 +1000,15 @@ Server::openStaticResource(int client_fd)
 }
 
 void
+Server::checkCgiMethod(int client_fd)
+{
+    const Request& request = this->_requests[client_fd];
+    const std::string& method = request.getMethod();
+    if (method != "GET" && method != "POST" && method != "HEAD")
+        throw (CgiMethodErrorException(this->_responses[client_fd]));
+}
+
+void
 Server::checkAndSetResourceType(int client_fd)
 {
     Log::trace("> checkAndSetResourceType");
@@ -996,6 +1017,7 @@ Server::checkAndSetResourceType(int client_fd)
     response.findAndSetUriExtension();
     if (this->isCGIUri(client_fd, response.getUriExtension()))
     {
+        this->checkCgiMethod(client_fd);
         response.setResourceType(ResType::CGI);
         return ;
     }
