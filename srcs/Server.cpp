@@ -730,7 +730,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     {
         response.appendBody(buf, bytes);
         if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
-            response.preparseCGIReturnValue();
+            response.preparseCGIMessage();
         //NOTE: BUFFER SIZE보다 읽은 것이 같거나 컸으면, 다시 한 번 버퍼를 확인해 보아야 함.
         if (bytes < BUFFER_SIZE)
         {

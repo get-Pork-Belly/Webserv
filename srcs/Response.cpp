@@ -342,6 +342,12 @@ Response::setResourceFd(const int resource_fd)
     this->_resoure_fd = resource_fd;
 }
 
+void
+Response::setHeaders(const std::string& key, const std::string& value)
+{
+    this->_headers[key] = value;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -356,6 +362,18 @@ const char*
 Response::CannotOpenCGIPipeException::what() const throw()
 {
     return ("[CODE 500] Cannot Open CGI Pipe.");
+}
+
+Response::InvalidCGIMessageException::InvalidCGIMessageException(Response& response)
+: _msg("InvalidCGIMessageException: Invalid Response Format: "), _response(response)
+{
+    this->_response.setStatusCode("500");
+}
+
+const char*
+Response::InvalidCGIMessageException::what() const throw()
+{
+    return (this->_msg.c_str());
 }
 
 /*============================================================================*/
@@ -903,6 +921,79 @@ Response::getHtmlLangMetaData() const
         return ("");
 
     return (html_tag_block.substr(lang_meta_data_start + 6, lang_meta_data_end - (lang_meta_data_start + 6)));
+}
+
+void
+Response::preparseCGIMessage()
+{
+    Log::trace("> preparseCGIMessage");
+
+    std::string line;
+    std::string cgi_message(this->getBody());
+
+    if (ft::substr(line, cgi_message, "\r\n\r\n") == false)
+        throw (InvalidCGIMessageException(*this));
+    else
+    {
+        if (this->parseCGIHeaders(line) == false)
+            throw (InvalidCGIMessageException(*this));
+    }
+    this->setBody(cgi_message);
+
+    Log::trace("< preparseCGIMessage");
+}
+
+bool
+Response::parseCGIHeaders(std::string& cgi_message)
+{
+    Log::trace("> parseHeaders");
+    std::string key;
+    std::string value;
+    std::string line;
+
+    while (ft::substr(line, cgi_message, "\r\n") && !cgi_message.empty())
+    {
+        if (ft::substr(key, line, ":") == false)
+            return (false);
+        value = ft::ltrim(line, " ");
+        if (this->isValidHeaders(key, value) == false)
+            return (false);
+        this->setHeaders(key, value);
+    }
+    if (ft::substr(key, line, ":") == false)
+        return (false);
+    value = ft::ltrim(line, " ");
+    if (this->isValidHeaders(key, value) == false)
+        return (false);
+    this->setHeaders(key, value);
+    Log::trace("< parseHeaders");
+    return (true);
+}
+
+bool
+Response::isValidHeaders(std::string& key, std::string& value)
+{
+    if (key.empty() || value.empty() ||
+        this->isValidSP(key) == false ||
+        this->isDuplicatedHeader(key) == false)
+        return (false);
+    return (true);
+}
+
+bool
+Response::isValidSP(std::string& str)
+{
+    if (str.find(" ") == std::string::npos)
+        return (true);
+    return (false);
+}
+
+bool
+Response::isDuplicatedHeader(std::string& key)
+{
+    if (this->_headers.find(key) == this->_headers.end())
+        return (true);
+    return (false);
 }
 
 void
