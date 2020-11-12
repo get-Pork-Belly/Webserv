@@ -1058,7 +1058,6 @@ Server::openCGIPipe(int client_fd)
     int pipe1[2];
     int pipe2[2];
 
-    //TODO: 예외객체
     if (pipe(pipe1) < 0)
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     if (pipe(pipe2) < 0)
@@ -1087,46 +1086,45 @@ Server::openCGIPipe(int client_fd)
 }
 
 bool
-Server::makeEnvpUsingRequest(char** envp, int client_fd)
+Server::makeEnvpUsingRequest(char** envp, int client_fd, int* idx)
 {
     Response& response = this->_responses[client_fd];
     Request& request= this->_requests[client_fd];
-    if (!(envp[0] = ft::strdup("AUTH_TYPE=" + request.getAuthType())))
+    if (!(envp[(*idx)++] = ft::strdup("AUTH_TYPE=" + request.getAuthType())))
         return (false);
-    if (!(envp[1] = ft::strdup("REMOTE_USER=" + request.getRemoteUser())))
+    if (!(envp[(*idx)++] = ft::strdup("REMOTE_USER=" + request.getRemoteUser())))
         return (false);
-    if (!(envp[2] = ft::strdup("REMOTE_IDENT=" + request.getRemoteIdent())))
+    if (!(envp[(*idx)++] = ft::strdup("REMOTE_IDENT=" + request.getRemoteIdent())))
         return (false);
-    if (!(envp[9] = ft::strdup("REMOTE_ADDR=" + request.getIpAddress())))
+    if (!(envp[(*idx)++] = ft::strdup("REMOTE_ADDR=" + request.getIpAddress())))
         return (false);
     if (!(request.getMethod() == "GET" || request.getMethod() == "POST" ||
                     request.getMethod() == "HEAD"))
     {
-        ft::doubleFreeSize(&envp, 18);
+        ft::doubleFreeSize(&envp, NUM_OF_META_VARIABLES);
         throw (CgiCannotMakeEnvpException(response));
     }
-    if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ request.getMethod())))
+    if (!(envp[(*idx)++] = ft::strdup("REQUEST_METHOD="+ request.getMethod())))
         return (false);
-    std::cout << "envp10: " << envp[10] << std::endl;
     return (true);
 }
 
 bool
-Server::makeEnvpUsingResponse(char** envp, int client_fd)
+Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
 {
     const Response& response = this->_responses[client_fd];
     
-    if (!(envp[6] = ft::strdup("PATH_INFO=" + response.getUriPath())))
+    if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + response.getUriPath())))
         return (false);
-    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + response.getResourceAbsPath())))
+    if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + response.getResourceAbsPath())))
         return (false);
-    if (!(envp[11] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
+    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
         return (false);
     return (true);
 }
 
 bool
-Server::makeEnvpUsingHeaders(char** envp, int client_fd)
+Server::makeEnvpUsingHeaders(char** envp, int client_fd, int* idx)
 {
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
     std::map<std::string, std::string>::const_iterator it;
@@ -1134,50 +1132,50 @@ Server::makeEnvpUsingHeaders(char** envp, int client_fd)
     it = headers.find("Content-Length");
     if (it == headers.end())
     {
-        if (!(envp[3] = ft::strdup("CONTENT_LENGTH=")))
+        if (!(envp[(*idx)++] = ft::strdup("CONTENT_LENGTH=")))
             return (false);
     }
     else
     {
-        if (!(envp[3] = ft::strdup("CONTENT_LENGTH=" + it->second)))
+        if (!(envp[(*idx)++] = ft::strdup("CONTENT_LENGTH=" + it->second)))
             return (false);
     }
     it = headers.find("Content-Type");
     if (it == headers.end())
     {
-        if (!(envp[4] = ft::strdup("CONTENT_TYPE=text/html")))
+        if (!(envp[(*idx)++] = ft::strdup("CONTENT_TYPE=text/html")))
             return (false);
     }
     else
     {
-        if (!(envp[4] = ft::strdup("CONTENT_TYPE=" + it->second)))
+        if (!(envp[(*idx)++] = ft::strdup("CONTENT_TYPE=" + it->second)))
             return (false);
     }
     return (true);
 }
 
 bool
-Server::makeEnvpUsingEtc(char** envp, int client_fd)
+Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
 {
     Response& response = this->_responses[client_fd];
     const std::map<std::string, std::string>& location_info =
         this->getLocationConfig().at(this->_responses[client_fd].getRoute());
-    if (!(envp[5] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
+    if (!(envp[(*idx)++] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
         return (false);
-    if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
+    if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
     {
-        ft::doubleFreeSize(&envp, 18);
+        ft::doubleFreeSize(&envp, NUM_OF_META_VARIABLES);
         throw (CgiCannotMakeEnvpException(response));
     }
-    if (!(envp[13] = ft::strdup("SERVER_NAME=" + this->getHost())))
+    if (!(envp[(*idx)++] = ft::strdup("SERVER_NAME=" + this->getHost())))
         return (false);
-    if (!(envp[14] = ft::strdup("SERVER_PORT=" + this->getPort())))
+    if (!(envp[(*idx)++] = ft::strdup("SERVER_PORT=" + this->getPort())))
         return (false);
-    if (!(envp[15] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
+    if (!(envp[(*idx)++] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
         return (false);
-    if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
+    if (!(envp[(*idx)++] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
         return (false);
-    if (!(envp[8] = ft::strdup("QUERY_STRING=")))
+    if (!(envp[(*idx)++] = ft::strdup("QUERY_STRING=")))
         return (false);
     return (true);
 }
@@ -1186,15 +1184,18 @@ char**
 Server::makeCGIEnvp(int client_fd)
 {
     Log::trace("> makeCGIEnvp");
+    int idx = 0;
     char** envp;
-    if (!(envp = (char **)malloc(sizeof(char *) * 18)))
+    if (!(envp = (char **)malloc(sizeof(char *) * NUM_OF_META_VARIABLES)))
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
-    for (int i = 0; i < 18; i++)
+    for (int i = 0; i < NUM_OF_META_VARIABLES; i++)
         envp[i] = nullptr;
-    if (!this->makeEnvpUsingRequest(envp, client_fd) || !this->makeEnvpUsingResponse(envp, client_fd)
-        || !this->makeEnvpUsingHeaders(envp, client_fd) || !this->makeEnvpUsingEtc(envp, client_fd))
+    if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
+        !this->makeEnvpUsingResponse(envp, client_fd, &idx) ||
+        !this->makeEnvpUsingHeaders(envp, client_fd, &idx) ||
+        !this->makeEnvpUsingEtc(envp, client_fd, &idx))
     {
-        ft::doubleFreeSize(&envp, 18);
+        ft::doubleFreeSize(&envp, NUM_OF_META_VARIABLES);
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     }
     return (envp);
@@ -1259,7 +1260,6 @@ Server::forkAndExecuteCGI(int client_fd)
         ft::doubleFreeSize(&envp, 18);
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     }
-
     if ((pid = fork()) < 0)
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     else if (pid == 0)
@@ -1281,7 +1281,6 @@ Server::forkAndExecuteCGI(int client_fd)
         response.setCGIPid(pid);
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
-        // NOTE 정상적으로 읽으면 select 알아서 clear 해준다.
         this->_server_manager->fdSet(response.getWriteFdToCGI(), FdSet::WRITE);
     }
     Log::trace("< forkAndExecuteCGI");

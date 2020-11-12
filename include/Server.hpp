@@ -19,6 +19,7 @@
 # include "Exception.hpp"
 
 const int BUFFER_SIZE = 65536;
+const int NUM_OF_META_VARIABLES = 18;
 
 class ServerManager;
 class Request;
@@ -116,10 +117,10 @@ public:
     void forkAndExecuteCGI(int fd);
     char** makeCGIArgv(int fd);
     char** makeCGIEnvp(int fd);
-    bool makeEnvpUsingRequest(char** envp, int fd);
-    bool makeEnvpUsingResponse(char** envp, int fd);
-    bool makeEnvpUsingHeaders(char** envp, int fd);
-    bool makeEnvpUsingEtc(char** envp, int fd);
+    bool makeEnvpUsingRequest(char** envp, int fd, int* idx);
+    bool makeEnvpUsingResponse(char** envp, int fd, int* idx);
+    bool makeEnvpUsingHeaders(char** envp, int fd, int* idx);
+    bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
 
 public:
     class PayloadTooLargeException : public std::exception
