@@ -7,8 +7,9 @@ http {
 
         location /folder {
             cgi .bin .cgi .bla;
+            cgi_path /Users/iwoo/Documents/Webserv/cgi_tester;
             autoindex on;
-            root /Users/iwoo/Documents/Webserv/tests/;
+            root /Users/iwoo/Documents/Webserv/www/;
         }
         location /old-folder {
             return 301 /folder;
