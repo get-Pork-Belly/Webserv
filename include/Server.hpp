@@ -18,7 +18,8 @@
 # include "Response.hpp"
 # include "Exception.hpp"
 
-const int BUFFER_SIZE = 65536;
+const int BUFFER_SIZE = 65534;
+const int CHUNKED_LINE_LENGTH = 8192;
 const int NUM_OF_META_VARIABLES = 18;
 
 class ServerManager;
@@ -121,6 +122,7 @@ public:
     bool makeEnvpUsingResponse(char** envp, int fd, int* idx);
     bool makeEnvpUsingHeaders(char** envp, int fd, int* idx);
     bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
+    bool isResponseAllSended(int fd) const;
 
 public:
     class PayloadTooLargeException : public std::exception

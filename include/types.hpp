@@ -77,4 +77,12 @@ enum class ResType
     ERROR_HTML,
 };
 
+enum class SendProgress
+{
+    DEFAULT,
+    CHUNK_START,
+    CHUNK_PROGRESS,
+    FINISH,
+};
+
 #endif

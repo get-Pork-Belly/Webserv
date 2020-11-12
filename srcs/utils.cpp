@@ -151,6 +151,8 @@ memset(void* b, int c, size_t len)
     return (b);
 }
 
+
+//TODO: stoiHexToDec
 int
 stoiHex(const std::string& str)
 {
@@ -169,6 +171,8 @@ stoiHex(const std::string& str)
     }
     return (ret);
 }
+
+//TODO: stoiDecToHex
 
 int
 getTimeDiffBetweenGMT(char *time_zone)
@@ -272,6 +276,36 @@ doubleFreeSize(char*** target, size_t size)
     }
     free(*target);
     *target = nullptr;
+}
+
+static unsigned int
+nbrlenHex(unsigned int n)
+{
+	int	len;
+
+	len = 1;
+	while (n >= 16)
+	{
+		n /= 16;
+		len++;
+	}
+	return (len);
+}
+
+std::string
+itosHex(unsigned int n)
+{
+    const char* base = "0123456789ABCDEF";
+    size_t len = ft::nbrlenHex(n);
+    std::string result;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        result += base[n % 16];
+        n /= 16;
+    }
+    std::reverse(result.begin(), result.end());
+    return (result);
 }
 
 }

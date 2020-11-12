@@ -474,13 +474,32 @@ Server::makeResponseMessage(int client_fd)
 
     if (response.isRedirection(response.getStatusCode()) == false)
         response.makeBody(request);
+
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
-    Log::trace("< makeResponseMessage");
-    // if (request.getMethod().compare("HEAD") == 0)
-    //     return (status_line + headers);
-    // else if (response.isNeedTobeChunkedBody)
-    return (status_line + headers + response.getBody());
+
+    //TODO: refactoring
+    const SendProgress& send_progress = response.getSendProgress();
+    switch (send_progress)
+    {
+    case SendProgress::FINISH:
+        return (response.getTransmittingBody());
+        break;
+    case SendProgress::DEFAULT:
+        response.setSendProgress(SendProgress::FINISH);
+        return (status_line + headers + response.getTransmittingBody());
+        break;
+    case SendProgress::CHUNK_START:
+        return (status_line + headers + response.getTransmittingBody());
+        break;
+    case SendProgress::CHUNK_PROGRESS:
+        return (response.getTransmittingBody());
+        break;
+    default:
+        break;
+    }
+    return (status_line + headers + response.getTransmittingBody());
+
 }
 
 bool
@@ -489,7 +508,6 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     Log::trace("> sendResponse");
     std::string tmp;
     tmp += response_message;
-    tmp += "\r\n";
     std::cout<<tmp<<std::endl;
     write(client_fd, tmp.c_str(), tmp.length()); 
     Log::trace("< sendResponse");
@@ -747,14 +765,15 @@ Server::run(int fd)
                 else
                 {
                     std::string response_message = this->makeResponseMessage(fd);
-                    // std::cout << "message: " << response_message << std::endl;
-                    // response_message = this->makeResponseMessage(this->_requests[fd], fd);
                     // TODO: sendResponse error handling
                     if (!(sendResponse(response_message, fd)))
                         std::cerr<<"Error: sendResponse"<<std::endl;
-                    this->_server_manager->fdClr(fd, FdSet::WRITE);
-                    this->_requests[fd].init();
-                    this->_responses[fd].init();
+                    if (this->isResponseAllSended(fd))
+                    {
+                        this->_server_manager->fdClr(fd, FdSet::WRITE);
+                        this->_requests[fd].init();
+                        this->_responses[fd].init();
+                    }
                 }
                 Log::trace("<<< write sequence");
             }
@@ -767,6 +786,11 @@ Server::run(int fd)
             catch(const std::exception& e)
             {
                 std::cerr << e.what() << '\n';
+            }
+            catch(const char* e)
+            {
+                //TODO: 에러객체 던지도록 수정
+                std::cerr << e << '\n';
             }
         }
         else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
@@ -1232,6 +1256,12 @@ Server::makeCGIArgv(int client_fd)
     }
     Log::trace("< makeCGIArgv");
     return (argv);
+}
+
+bool
+Server::isResponseAllSended(int fd) const
+{
+    return (this->_responses[fd].getSendProgress() == SendProgress::FINISH);
 }
 
 void

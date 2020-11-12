@@ -9,6 +9,7 @@
 # include <cstring>
 # include <unistd.h>
 # include <map>
+# include <algorithm>
 
 namespace ft
 {
@@ -39,6 +40,7 @@ namespace ft
     std::string inetNtoA(const in_addr_t& client_address);
     void doubleFree(char*** target);
     void doubleFreeSize(char*** target, size_t size);
+    std::string itosHex(unsigned int n);
 }
 
 #endif
