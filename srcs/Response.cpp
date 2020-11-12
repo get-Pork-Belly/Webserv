@@ -472,7 +472,7 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
 
-    Log::printLocationConfig(location_config);
+    // Log::printLocationConfig(location_config);
 
     if (uri.length() == 1)
     {
@@ -921,11 +921,7 @@ Response::encodeChunkedBody()
 }
 
 void
-Response::appendBody(char* buf)
+Response::appendBody(char* buf, int bytes)
 {
-    std::string tmp = this->getBody();
-    std::string tmp2(buf);
-
-    std::string ret = tmp + tmp2;
-    this->setBody(ret);
+    this->setBody(this->getBody() + std::string(buf, bytes));
 }

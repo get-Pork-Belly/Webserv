@@ -137,7 +137,7 @@ public:
     std::string makeHeaders(Request& request);
     std::string makeStatusLine();
 
-    void appendBody(char* buf);
+    void appendBody(char* buf, int bytes);
 
     /* General header */
     void appendDateHeader(std::string& headers);

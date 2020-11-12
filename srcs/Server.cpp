@@ -717,7 +717,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE + 1);
     if (bytes > 0)
     {
-        response.appendBody(buf);
+        response.appendBody(buf, bytes);
 
         //NOTE: BUFFER SIZE보다 읽은 것이 같거나 컸으면, 다시 한 번 버퍼를 확인해 보아야 함.
         if (bytes < BUFFER_SIZE)
@@ -930,7 +930,7 @@ Server::readStaticResource(int resource_fd)
     ft::memset(buf, 0, BUFFER_SIZE + 1);
     if ((bytes = read(resource_fd, buf, BUFFER_SIZE)) > 0)
     {
-        this->_responses[client_socket].appendBody(buf);
+        this->_responses[client_socket].appendBody(buf, bytes);
         if (bytes < BUFFER_SIZE)
             this->closeFdAndSetClientOnWriteFdSet(resource_fd);
     }
