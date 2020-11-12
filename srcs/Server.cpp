@@ -755,6 +755,11 @@ Server::run(int fd)
                     // TODO: sendResponse error handling
                     if (!(sendResponse(response_message, fd)))
                         std::cerr<<"Error: sendResponse"<<std::endl;
+                    if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
+                    {
+                        this->_server_manager->fdClr(fd, FdSet::WRITE);
+                        this->_server_manager->fdSet(this->_responses[fd].getLinkedResourceFd(), FdSet::READ);
+                    }
                     if (this->isResponseAllSended(fd))
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
@@ -938,7 +943,8 @@ Server::readStaticResource(int resource_fd)
         else
         {
             this->_responses[client_socket].setReceiveProgress(ReceiveProgress::ON_GOING);
-            int client_socket = this->_server_manager->getFdTable()[resource_fd].second;
+            this->_responses[client_socket].setLinkedResourceFd(resource_fd);
+            this->_server_manager->fdClr(resource_fd, FdSet::READ);
             this->_server_manager->fdSet(client_socket, FdSet::WRITE);
         }
     }
