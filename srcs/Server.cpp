@@ -781,7 +781,7 @@ Server::run(int fd)
             {
                 int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
                 this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
-                this->closeFdAndSetFd(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ, client_fd, FdSet::WRITE);
+                this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ);
             }
             catch(const std::exception& e)
             {
@@ -818,8 +818,8 @@ Server::run(int fd)
                         this->_responses[fd].getReadFdFromCGI() != 0)
                 {
                     Response& response = this->_responses[fd];
-                    this->closeFdAndSetFd(response.getReadFdFromCGI(), FdSet::READ, fd, FdSet::WRITE);
-                    this->closeFdAndSetFd(response.getWriteFdToCGI(), FdSet::WRITE, fd, FdSet::WRITE);
+                    this->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);
+                    this->closeFdAndUpdateFdTable(response.getWriteFdToCGI(), FdSet::WRITE);
                 }
             }
             catch(const Request::RequestFormatException& e)
@@ -865,6 +865,15 @@ Server::closeFdAndSetClientOnWriteFdSet(int fd)
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
     this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+    close(fd);
+}
+
+void
+Server::closeFdAndUpdateFdTable(int fd, FdSet fd_set)
+{
+    this->_server_manager->fdClr(fd, fd_set);
+    this->_server_manager->setClosedFdOnFdTable(fd);
+    this->_server_manager->updateFdMax(fd);
     close(fd);
 }
 

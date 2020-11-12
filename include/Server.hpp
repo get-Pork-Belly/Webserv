@@ -75,6 +75,7 @@ public:
     /* Util */
     void closeClientSocket(int fd);
     void closeFdAndSetClientOnWriteFdSet(int fd);
+    void closeFdAndUpdateFdTable(int fd, FdSet fd_set);
     void closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_fd_set);
     bool isFdManagedByServer(int fd) const;
     bool isServerSocket(int fd) const;
