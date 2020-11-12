@@ -85,4 +85,10 @@ enum class SendProgress
     FINISH,
 };
 
+enum class OnRead
+{
+    READING,
+    COMPLETE,
+};
+
 #endif
