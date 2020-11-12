@@ -16,8 +16,8 @@
 */
 
 Response::Response()
-: _status_code("200"), _headers({{"", ""}}), _transfer_type(""), _clients(""),
-_location_info({{"",""}}), _resource_abs_path(""), _route(""),
+: _status_code("200"), _headers(), _transfer_type(""), _clients(""),
+_location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
 _cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
