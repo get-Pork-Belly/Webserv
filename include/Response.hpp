@@ -154,6 +154,19 @@ public:
     void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
     void appendTransferEncodingHeader(std::string& headers);
     void appendAuthenticateHeader(std::string& headers);
+
+
+private:
+    OnRead _on_read;
+public:
+    const OnRead& getOnRead() const
+    {
+        return this->_on_read;
+    }
+    void setOnRead(const OnRead& on_read)
+    {
+        this->_on_read = on_read;
+    }
 };
 
 #endif
