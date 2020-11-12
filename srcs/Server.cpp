@@ -1000,7 +1000,7 @@ Server::openStaticResource(int client_fd)
 }
 
 void
-Server::checkCgiMethod(int client_fd)
+Server::checkValidOfCgiMethod(int client_fd)
 {
     const Request& request = this->_requests[client_fd];
     const std::string& method = request.getMethod();
@@ -1017,7 +1017,7 @@ Server::checkAndSetResourceType(int client_fd)
     response.findAndSetUriExtension();
     if (this->isCGIUri(client_fd, response.getUriExtension()))
     {
-        this->checkCgiMethod(client_fd);
+        this->checkValidOfCgiMethod(client_fd);
         response.setResourceType(ResType::CGI);
         return ;
     }

@@ -100,7 +100,7 @@ public:
     bool isAutoIndexOn(int fd);
     bool isCGIUri(int fd, const std::string& extension);
     void checkAndSetResourceType(int fd);
-    void checkCgiMethod(int fd);
+    void checkValidOfCgiMethod(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
     void processResponseBody(int fd);
