@@ -19,6 +19,7 @@
 # include "Exception.hpp"
 
 const int BUFFER_SIZE = 65534;
+const int CHUNKED_LINE_LENGTH = 8192;
 
 class ServerManager;
 class Request;

@@ -894,10 +894,10 @@ Response::encodeChunkedBody()
         target_size = raw_body_size;
     while (already_encoded_size < target_size)
     {
-        if (already_encoded_size + 8192 > target_size)
+        if (already_encoded_size + CHUNKED_LINE_LENGTH > target_size)
             substring_size = target_size - already_encoded_size;
         else
-            substring_size = 8192;
+            substring_size = CHUNKED_LINE_LENGTH ;
         chunked_body += ft::itosHex(substring_size);
         chunked_body += "\r\n";
         chunked_body += raw_body.substr(already_encoded_size, substring_size);
