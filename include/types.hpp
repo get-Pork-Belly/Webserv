@@ -85,10 +85,10 @@ enum class SendProgress
     FINISH,
 };
 
-enum class OnRead
+enum class ReceiveProgress
 {
-    READING,
-    COMPLETE,
+    ON_GOING,
+    FINISH,
 };
 
 #endif
