@@ -1125,7 +1125,7 @@ Server::makeEnvpUsingRequest(char** envp, int client_fd, int* idx)
     if (!(request.getMethod() == "GET" || request.getMethod() == "POST" ||
                     request.getMethod() == "HEAD"))
     {
-        ft::doubleFreeSize(&envp, NUM_OF_META_VARIABLES);
+        ft::doubleFree(&envp);
         throw (CgiCannotMakeEnvpException(response));
     }
     if (!(envp[(*idx)++] = ft::strdup("REQUEST_METHOD="+ request.getMethod())))
@@ -1188,7 +1188,7 @@ Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
     {
-        ft::doubleFreeSize(&envp, NUM_OF_META_VARIABLES);
+        ft::doubleFree(&envp);
         throw (CgiCannotMakeEnvpException(response));
     }
     if (!(envp[(*idx)++] = ft::strdup("SERVER_NAME=" + this->getHost())))
@@ -1219,7 +1219,7 @@ Server::makeCGIEnvp(int client_fd)
         !this->makeEnvpUsingHeaders(envp, client_fd, &idx) ||
         !this->makeEnvpUsingEtc(envp, client_fd, &idx))
     {
-        ft::doubleFreeSize(&envp, NUM_OF_META_VARIABLES);
+        ft::doubleFree(&envp);
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     }
     return (envp);
@@ -1281,13 +1281,13 @@ Server::forkAndExecuteCGI(int client_fd)
     stdout_of_cgi = response.getStdoutOfCGI();
     if (!(argv = this->makeCGIArgv(client_fd)))
     {
-        ft::doubleFreeSize(&argv, 3);
+        ft::doubleFree(&argv);
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     }
     if (!(envp = this->makeCGIEnvp(client_fd)))
     {
-        ft::doubleFreeSize(&argv, 3);
-        ft::doubleFreeSize(&envp, 18);
+        ft::doubleFree(&argv);
+        ft::doubleFree(&envp);
         throw (CgiExecuteErrorException(this->_responses[client_fd]));
     }
     if ((pid = fork()) < 0)

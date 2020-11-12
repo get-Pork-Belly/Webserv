@@ -39,7 +39,6 @@ namespace ft
     char* strdup(const std::string& s);
     std::string inetNtoA(const in_addr_t& client_address);
     void doubleFree(char*** target);
-    void doubleFreeSize(char*** target, size_t size);
     std::string itosHex(unsigned int n);
 }
 

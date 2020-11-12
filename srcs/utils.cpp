@@ -266,18 +266,6 @@ doubleFree(char*** target)
     *target = nullptr;
 }
 
-void
-doubleFreeSize(char*** target, size_t size)
-{
-    for (size_t i = 0; i < size; i++)
-    {
-        if ((*target)[i] != nullptr)
-            free((*target)[i]);
-    }
-    free(*target);
-    *target = nullptr;
-}
-
 static unsigned int
 nbrlenHex(unsigned int n)
 {
