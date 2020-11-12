@@ -296,4 +296,12 @@ itosHex(unsigned int n)
     return (result);
 }
 
+bool
+is_print(char ch)
+{
+	if (ch  >= 32 && ch <= 126)
+		return (true);
+	return (false);
+}
+
 }

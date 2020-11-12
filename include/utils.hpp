@@ -40,6 +40,7 @@ namespace ft
     std::string inetNtoA(const in_addr_t& client_address);
     void doubleFree(char*** target);
     std::string itosHex(unsigned int n);
+    bool is_print(char ch);
 }
 
 #endif
