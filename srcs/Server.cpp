@@ -318,6 +318,7 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
     int bytes;
     Request& req = this->_requests[client_fd];
 
+    ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
     if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
         req.parseRequestWithoutBody(buf);
     else if (bytes == 0)
@@ -328,18 +329,40 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
 }
 
 void
+Server::processIfNotFoundHeaders(int client_fd, const std::string& readed)
+{
+    size_t bytes;
+    char buf[3];
+
+    if (readed.length() == BUFFER_SIZE)
+    {
+        this->_requests[client_fd].setIsBufferLeft(true);
+        throw (Request::RequestFormatException(this->_requests[client_fd], "400"));
+    }
+    if (readed == "\r\n")
+    {
+        ft::memset(reinterpret_cast<void *>(buf), 0, 3);
+        bytes = read(client_fd, buf, 2);
+        if (bytes != 2)
+            throw (ReadErrorException());
+    }
+}
+
+void
 Server::receiveRequestWithoutBody(int client_fd)
 {
     Log::trace("> receiveRequestWithoutBody");
     int bytes;
     char buf[BUFFER_SIZE + 1];
     size_t header_end_pos = 0;
+    std::string readed;
     Request& req = this->_requests[client_fd];
 
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
-        if ((header_end_pos = std::string(buf).find("\r\n\r\n")) != std::string::npos)
+        readed = std::string(buf);
+        if ((header_end_pos = readed.find("\r\n\r\n")) != std::string::npos)
         {
             if (static_cast<size_t>(bytes) == header_end_pos + 4)
             {
@@ -350,6 +373,8 @@ Server::receiveRequestWithoutBody(int client_fd)
                 req.setIsBufferLeft(true);
             this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
         }
+        else if ((header_end_pos = readed.find("\r\n")) != std::string::npos)
+            this->processIfNotFoundHeaders(client_fd, readed);
         else
         {
             //NOTE: if BUFFER_SIZE is too small to read including "\r\n\r\n", this block always execute. 
