@@ -43,7 +43,7 @@ private:
     SendProgress _send_progress;
     ReceiveProgress _receive_progress;
 
-    int _linked_resoure_fd;
+    int _resoure_fd;
 
 public:
     /* Constructor */
@@ -84,7 +84,7 @@ public:
     const SendProgress& getSendProgress() const;
     const ReceiveProgress& getReceiveProgress() const;
 
-    int getLinkedResourceFd() const
+    int getResourceFd() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -107,7 +107,7 @@ public:
     void setAlreadyEncodedSize(const size_t already_encoded_size);
     void setSendProgress(const SendProgress send_progress);
     void setReceiveProgress(const ReceiveProgress rececive_progress);
-    void setLinkedResourceFd(const int resource_fd);
+    void setResourceFd(const int resource_fd);
 
     /* Exception */
 public:

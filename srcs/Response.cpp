@@ -22,7 +22,7 @@ _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
 _cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
 _already_encoded_size(0), _send_progress(SendProgress::DEFAULT),
-_receive_progress(ReceiveProgress::FINISH), _linked_resoure_fd(0)
+_receive_progress(ReceiveProgress::FINISH), _resoure_fd(0)
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -41,7 +41,7 @@ _stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi)
 _write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
 _uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body),
 _already_encoded_size(other._already_encoded_size), _send_progress(other._send_progress),
-_receive_progress(other._receive_progress), _linked_resoure_fd(other._linked_resoure_fd)
+_receive_progress(other._receive_progress), _resoure_fd(other._resoure_fd)
 {}
 
 /*============================================================================*/
@@ -83,7 +83,7 @@ Response::operator=(const Response& rhs)
     this->_already_encoded_size = rhs._already_encoded_size;
     this->_send_progress = rhs._send_progress;
     this->_receive_progress = rhs._receive_progress;
-    this->_linked_resoure_fd = rhs._linked_resoure_fd;
+    this->_resoure_fd = rhs._resoure_fd;
     return (*this);
 }
 
@@ -218,9 +218,9 @@ Response::getReceiveProgress() const
 }
 
 int
-Response::getLinkedResourceFd() const
+Response::getResourceFd() const
 {
-    return (this->_linked_resoure_fd);
+    return (this->_resoure_fd);
 }
 
 /*============================================================================*/
@@ -337,9 +337,9 @@ Response::setReceiveProgress(const ReceiveProgress receive_progress)
 }
 
 void
-Response::setLinkedResourceFd(const int resource_fd)
+Response::setResourceFd(const int resource_fd)
 {
-    this->_linked_resoure_fd = resource_fd;
+    this->_resoure_fd = resource_fd;
 }
 
 /*============================================================================*/

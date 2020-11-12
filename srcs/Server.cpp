@@ -758,7 +758,7 @@ Server::run(int fd)
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
-                        this->_server_manager->fdSet(this->_responses[fd].getLinkedResourceFd(), FdSet::READ);
+                        this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
                     }
                     if (this->isResponseAllSended(fd))
                     {
@@ -929,7 +929,7 @@ Server::readStaticResource(int resource_fd)
         else
         {
             this->_responses[client_socket].setReceiveProgress(ReceiveProgress::ON_GOING);
-            this->_responses[client_socket].setLinkedResourceFd(resource_fd);
+            this->_responses[client_socket].setResourceFd(resource_fd);
             this->_server_manager->fdClr(resource_fd, FdSet::READ);
             this->_server_manager->fdSet(client_socket, FdSet::WRITE);
         }
