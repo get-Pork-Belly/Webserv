@@ -334,11 +334,6 @@ Server::processIfNotFoundHeaders(int client_fd, const std::string& readed)
     size_t bytes;
     char buf[3];
 
-    if (readed.length() == BUFFER_SIZE)
-    {
-        this->_requests[client_fd].setIsBufferLeft(true);
-        throw (Request::RequestFormatException(this->_requests[client_fd], "400"));
-    }
     if (readed == "\r\n")
     {
         ft::memset(reinterpret_cast<void *>(buf), 0, 3);
