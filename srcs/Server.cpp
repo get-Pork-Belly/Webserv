@@ -546,7 +546,6 @@ Server::isClientOfServer(int fd) const
 bool
 Server::isServerSocket(int fd) const
 {
-    Log::trace("> isServerSocket");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::SERVER_SOCKET)
         return true;
@@ -768,6 +767,11 @@ Server::run(int fd)
                     // TODO: sendResponse error handling
                     if (!(sendResponse(response_message, fd)))
                         std::cerr<<"Error: sendResponse"<<std::endl;
+                    if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
+                    {
+                        this->_server_manager->fdClr(fd, FdSet::WRITE);
+                        this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
+                    }
                     if (this->isResponseAllSended(fd))
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
@@ -960,16 +964,26 @@ Server::readStaticResource(int resource_fd)
     {
         this->_responses[client_socket].appendBody(buf);
         if (bytes < BUFFER_SIZE)
-            this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        {
+            this->_responses[client_socket].setReceiveProgress(ReceiveProgress::FINISH);
+            this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
+        }
+        else
+        {
+            this->_responses[client_socket].setReceiveProgress(ReceiveProgress::ON_GOING);
+            this->_responses[client_socket].setResourceFd(resource_fd);
+            this->_server_manager->fdClr(resource_fd, FdSet::READ);
+            this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+        }
     }
     else if (bytes == 0)
     {
-        this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
         throw (ReadErrorException());
     }
     else
     {
-        this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
         throw (ReadErrorException());
     }
     Log::trace("< readStaticResource");
