@@ -534,7 +534,6 @@ Server::isClientOfServer(int fd) const
 bool
 Server::isServerSocket(int fd) const
 {
-    Log::trace("> isServerSocket");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::SERVER_SOCKET)
         return true;
@@ -747,6 +746,7 @@ Server::run(int fd)
         {
             try
             {
+                sleep(2);
                 Log::trace(">>> write sequence");
                 if (this->isCGIPipe(fd))
                     this->sendDataToCGI(fd);
@@ -762,6 +762,10 @@ Server::run(int fd)
                         this->_requests[fd].init();
                         this->_responses[fd].init();
                     }
+                    //NOTE: 아래 추가했어용
+                    else if (this->_responses[fd].getSendProgress() == SendProgress::CHUNK_START ||
+                            this->_responses[fd].getSendProgress() == SendProgress::CHUNK_PROGRESS)
+                        this->_server_manager->fdClr(fd, FdSet::WRITE);
                 }
                 Log::trace("<<< write sequence");
             }
@@ -932,7 +936,24 @@ Server::readStaticResource(int resource_fd)
     {
         this->_responses[client_socket].appendBody(buf);
         if (bytes < BUFFER_SIZE)
+        {
+            this->_responses[client_socket].setOnRead(OnRead::COMPLETE);
             this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        }
+        else
+        {
+            //CHUNKED RESPONSE
+            this->_responses[client_socket].setOnRead(OnRead::READING);
+            // const FdType& type = this->_server_manager->getFdTable()[resource_fd].first;
+            int client_socket = this->_server_manager->getFdTable()[resource_fd].second;
+            // Log::closeFd(*this, client_socket, type, resource_fd);
+
+            // this->_server_manager->fdClr(resource_fd, FdSet::READ);
+            // this->_server_manager->setClosedFdOnFdTable(resource_fd);
+            // this->_server_manager->updateFdMax(resource_fd);
+            this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+        }
+        
     }
     else if (bytes == 0)
     {

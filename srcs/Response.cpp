@@ -909,7 +909,8 @@ Response::encodeChunkedBody()
         this->setSendProgress(SendProgress::CHUNK_START);
     else if (this->getSendProgress() == SendProgress::CHUNK_START)
         this->setSendProgress(SendProgress::CHUNK_PROGRESS);
-    if (already_encoded_size == raw_body_size)
+        //NOTE 여기 바꿨어용
+    if (already_encoded_size == raw_body_size && getOnRead() == OnRead::COMPLETE)
     {
         chunked_body += "0\r\n\r\n";
         this->setSendProgress(SendProgress::FINISH);
