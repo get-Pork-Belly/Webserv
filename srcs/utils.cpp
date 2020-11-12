@@ -297,7 +297,7 @@ itosHex(unsigned int n)
 }
 
 bool
-is_print(char ch)
+IsPrintable(char ch)
 {
 	if (ch  >= 32 && ch <= 126)
 		return (true);
