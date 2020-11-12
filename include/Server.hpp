@@ -185,14 +185,6 @@ public:
         CgiInternalServerException(Response& response);
         virtual const char* what() const throw();
     };
-    class CgiCannotMakeEnvpException: public SendErrorCodeToClientException
-    {
-    private:
-        Response& _response;
-    public:
-        CgiCannotMakeEnvpException(Response& response);
-        virtual const char* what() const throw();
-    };
     class AuthenticateErrorException : public SendErrorCodeToClientException
     {
     private:

@@ -245,18 +245,6 @@ Server::CgiInternalServerException::what() const throw()
     return ("[CODE 500] Server Internal error");
 }
 
-Server::CgiCannotMakeEnvpException::CgiCannotMakeEnvpException(Response& response)
-: _response(response)
-{
-    this->_response.setStatusCode("400");
-}
-
-const char*
-Server::CgiCannotMakeEnvpException::what() const throw()
-{
-    return ("[CODE 400] Can not make envp");
-}
-
 Server::AuthenticateErrorException::AuthenticateErrorException(Response& res, const std::string& status_code)
 : _res(res), _status_code(status_code)
 {
@@ -1121,7 +1109,6 @@ Server::openCGIPipe(int client_fd)
 bool
 Server::makeEnvpUsingRequest(char** envp, int client_fd, int* idx)
 {
-    Response& response = this->_responses[client_fd];
     Request& request= this->_requests[client_fd];
     if (!(envp[(*idx)++] = ft::strdup("AUTH_TYPE=" + request.getAuthType())))
         return (false);
@@ -1133,10 +1120,7 @@ Server::makeEnvpUsingRequest(char** envp, int client_fd, int* idx)
         return (false);
     if (!(request.getMethod() == "GET" || request.getMethod() == "POST" ||
                     request.getMethod() == "HEAD"))
-    {
-        ft::doubleFree(&envp);
-        throw (CgiCannotMakeEnvpException(response));
-    }
+        return (false);
     if (!(envp[(*idx)++] = ft::strdup("REQUEST_METHOD="+ request.getMethod())))
         return (false);
     return (true);
@@ -1190,16 +1174,13 @@ Server::makeEnvpUsingHeaders(char** envp, int client_fd, int* idx)
 bool
 Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
 {
-    Response& response = this->_responses[client_fd];
     const std::map<std::string, std::string>& location_info =
         this->getLocationConfig().at(this->_responses[client_fd].getRoute());
+
     if (!(envp[(*idx)++] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
-    {
-        ft::doubleFree(&envp);
-        throw (CgiCannotMakeEnvpException(response));
-    }
+        return (false);
     if (!(envp[(*idx)++] = ft::strdup("SERVER_NAME=" + this->getHost())))
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SERVER_PORT=" + this->getPort())))
