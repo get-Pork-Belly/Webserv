@@ -18,7 +18,5 @@ http {
             index youpi.bad_extension;
             cgi .bla;
             cgi_path /Users/sanam/Desktop/Webserv/cgi_tester;
-            auth_basic sanam;
-            auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpasswd;
     }
 }

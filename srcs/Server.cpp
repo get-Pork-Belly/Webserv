@@ -233,14 +233,26 @@ Server::IndexNoExistException::what() const throw()
     return ("[CODE 403] No index & Autoindex off");
 }
 
-Server::CgiExecuteErrorException::CgiExecuteErrorException(Response& response)
+Server::CgiMethodErrorException::CgiMethodErrorException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("400");
+}
+
+const char*
+Server::CgiMethodErrorException::what() const throw()
+{
+    return ("[CODE 400] CGI can handle only GET HEAD POST");
+}
+
+Server::CgiInternalServerException::CgiInternalServerException(Response& response)
 : _response(response)
 {
     this->_response.setStatusCode("500");
 }
 
 const char*
-Server::CgiExecuteErrorException::what() const throw()
+Server::CgiInternalServerException::what() const throw()
 {
     return ("[CODE 500] Server Internal error");
 }
@@ -534,7 +546,6 @@ Server::isClientOfServer(int fd) const
 bool
 Server::isServerSocket(int fd) const
 {
-    Log::trace("> isServerSocket");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
     if (fd_table[fd].first == FdType::SERVER_SOCKET)
         return true;
@@ -694,9 +705,9 @@ Server::sendDataToCGI(int write_fd_to_cgi)
             this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
     }
     else if (bytes == 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     else
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
 
     Log::trace("< sendDataToCGI");
 }
@@ -729,9 +740,9 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     }
     //TODO: return 0 확인하기
     else if (bytes == 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     else
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
 
     Log::trace("< receiveDataFromCGI");
 }
@@ -756,6 +767,11 @@ Server::run(int fd)
                     // TODO: sendResponse error handling
                     if (!(sendResponse(response_message, fd)))
                         std::cerr<<"Error: sendResponse"<<std::endl;
+                    if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
+                    {
+                        this->_server_manager->fdClr(fd, FdSet::WRITE);
+                        this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
+                    }
                     if (this->isResponseAllSended(fd))
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
@@ -769,7 +785,7 @@ Server::run(int fd)
             {
                 int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
                 this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
-                this->closeFdAndSetFd(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ, client_fd, FdSet::WRITE);
+                this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ);
             }
             catch(const std::exception& e)
             {
@@ -802,6 +818,13 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
+                if (this->_responses[fd].getWriteFdToCGI() != 0 ||
+                        this->_responses[fd].getReadFdFromCGI() != 0)
+                {
+                    Response& response = this->_responses[fd];
+                    this->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);
+                    this->closeFdAndUpdateFdTable(response.getWriteFdToCGI(), FdSet::WRITE);
+                }
             }
             catch(const Request::RequestFormatException& e)
             {
@@ -846,6 +869,15 @@ Server::closeFdAndSetClientOnWriteFdSet(int fd)
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
     this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+    close(fd);
+}
+
+void
+Server::closeFdAndUpdateFdTable(int fd, FdSet fd_set)
+{
+    this->_server_manager->fdClr(fd, fd_set);
+    this->_server_manager->setClosedFdOnFdTable(fd);
+    this->_server_manager->updateFdMax(fd);
     close(fd);
 }
 
@@ -932,16 +964,26 @@ Server::readStaticResource(int resource_fd)
     {
         this->_responses[client_socket].appendBody(buf, bytes);
         if (bytes < BUFFER_SIZE)
-            this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        {
+            this->_responses[client_socket].setReceiveProgress(ReceiveProgress::FINISH);
+            this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
+        }
+        else
+        {
+            this->_responses[client_socket].setReceiveProgress(ReceiveProgress::ON_GOING);
+            this->_responses[client_socket].setResourceFd(resource_fd);
+            this->_server_manager->fdClr(resource_fd, FdSet::READ);
+            this->_server_manager->fdSet(client_socket, FdSet::WRITE);
+        }
     }
     else if (bytes == 0)
     {
-        this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
         throw (ReadErrorException());
     }
     else
     {
-        this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
         throw (ReadErrorException());
     }
     Log::trace("< readStaticResource");
@@ -972,6 +1014,15 @@ Server::openStaticResource(int client_fd)
 }
 
 void
+Server::checkValidOfCgiMethod(int client_fd)
+{
+    const Request& request = this->_requests[client_fd];
+    const std::string& method = request.getMethod();
+    if (method != "GET" && method != "POST" && method != "HEAD")
+        throw (CgiMethodErrorException(this->_responses[client_fd]));
+}
+
+void
 Server::checkAndSetResourceType(int client_fd)
 {
     Log::trace("> checkAndSetResourceType");
@@ -980,6 +1031,7 @@ Server::checkAndSetResourceType(int client_fd)
     response.findAndSetUriExtension();
     if (this->isCGIUri(client_fd, response.getUriExtension()))
     {
+        this->checkValidOfCgiMethod(client_fd);
         response.setResourceType(ResType::CGI);
         return ;
     }
@@ -1063,11 +1115,10 @@ Server::openCGIPipe(int client_fd)
     int pipe1[2];
     int pipe2[2];
 
-    //TODO: 예외객체
     if (pipe(pipe1) < 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     if (pipe(pipe2) < 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
 
     int stdin_of_cgi = pipe1[0];
     int stdout_of_cgi = pipe2[1];
@@ -1091,103 +1142,109 @@ Server::openCGIPipe(int client_fd)
     Log::trace("< openCGIPipe");
 }
 
-char**
-Server::makeCGIEnvp(int client_fd)
+bool
+Server::makeEnvpUsingRequest(char** envp, int client_fd, int* idx)
 {
-    Log::trace("> makeCGIEnvp");
-    char** envp;
+    Request& request= this->_requests[client_fd];
+    if (!(envp[(*idx)++] = ft::strdup("AUTH_TYPE=" + request.getAuthType())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("REMOTE_USER=" + request.getRemoteUser())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("REMOTE_IDENT=" + request.getRemoteIdent())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("REMOTE_ADDR=" + request.getIpAddress())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("REQUEST_METHOD="+ request.getMethod())))
+        return (false);
+    return (true);
+}
+
+bool
+Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
+{
+    const Response& response = this->_responses[client_fd];
+    
+    if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + response.getUriPath())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + response.getResourceAbsPath())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
+        return (false);
+    return (true);
+}
+
+bool
+Server::makeEnvpUsingHeaders(char** envp, int client_fd, int* idx)
+{
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
-    const std::map<std::string, std::string>& location_info =
-        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
-
-    // 각각에 대한 it
-    if (!(envp = (char **)malloc(sizeof(char *) * 18)))
-        return (nullptr);
-    for (int i = 0; i < 18; i++)
-        envp[i] = nullptr;
-
-    std::map<std::string, std::string>::const_iterator it = headers.find("Authorization");
-    // AUTH_TYPE // Request_Headers의 Authorization value 공백 앞부분
-    // REMOTE_IDENT & REMOTE_USER // Request_Headers의 Authorization value 공백 뒷부분
-    // AUTH_TYPE
-    it = headers.find("Authorization");
-    if (it == headers.end())
-    {
-        if (!(envp[0] = ft::strdup("AUTH_TYPE=")))
-            return (nullptr);
-    }
-    else
-    {
-        if (!(envp[0] = ft::strdup("AUTH_TYPE=" + this->_requests[client_fd].getAuthType())))
-            return (nullptr);
-    }
-    // TODO: Authorization있을때만 해야하는 지 확인할 것
-    // REMOTE_USER; 1
-    if (!(envp[1] = ft::strdup("REMOTE_USER=" + this->_requests[client_fd].getRemoteUser())))
-        return (nullptr);
-    // TODO: Authorization있을때만 해야하는 지 확인할 것
-    // REMOTE_IDENT 2
-    if (!(envp[2] = ft::strdup("REMOTE_IDENT=" + this->_requests[client_fd].getRemoteIdent())))
-        return (nullptr);
+    std::map<std::string, std::string>::const_iterator it;
 
     it = headers.find("Content-Length");
     if (it == headers.end())
     {
-        if (!(envp[3] = ft::strdup("CONTENT_LENGTH=")))
-            return (nullptr);
+        if (!(envp[(*idx)++] = ft::strdup("CONTENT_LENGTH=")))
+            return (false);
     }
     else
     {
-        if (!(envp[3] = ft::strdup("CONTENT_LENGTH=" + it->second)))
-            return (nullptr);
+        if (!(envp[(*idx)++] = ft::strdup("CONTENT_LENGTH=" + it->second)))
+            return (false);
     }
-
     it = headers.find("Content-Type");
     if (it == headers.end())
     {
-        if (!(envp[4] = ft::strdup("CONTENT_TYPE=text/html")))
-            return (nullptr);
+        if (!(envp[(*idx)++] = ft::strdup("CONTENT_TYPE=text/html")))
+            return (false);
     }
     else
     {
-        if (!(envp[4] = ft::strdup("CONTENT_TYPE=" + it->second)))
-            return (nullptr);
+        if (!(envp[(*idx)++] = ft::strdup("CONTENT_TYPE=" + it->second)))
+            return (false);
     }
+    return (true);
+}
 
-    if (!(envp[5] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
-        return (nullptr);
-    if (!(envp[6] = ft::strdup("PATH_INFO=" + this->_responses[client_fd].getUriPath())))
-        return (nullptr);
-    if (!(envp[7] = ft::strdup("PATH_TRANSLATED=" + this->_responses[client_fd].getResourceAbsPath())))
-        return (nullptr);
-    //TODO: GET일 때는 QUERY를 여기로 넣어주기
-    if (!(envp[8] = ft::strdup("QUERY_STRING=")))
-        return (nullptr);
-    if (!(envp[9] = ft::strdup("REMOTE_ADDR=" + this->_requests[client_fd].getIpAddress())))
-        return (nullptr);
-    //TODO: get/head <-> post 구조 다르게 가져가야함.  REQUEST_METHOD : Location info의 limit_except or GET/POST/HEAD
-    if (!(this->_requests[client_fd].getMethod() == "GET" ||
-            this->_requests[client_fd].getMethod() == "POST" ||
-            this->_requests[client_fd].getMethod() == "HEAD"))
-        return (nullptr);
-    else
+bool
+Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
+{
+    const std::map<std::string, std::string>& location_info =
+        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
+
+    if (!(envp[(*idx)++] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("SERVER_NAME=" + this->getHost())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("SERVER_PORT=" + this->getPort())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("QUERY_STRING=")))
+        return (false);
+    return (true);
+}
+
+char**
+Server::makeCGIEnvp(int client_fd)
+{
+    Log::trace("> makeCGIEnvp");
+    int idx = 0;
+    char** envp;
+    if (!(envp = (char **)malloc(sizeof(char *) * NUM_OF_META_VARIABLES)))
+        throw (CgiInternalServerException(this->_responses[client_fd]));
+    for (int i = 0; i < NUM_OF_META_VARIABLES; i++)
+        envp[i] = nullptr;
+    if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
+        !this->makeEnvpUsingResponse(envp, client_fd, &idx) ||
+        !this->makeEnvpUsingHeaders(envp, client_fd, &idx) ||
+        !this->makeEnvpUsingEtc(envp, client_fd, &idx))
     {
-        if (!(envp[10] = ft::strdup("REQUEST_METHOD="+ this->_requests[client_fd].getMethod())))
-            return (nullptr);
-        }
-        if (!(envp[11] = ft::strdup("REQUEST_URI=" + this->_responses[client_fd].getUriPath())))
-        return (nullptr);
-    if (!(envp[12] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
-        return (nullptr);
-    if (!(envp[13] = ft::strdup("SERVER_NAME=" + this->getHost())))
-        return (nullptr);
-    if (!(envp[14] = ft::strdup("SERVER_PORT=" + this->getPort())))
-        return (nullptr);
-    if (!(envp[15] = ft::strdup("SERVER_PROTOCOL=HTTP/1.1")))
-        return (nullptr);
-    if (!(envp[16] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
-        return (nullptr);
-    Log::trace("< makeCGIEnvp");
+        ft::doubleFree(&envp);
+        throw (CgiInternalServerException(this->_responses[client_fd]));
+    }
     return (envp);
 }
 
@@ -1199,14 +1256,27 @@ Server::makeCGIArgv(int client_fd)
     Response& response = this->_responses[client_fd];
 
     if (!(argv = (char **)malloc(sizeof(char *) * 3)))
-        return (nullptr);
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     const location_info& location_info =
             this->getLocationConfig().at(this->_responses[client_fd].getRoute());
+    for (int i = 0; i < 3; i++)
+        argv[i] = nullptr;
+    location_info::const_iterator it = location_info.find("cgi_path");
+    if (it == location_info.end())
+    {
+        ft::doubleFree(&argv);
+        throw (CgiInternalServerException(this->_responses[client_fd]));
+    }
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
-        return (nullptr);
+    {
+        ft::doubleFree(&argv);
+        throw (CgiInternalServerException(this->_responses[client_fd]));
+    }
     if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
-        return (nullptr);
-    argv[2] = nullptr;
+    {
+        ft::doubleFree(&argv);
+        throw (CgiInternalServerException(this->_responses[client_fd]));
+    }
     Log::trace("< makeCGIArgv");
     return (argv);
 }
@@ -1222,30 +1292,37 @@ Server::forkAndExecuteCGI(int client_fd)
 {
     Log::trace("> forkAndExecuteCGI");
 
-    Response& response = this->_responses[client_fd];
-    // Request& request = this->_requests[client_fd];
-    int stdin_of_cgi = response.getStdinOfCGI();
-    int stdout_of_cgi = response.getStdoutOfCGI();
-    //TODO: 만약 아래의 두 함수가 return False를 한다면 할당 해놓은 자원 모두를 해체하고 throw 500을 하자.
-    char** argv = this->makeCGIArgv(client_fd);
-    char** envp = this->makeCGIEnvp(client_fd);
-    if (argv == nullptr || envp == nullptr)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
     pid_t pid;
     int ret;
+    int stdin_of_cgi;
+    int stdout_of_cgi;
+    char** argv;
+    char** envp;
+    Response& response = this->_responses[client_fd];
 
-    //TODO: CGI Exception 만들기
+    stdin_of_cgi = response.getStdinOfCGI();
+    stdout_of_cgi = response.getStdoutOfCGI();
+    if (!(argv = this->makeCGIArgv(client_fd)))
+    {
+        ft::doubleFree(&argv);
+        throw (CgiInternalServerException(this->_responses[client_fd]));
+    }
+    if (!(envp = this->makeCGIEnvp(client_fd)))
+    {
+        ft::doubleFree(&argv);
+        ft::doubleFree(&envp);
+        throw (CgiInternalServerException(this->_responses[client_fd]));
+    }
     if ((pid = fork()) < 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     else if (pid == 0)
     {
         close(response.getWriteFdToCGI());
         close(response.getReadFdFromCGI());
         if (dup2(stdin_of_cgi, 0) < 0)
-            throw (CgiExecuteErrorException(this->_responses[client_fd]));
+            throw (CgiInternalServerException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
-            throw (CgiExecuteErrorException(this->_responses[client_fd]));
-        //TODO: execve실패했을 경우 생각해보기
+            throw (CgiInternalServerException(this->_responses[client_fd]));
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
         exit(ret);
@@ -1257,7 +1334,6 @@ Server::forkAndExecuteCGI(int client_fd)
         response.setCGIPid(pid);
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
-        // NOTE 정상적으로 읽으면 select 알아서 clear 해준다.
         this->_server_manager->fdSet(response.getWriteFdToCGI(), FdSet::WRITE);
     }
     Log::trace("< forkAndExecuteCGI");

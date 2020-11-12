@@ -41,6 +41,9 @@ private:
     size_t _already_encoded_size;
 
     SendProgress _send_progress;
+    ReceiveProgress _receive_progress;
+
+    int _resoure_fd;
 
 public:
     /* Constructor */
@@ -79,6 +82,9 @@ public:
 
     size_t getAlreadyEncodedSize() const;
     const SendProgress& getSendProgress() const;
+    const ReceiveProgress& getReceiveProgress() const;
+
+    int getResourceFd() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -100,6 +106,8 @@ public:
 
     void setAlreadyEncodedSize(const size_t already_encoded_size);
     void setSendProgress(const SendProgress send_progress);
+    void setReceiveProgress(const ReceiveProgress rececive_progress);
+    void setResourceFd(const int resource_fd);
 
     /* Exception */
 public:
@@ -154,6 +162,7 @@ public:
     void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
     void appendTransferEncodingHeader(std::string& headers);
     void appendAuthenticateHeader(std::string& headers);
+
 };
 
 #endif

@@ -18,8 +18,9 @@
 # include "Response.hpp"
 # include "Exception.hpp"
 
-const int BUFFER_SIZE = 65534;
+const int BUFFER_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 8192;
+const int NUM_OF_META_VARIABLES = 18;
 
 class ServerManager;
 class Request;
@@ -74,6 +75,7 @@ public:
     /* Util */
     void closeClientSocket(int fd);
     void closeFdAndSetClientOnWriteFdSet(int fd);
+    void closeFdAndUpdateFdTable(int fd, FdSet fd_set);
     void closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_fd_set);
     bool isFdManagedByServer(int fd) const;
     bool isServerSocket(int fd) const;
@@ -98,6 +100,7 @@ public:
     bool isAutoIndexOn(int fd);
     bool isCGIUri(int fd, const std::string& extension);
     void checkAndSetResourceType(int fd);
+    void checkValidOfCgiMethod(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
     void processResponseBody(int fd);
@@ -117,6 +120,10 @@ public:
     void forkAndExecuteCGI(int fd);
     char** makeCGIArgv(int fd);
     char** makeCGIEnvp(int fd);
+    bool makeEnvpUsingRequest(char** envp, int fd, int* idx);
+    bool makeEnvpUsingResponse(char** envp, int fd, int* idx);
+    bool makeEnvpUsingHeaders(char** envp, int fd, int* idx);
+    bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
     bool isResponseAllSended(int fd) const;
 
 public:
@@ -171,12 +178,20 @@ public:
         OpenResourceErrorException(Response& response, int error_num);
         virtual const char* what() const throw();
     };
-    class CgiExecuteErrorException : public SendErrorCodeToClientException
+    class CgiMethodErrorException : public SendErrorCodeToClientException
     {
     private:
         Response& _response;
     public:
-        CgiExecuteErrorException(Response& response);
+        CgiMethodErrorException(Response& response);
+        virtual const char* what() const throw();
+    };
+    class CgiInternalServerException : public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        CgiInternalServerException(Response& response);
         virtual const char* what() const throw();
     };
     class AuthenticateErrorException : public SendErrorCodeToClientException
