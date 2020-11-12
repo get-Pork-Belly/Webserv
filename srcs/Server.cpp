@@ -1118,9 +1118,6 @@ Server::makeEnvpUsingRequest(char** envp, int client_fd, int* idx)
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("REMOTE_ADDR=" + request.getIpAddress())))
         return (false);
-    if (!(request.getMethod() == "GET" || request.getMethod() == "POST" ||
-                    request.getMethod() == "HEAD"))
-        return (false);
     if (!(envp[(*idx)++] = ft::strdup("REQUEST_METHOD="+ request.getMethod())))
         return (false);
     return (true);
