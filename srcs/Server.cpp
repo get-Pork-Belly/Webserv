@@ -840,20 +840,6 @@ Server::closeClientSocket(int client_fd)
 }
 
 void
-Server::closeFdAndSetClientOnWriteFdSet(int fd)
-{
-    const FdType& type = this->_server_manager->getFdTable()[fd].first;
-    int client_socket = this->_server_manager->getFdTable()[fd].second;
-    Log::closeFd(*this, client_socket, type, fd);
-
-    this->_server_manager->fdClr(fd, FdSet::READ);
-    this->_server_manager->setClosedFdOnFdTable(fd);
-    this->_server_manager->updateFdMax(fd);
-    this->_server_manager->fdSet(client_socket, FdSet::WRITE);
-    close(fd);
-}
-
-void
 Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_fd_set)
 {
     Log::trace("> closeFdAndSetFd");
@@ -950,12 +936,12 @@ Server::readStaticResource(int resource_fd)
     }
     else if (bytes == 0)
     {
-        this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
         throw (ReadErrorException());
     }
     else
     {
-        this->closeFdAndSetClientOnWriteFdSet(resource_fd);
+        this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
         throw (ReadErrorException());
     }
     Log::trace("< readStaticResource");
