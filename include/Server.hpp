@@ -18,7 +18,8 @@
 # include "Response.hpp"
 # include "Exception.hpp"
 
-const int BUFFER_SIZE = 65536;
+const int BUFFER_SIZE = 65534;
+const int CHUNKED_LINE_LENGTH = 8192;
 
 class ServerManager;
 class Request;
@@ -116,6 +117,7 @@ public:
     void forkAndExecuteCGI(int fd);
     char** makeCGIArgv(int fd);
     char** makeCGIEnvp(int fd);
+    bool isResponseAllSended(int fd) const;
 
 public:
     class PayloadTooLargeException : public std::exception

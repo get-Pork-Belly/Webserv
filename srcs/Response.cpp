@@ -20,7 +20,8 @@ Response::Response()
 _location_info({{"",""}}), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
-_cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body("")
+_cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
+_already_encoded_size(0), _send_progress(SendProgress::DEFAULT)
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -37,7 +38,8 @@ _file_info(other._file_info), _resource_type(other._resource_type),
 _body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
 _stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
 _write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
-_uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body)
+_uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body),
+_already_encoded_size(other._already_encoded_size), _send_progress(other._send_progress)
 {}
 
 /*============================================================================*/
@@ -76,6 +78,8 @@ Response::operator=(const Response& rhs)
     this->_uri_path = rhs._uri_path;
     this->_uri_extension = rhs._uri_extension;
     this->_transmitting_body = rhs._transmitting_body;
+    this->_already_encoded_size = rhs._already_encoded_size;
+    this->_send_progress = rhs._send_progress;
     return (*this);
 }
 
@@ -185,6 +189,23 @@ Response::getWriteFdToCGI() const
     return (this->_write_fd_to_cgi);
 }
 
+size_t
+Response::getAlreadyEncodedSize() const
+{
+    return (this->_already_encoded_size);
+}
+
+const std::string&
+Response::getTransmittingBody() const
+{
+    return (this->_transmitting_body);
+}
+
+const SendProgress&
+Response::getSendProgress() const
+{
+    return (this->_send_progress);
+}
 
 /*============================================================================*/
 /********************************  Setter  ************************************/
@@ -273,6 +294,24 @@ void
 Response::setWriteFdToCGI(const int fd)
 {
     this->_write_fd_to_cgi = fd;
+}
+
+void
+Response::setTransmittingBody(const std::string& transmitting_body)
+{
+    this->_transmitting_body = transmitting_body;
+}
+
+void
+Response::setAlreadyEncodedSize(const size_t already_encoded_size)
+{
+    this->_already_encoded_size = already_encoded_size;
+}
+
+void
+Response::setSendProgress(const SendProgress send_progress)
+{
+    this->_send_progress = send_progress;
 }
 
 /*============================================================================*/
@@ -557,7 +596,7 @@ void
 Response::appendContentLengthHeader(std::string& headers)
 {
     headers += "Content-Length: ";
-    headers += std::to_string(this->getBody().length());
+    headers += std::to_string(this->getTransmittingBody().length());
     headers += "\r\n";
 }
 
@@ -637,6 +676,14 @@ Response::appendRetryAfterHeader(std::string& headers, const std::string& status
 }
 
 void
+Response::appendTransferEncodingHeader(std::string& headers)
+{
+    Log::trace("> appendTransferEncodingHeader");
+    headers += "Transfer-Encoding: chunked\r\n";
+    Log::trace("< appendTransferEncodingHeader");
+}
+
+void
 Response::appendAuthenticateHeader(std::string& headers)
 {
     const location_info& location = this->getLocationInfo();
@@ -657,16 +704,19 @@ Response::makeHeaders(Request& request)
     
     //TODO 적정 reserve size 구하기
     headers.reserve(200);
+    // General headers
     this->appendDateHeader(headers);
     this->appendServerHeader(headers);
-    // if chunked 
-    // headers += this->makeTransferEncodingHeader();
-    // if not chunked
-    this->appendContentLanguageHeader(headers);
-    this->appendContentLengthHeader(headers);
-    this->appendContentTypeHeader(headers);
 
-    Log::printLocationInfo(this->_location_info);
+    // Entity headers
+    this->appendContentLanguageHeader(headers);
+    this->appendContentTypeHeader(headers);
+    if (this->isNeedToBeChunkedBody(request))
+        this->appendTransferEncodingHeader(headers);
+    else
+        this->appendContentLengthHeader(headers);
+
+    // Log::printLocationInfo(this->_location_info);
 
     //TODO switch 문 고려
     std::string status_code = this->getStatusCode();
@@ -702,12 +752,16 @@ void
 Response::makeBody(Request& request)
 {
     Log::trace("> makeBody");
+
     if (this->getResourceType() == ResType::AUTO_INDEX)
         PageGenerator::makeAutoIndex(*this);
     else if (this->getStatusCode().front() != '2')
         PageGenerator::makeErrorPage(*this);
     else if (this->isNeedToBeChunkedBody(request))
         this->encodeChunkedBody();
+    else
+        this->setTransmittingBody(this->getBody() + "\r\n");
+
     Log::trace("< makeBody");
 }
 
@@ -751,13 +805,14 @@ Response::findAndSetUriExtension()
 bool
 Response::isNeedToBeChunkedBody(const Request& request) const
 {
-    if (request.getVersion().compare("1.1") != 0 || request.getVersion().compare("2.0") != 0)
+    if (request.getVersion().compare("HTTP/1.1") != 0 && request.getVersion().compare("HTTP/2.0") != 0)
         return (false);
+
     //NOTE: 아래 기준은 임의로 정한 것임.
     if (this->_file_info.st_size > BUFFER_SIZE)
         return (true);
-    if (this->getResourceType() == ResType::CGI)
-        return (true);
+    // if (this->getResourceType() == ResType::CGI)
+    //     return (true);
     return (false);
 }
 
@@ -825,12 +880,44 @@ Response::getHtmlLangMetaData() const
 void
 Response::encodeChunkedBody()
 {
-    // size_t chunked_index = this->getChunkedIndex();
-    // size_t chunked_index = 0;
+    Log::trace("> encodeChunkedBody");
 
-    // this->setTransmittingBody(ft::rawToChunked(chunked_index));
+    const std::string& raw_body = this->getBody(); // raw_body
+    size_t already_encoded_size = this->getAlreadyEncodedSize(); // 지금까지 인코딩한 사이즈
+    std::string chunked_body; // 청크처리되어 이번에 송신될 body.
+    size_t target_size; // 이번 청크처리에서 청크처리할 사이즈.
+    size_t raw_body_size = raw_body.length(); // 전체 Body의 사이즈
+    size_t substring_size;
+    if (raw_body_size - already_encoded_size > BUFFER_SIZE)
+        target_size = already_encoded_size + BUFFER_SIZE;
+    else
+        target_size = raw_body_size;
+    while (already_encoded_size < target_size)
+    {
+        if (already_encoded_size + CHUNKED_LINE_LENGTH > target_size)
+            substring_size = target_size - already_encoded_size;
+        else
+            substring_size = CHUNKED_LINE_LENGTH ;
+        chunked_body += ft::itosHex(substring_size);
+        chunked_body += "\r\n";
+        chunked_body += raw_body.substr(already_encoded_size, substring_size);
+        chunked_body += "\r\n";
+        already_encoded_size += substring_size;
+    }
+    
+    if (this->getSendProgress() == SendProgress::DEFAULT)
+        this->setSendProgress(SendProgress::CHUNK_START);
+    else if (this->getSendProgress() == SendProgress::CHUNK_START)
+        this->setSendProgress(SendProgress::CHUNK_PROGRESS);
+    if (already_encoded_size == raw_body_size)
+    {
+        chunked_body += "0\r\n\r\n";
+        this->setSendProgress(SendProgress::FINISH);
+    }
+    this->setAlreadyEncodedSize(already_encoded_size);
+    this->setTransmittingBody(chunked_body);
 
-    // this->setChunkedIndex(chunked_index);
+    Log::trace("< encodeChunkedBody");
 }
 
 void

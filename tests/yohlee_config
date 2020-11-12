@@ -20,8 +20,8 @@ http {
             autoindex on;
             root /goinfre/yohlee/Webserv/;
 
-            auth_basic yohlee;
-            auth_basic_user_file yohlee:123123;
+            auth_basic sanam;
+            auth_basic_user_file /goinfre/yohlee/Webserv/.htpasswd;
         }
 
         location /directory {
