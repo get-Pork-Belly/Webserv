@@ -41,6 +41,7 @@ private:
     size_t _already_encoded_size;
 
     SendProgress _send_progress;
+    ReceiveProgress _receive_progress;
 
 public:
     /* Constructor */
@@ -79,6 +80,7 @@ public:
 
     size_t getAlreadyEncodedSize() const;
     const SendProgress& getSendProgress() const;
+    const ReceiveProgress& getReceiveProgress() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -100,6 +102,7 @@ public:
 
     void setAlreadyEncodedSize(const size_t already_encoded_size);
     void setSendProgress(const SendProgress send_progress);
+    void setReceiveProgress(const ReceiveProgress rececive_progress);
 
     /* Exception */
 public:
@@ -155,18 +158,6 @@ public:
     void appendTransferEncodingHeader(std::string& headers);
     void appendAuthenticateHeader(std::string& headers);
 
-
-private:
-    OnRead _on_read;
-public:
-    const OnRead& getOnRead() const
-    {
-        return this->_on_read;
-    }
-    void setOnRead(const OnRead& on_read)
-    {
-        this->_on_read = on_read;
-    }
 };
 
 #endif

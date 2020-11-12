@@ -21,7 +21,8 @@ _location_info({{"",""}}), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
 _cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
-_already_encoded_size(0), _send_progress(SendProgress::DEFAULT)
+_already_encoded_size(0), _send_progress(SendProgress::DEFAULT),
+_receive_progress(ReceiveProgress::FINISH)
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -39,7 +40,8 @@ _body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
 _stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
 _write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
 _uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body),
-_already_encoded_size(other._already_encoded_size), _send_progress(other._send_progress)
+_already_encoded_size(other._already_encoded_size), _send_progress(other._send_progress),
+_receive_progress(other._receive_progress)
 {}
 
 /*============================================================================*/
@@ -80,6 +82,7 @@ Response::operator=(const Response& rhs)
     this->_transmitting_body = rhs._transmitting_body;
     this->_already_encoded_size = rhs._already_encoded_size;
     this->_send_progress = rhs._send_progress;
+    this->_receive_progress = rhs._receive_progress;
     return (*this);
 }
 
@@ -207,6 +210,12 @@ Response::getSendProgress() const
     return (this->_send_progress);
 }
 
+const ReceiveProgress&
+Response::getReceiveProgress() const
+{
+    return (this->_receive_progress);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -312,6 +321,12 @@ void
 Response::setSendProgress(const SendProgress send_progress)
 {
     this->_send_progress = send_progress;
+}
+
+void
+Response::setReceiveProgress(const ReceiveProgress receive_progress)
+{
+    this->_receive_progress = receive_progress;
 }
 
 /*============================================================================*/
@@ -909,8 +924,8 @@ Response::encodeChunkedBody()
         this->setSendProgress(SendProgress::CHUNK_START);
     else if (this->getSendProgress() == SendProgress::CHUNK_START)
         this->setSendProgress(SendProgress::CHUNK_PROGRESS);
-        //NOTE 여기 바꿨어용
-    if (already_encoded_size == raw_body_size && getOnRead() == OnRead::COMPLETE)
+    if (already_encoded_size == raw_body_size &&
+            this->getReceiveProgress() == ReceiveProgress::FINISH)
     {
         chunked_body += "0\r\n\r\n";
         this->setSendProgress(SendProgress::FINISH);
