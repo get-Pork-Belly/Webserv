@@ -819,7 +819,7 @@ Server::run(int fd)
                 {
                     Response& response = this->_responses[fd];
                     this->closeFdAndSetFd(response.getReadFdFromCGI(), FdSet::READ, fd, FdSet::WRITE);
-                    this->closeFdAndSetFd(response.getWriteFdToCGI(), FdSet::READ, fd, FdSet::WRITE);
+                    this->closeFdAndSetFd(response.getWriteFdToCGI(), FdSet::WRITE, fd, FdSet::WRITE);
                 }
             }
             catch(const Request::RequestFormatException& e)
