@@ -176,12 +176,12 @@ public:
         OpenResourceErrorException(Response& response, int error_num);
         virtual const char* what() const throw();
     };
-    class CgiExecuteErrorException : public SendErrorCodeToClientException
+    class CgiInternalServerException : public SendErrorCodeToClientException
     {
     private:
         Response& _response;
     public:
-        CgiExecuteErrorException(Response& response);
+        CgiInternalServerException(Response& response);
         virtual const char* what() const throw();
     };
     class CgiCannotMakeEnvpException: public SendErrorCodeToClientException

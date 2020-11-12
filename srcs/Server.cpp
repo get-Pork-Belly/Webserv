@@ -233,14 +233,14 @@ Server::IndexNoExistException::what() const throw()
     return ("[CODE 403] No index & Autoindex off");
 }
 
-Server::CgiExecuteErrorException::CgiExecuteErrorException(Response& response)
+Server::CgiInternalServerException::CgiInternalServerException(Response& response)
 : _response(response)
 {
     this->_response.setStatusCode("500");
 }
 
 const char*
-Server::CgiExecuteErrorException::what() const throw()
+Server::CgiInternalServerException::what() const throw()
 {
     return ("[CODE 500] Server Internal error");
 }
@@ -706,9 +706,9 @@ Server::sendDataToCGI(int write_fd_to_cgi)
             this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
     }
     else if (bytes == 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     else
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
 
     Log::trace("< sendDataToCGI");
 }
@@ -741,9 +741,9 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     }
     //TODO: return 0 확인하기
     else if (bytes == 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     else
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
 
     Log::trace("< receiveDataFromCGI");
 }
@@ -1083,9 +1083,9 @@ Server::openCGIPipe(int client_fd)
     int pipe2[2];
 
     if (pipe(pipe1) < 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     if (pipe(pipe2) < 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
 
     int stdin_of_cgi = pipe1[0];
     int stdout_of_cgi = pipe2[1];
@@ -1211,7 +1211,7 @@ Server::makeCGIEnvp(int client_fd)
     int idx = 0;
     char** envp;
     if (!(envp = (char **)malloc(sizeof(char *) * NUM_OF_META_VARIABLES)))
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     for (int i = 0; i < NUM_OF_META_VARIABLES; i++)
         envp[i] = nullptr;
     if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
@@ -1220,7 +1220,7 @@ Server::makeCGIEnvp(int client_fd)
         !this->makeEnvpUsingEtc(envp, client_fd, &idx))
     {
         ft::doubleFree(&envp);
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     }
     return (envp);
 }
@@ -1233,7 +1233,7 @@ Server::makeCGIArgv(int client_fd)
     Response& response = this->_responses[client_fd];
 
     if (!(argv = (char **)malloc(sizeof(char *) * 3)))
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     const location_info& location_info =
             this->getLocationConfig().at(this->_responses[client_fd].getRoute());
     for (int i = 0; i < 3; i++)
@@ -1242,17 +1242,17 @@ Server::makeCGIArgv(int client_fd)
     if (it == location_info.end())
     {
         ft::doubleFree(&argv);
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     }
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
     {
         ft::doubleFree(&argv);
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     }
     if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
     {
         ft::doubleFree(&argv);
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     }
     Log::trace("< makeCGIArgv");
     return (argv);
@@ -1282,24 +1282,24 @@ Server::forkAndExecuteCGI(int client_fd)
     if (!(argv = this->makeCGIArgv(client_fd)))
     {
         ft::doubleFree(&argv);
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     }
     if (!(envp = this->makeCGIEnvp(client_fd)))
     {
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     }
     if ((pid = fork()) < 0)
-        throw (CgiExecuteErrorException(this->_responses[client_fd]));
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     else if (pid == 0)
     {
         close(response.getWriteFdToCGI());
         close(response.getReadFdFromCGI());
         if (dup2(stdin_of_cgi, 0) < 0)
-            throw (CgiExecuteErrorException(this->_responses[client_fd]));
+            throw (CgiInternalServerException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
-            throw (CgiExecuteErrorException(this->_responses[client_fd]));
+            throw (CgiInternalServerException(this->_responses[client_fd]));
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
         exit(ret);
