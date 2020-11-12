@@ -223,6 +223,12 @@ Response::getResourceFd() const
     return (this->_resoure_fd);
 }
 
+const std::map<std::string, std::string>&
+Response::getHeaders() const
+{
+    return (this->_headers);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -939,6 +945,9 @@ Response::preparseCGIMessage()
             throw (InvalidCGIMessageException(*this));
     }
     this->setBody(cgi_message);
+    if (this->getHeaders().find("Status") == this->getHeaders().end())
+        throw (InvalidCGIMessageException(*this));
+    this->setStatusCode(this->_headers.at("Status").substr(0, 3));
 
     Log::trace("< preparseCGIMessage");
 }

@@ -85,6 +85,7 @@ public:
     const ReceiveProgress& getReceiveProgress() const;
 
     int getResourceFd() const;
+    const std::map<std::string, std::string>& getHeaders() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
