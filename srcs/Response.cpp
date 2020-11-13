@@ -849,7 +849,7 @@ bool
 Response::isExtensionInMimeTypeTable(const std::string& extension) const
 {
     const std::map<std::string, std::string>& mime_type_table = this->getMimeTypeTable();
-    std::cout<<"in isExtensionInMimeTypeTable extension:"<<extension<<std::endl;
+    // std::cout<<"in isExtensionInMimeTypeTable extension:"<<extension<<std::endl;
     return (mime_type_table.find(extension) != mime_type_table.end());
 }
 
@@ -873,8 +873,8 @@ Response::isNeedToBeChunkedBody(const Request& request) const
     //NOTE: 아래 기준은 임의로 정한 것임.
     if (this->_file_info.st_size > BUFFER_SIZE)
         return (true);
-    // if (this->getResourceType() == ResType::CGI)
-    //     return (true);
+    if (this->getResourceType() == ResType::CGI)
+        return (true);
     return (false);
 }
 
@@ -958,7 +958,6 @@ Response::preparseCGIMessage()
     if (this->getHeaders().find("Status") == this->getHeaders().end())
         throw (InvalidCGIMessageException(*this));
     this->setStatusCode(this->_headers.at("Status").substr(0, 3));
-
     Log::trace("< preparseCGIMessage");
 }
 
@@ -1042,7 +1041,6 @@ Response::encodeChunkedBody()
         chunked_body += "\r\n";
         already_encoded_size += substring_size;
     }
-    
     if (this->getSendProgress() == SendProgress::DEFAULT)
         this->setSendProgress(SendProgress::CHUNK_START);
     else if (this->getSendProgress() == SendProgress::CHUNK_START)
