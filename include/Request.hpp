@@ -89,7 +89,6 @@ public:
     void parseRequestWithoutBody(char* buf);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
-    void parseNormalBodies(char* buf);
     void parseChunkedBody(char* buf);
 
     /* valid check */
@@ -102,6 +101,8 @@ public:
     bool isValidHeaderFields(std::string& key);
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
+
+    void appendBody(char* buf, int bytes);
 
     /* Exception */
 public:

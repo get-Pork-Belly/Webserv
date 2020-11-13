@@ -427,11 +427,9 @@ Request::parseChunkedBody(char* buf)
 }
 
 void
-Request::parseNormalBodies(char* buf)
+Request::appendBody(char* buf, int bytes)
 {
-    std::string normal_body(buf);
-    this->setBodies(normal_body);
-    this->setReqInfo(ReqInfo::COMPLETE);
+    this->setBodies(this->getBodies() + std::string(buf, bytes));
 }
 
 void
