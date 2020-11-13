@@ -329,16 +329,17 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
 }
 
 void
-Server::processIfNotFoundHeaders(int client_fd, const std::string& readed)
+Server::processIfHeadersNotFound(int client_fd, const std::string& readed)
 {
+    const int crlf_size = 2;
     size_t bytes;
-    char buf[3];
+    char buf[crlf_size + 1];
 
     if (readed == "\r\n")
     {
-        ft::memset(reinterpret_cast<void *>(buf), 0, 3);
-        bytes = read(client_fd, buf, 2);
-        if (bytes != 2)
+        ft::memset(reinterpret_cast<void *>(buf), 0, crlf_size + 1);
+        bytes = read(client_fd, buf, crlf_size);
+        if (bytes != crlf_size)
             throw (ReadErrorException());
     }
 }
@@ -369,7 +370,7 @@ Server::receiveRequestWithoutBody(int client_fd)
             this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
         }
         else if ((header_end_pos = readed.find("\r\n")) != std::string::npos)
-            this->processIfNotFoundHeaders(client_fd, readed);
+            this->processIfHeadersNotFound(client_fd, readed);
         else
         {
             //NOTE: if BUFFER_SIZE is too small to read including "\r\n\r\n", this block always execute. 
@@ -528,8 +529,8 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     Log::trace("> sendResponse");
     std::string tmp;
     tmp += response_message;
-    std::cout<<tmp<<std::endl;
-    write(client_fd, tmp.c_str(), tmp.length()); 
+    // std::cout<<tmp<<std::endl;
+    write(client_fd, tmp.c_str(), tmp.length());
     Log::trace("< sendResponse");
     return (true);
 }
