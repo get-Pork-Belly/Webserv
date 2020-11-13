@@ -11,14 +11,14 @@
 
 Request::Request()
 : _method(""), _uri(""), _version(""),
-_protocol(""), _bodies(""), _status_code("200"),
+_protocol(""), _body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
-_protocol(other._protocol), _bodies(other._bodies),
+_protocol(other._protocol), _body(other._body),
 _status_code(other._status_code), _info(other._info),
 _is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
 _transfered_body_size(other._transfered_body_size) {}
@@ -31,7 +31,7 @@ Request::operator=(const Request& other)
     this->_version = other._version;
     this->_headers = other._headers;
     this->_protocol = other._protocol;
-    this->_bodies = other._bodies;
+    this->_body = other._body;
     this->_status_code = other._status_code;
     this->_info = other._info;
     this->_is_buffer_left = other._is_buffer_left;
@@ -81,9 +81,9 @@ Request::getProtocol() const
 }
 
 const std::string&
-Request::getBodies() const
+Request::getBody() const
 {
-    return (this->_bodies);
+    return (this->_body);
 }
 
 const std::string&
@@ -169,9 +169,9 @@ Request::setProtocol(const std::string& protocol)
 }
 
 void
-Request::setBodies(const std::string& req_message)
+Request::setBody(const std::string& req_message)
 {
-    this->_bodies = req_message;
+    this->_body = req_message;
 }
 
 void
@@ -411,7 +411,7 @@ Request::parseChunkedBody(char* buf)
         else if (line_len != -1)
         {
             if (ft::substr(line, req_message, "\r\n") && !req_message.empty())
-                this->_bodies += line.substr(0, line_len) + "\r\n";
+                this->_body += line.substr(0, line_len) + "\r\n";
             else
             {
                 this->setStatusCode("400");
@@ -429,7 +429,7 @@ Request::parseChunkedBody(char* buf)
 void
 Request::appendBody(char* buf, int bytes)
 {
-    this->setBodies(this->getBodies() + std::string(buf, bytes));
+    this->setBody(this->getBody() + std::string(buf, bytes));
 }
 
 void

@@ -23,6 +23,6 @@ int main()
         std::cout << kv.first << std::endl;
         std::cout << kv.second << std::endl;
     }
-    std::cout << test.getRequestBodies() << std::endl;
+    std::cout << test.getRequestBody() << std::endl;
 
 }

@@ -724,7 +724,7 @@ Server::sendDataToCGI(int write_fd_to_cgi)
         this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
         return ;
     }
-    body = request.getBodies().c_str();
+    body = request.getBody().c_str();
     bytes = write(write_fd_to_cgi, body, content_length);
     if (bytes > 0)
             this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
