@@ -402,6 +402,7 @@ Request::parseChunkedBody(const std::string& body)
     }
     while (ft::substr(line, req_message, "\r\n") && !req_message.empty())
     {
+        std::cout << "linelen: " << line_len << std::endl;
         line_len = ft::stoiHex(line);
         if (line_len == 0)
         {
