@@ -384,6 +384,12 @@ Server::receiveRequestWithoutBody(int client_fd)
     Log::trace("< receiveRequestWithoutBody");
 }
 
+//TODO: 1. request Body가 컸을 때 (Chunked NOrmal 둘 다 해야 함.)
+//TODO:   1-1. 송신되어 온 데이터가 클 때 Request에 저장 처리.
+//TODO: 2. CGI에 저장되어 있는 바디를 넘겨야 하는데 그것이 매우 클 때 처리
+//NOTE: 기존에는 Request Body 한 번에(content length만큼) 읽음 -> select로 순회할수 있도록 변경할 것
+//NOTE: CGI PIPE 에도 한 번에 WRITE해줌. -> select 순회할수 있도록 변경할 것
+
 void
 Server::receiveRequestNormalBody(int client_fd)
 {
@@ -396,22 +402,14 @@ Server::receiveRequestNormalBody(int client_fd)
     if (content_length > this->_limit_client_body_size)
         throw (PayloadTooLargeException(req));
 
-    char buf[content_length + 1];
-    ft::memset(reinterpret_cast<void *>(buf), 0, content_length + 1);
-    // if ((bytes = recv(client_fd, buf, content_length, 0)) > 0)
-    //     req.parseNormalBodies(buf);
-    // if ((bytes = recv(client_fd, buf, content_length, 0)) > 0)
-    if ((bytes = recv(client_fd, buf, content_length, 0)) > 0)
+    char buf[BUFFER_SIZE + 1];
+    ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+
+    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
-        // if (bytes < BUFFER_SIZE)
-        // {
-            std::cout << "buf size: " << bytes << std::endl;
-            req.parseNormalBodies(buf);
-        // }
-        // else
-        // {
-        //     req.appendBody(buf);
-        // }
+        req.appendBody(buf, bytes);
+        if (bytes < BUFFER_SIZE)
+            req.setReqInfo(ReqInfo::COMPLETE);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -451,7 +449,10 @@ Server::receiveRequestChunkedBody(int client_fd)
     Request& req = this->_requests[client_fd];
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
+    {
+        // if (bytes < BUFFER_SIZE)
         req.parseChunkedBody(buf);
+    }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
