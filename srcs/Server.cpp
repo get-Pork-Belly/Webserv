@@ -384,8 +384,9 @@ Server::receiveRequestWithoutBody(int client_fd)
     Log::trace("< receiveRequestWithoutBody");
 }
 
-//TODO: 1. request Body가 컸을 때 (Chunked NOrmal 둘 다 해야 함.)
-//TODO:   1-1. 송신되어 온 데이터가 클 때 Request에 저장 처리.
+//TODO: 1. request Body가 컸을 때 (Chunked Normal 둘 다 해야 함.)
+//TODO:   1-1. 송신되어 온 데이터가 클 때 Request에 저장 처리. (완료)
+//TODO:   1-2. Request Body가 chunked 일 때
 //TODO: 2. CGI에 저장되어 있는 바디를 넘겨야 하는데 그것이 매우 클 때 처리
 //NOTE: 기존에는 Request Body 한 번에(content length만큼) 읽음 -> select로 순회할수 있도록 변경할 것
 //NOTE: CGI PIPE 에도 한 번에 WRITE해줌. -> select 순회할수 있도록 변경할 것
@@ -450,8 +451,9 @@ Server::receiveRequestChunkedBody(int client_fd)
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
-        // if (bytes < BUFFER_SIZE)
-        req.parseChunkedBody(buf);
+        req.appendBody(buf, bytes);
+        if (bytes < BUFFER_SIZE)
+            req.parseChunkedBody(req.getBody());
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
