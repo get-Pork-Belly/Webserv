@@ -296,4 +296,12 @@ itosHex(unsigned int n)
     return (result);
 }
 
+bool
+IsPrintable(char ch)
+{
+	if (ch  >= 32 && ch <= 126)
+		return (true);
+	return (false);
+}
+
 }
