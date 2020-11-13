@@ -87,6 +87,7 @@ enum class SendProgress
 
 enum class ReceiveProgress
 {
+    CGI_BEGIN,
     ON_GOING,
     FINISH,
 };

@@ -750,14 +750,17 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     if (bytes > 0)
     {
         response.appendBody(buf, bytes);
-
+        if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
+            response.preparseCGIMessage();
         //NOTE: BUFFER SIZE보다 읽은 것이 같거나 컸으면, 다시 한 번 버퍼를 확인해 보아야 함.
         if (bytes < BUFFER_SIZE)
         {
+            response.setReceiveProgress(ReceiveProgress::FINISH);
             this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
         //NOTE waitpid의 타이밍을 잘 잡자.
             waitpid(response.getCGIPid(), &status, 0);
         }
+        response.setReceiveProgress(ReceiveProgress::ON_GOING);
     }
     //TODO: return 0 확인하기
     else if (bytes == 0)
@@ -822,7 +825,6 @@ Server::run(int fd)
         {
             try
             {
-                std::cout << "Fd: " << fd << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
                 if (this->isCGIPipe(fd)) 
                     this->receiveDataFromCGI(fd);
                 else if (this->isStaticResource(fd))
@@ -1102,6 +1104,7 @@ Server::preprocessResponseBody(int client_fd, ResType& res_type)
         std::cout << "CGIpipe will be opened" << std::endl;
         this->openCGIPipe(client_fd);
         this->forkAndExecuteCGI(client_fd);
+        this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
         break ;
     default:
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);

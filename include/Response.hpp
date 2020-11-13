@@ -85,6 +85,7 @@ public:
     const ReceiveProgress& getReceiveProgress() const;
 
     int getResourceFd() const;
+    const std::map<std::string, std::string>& getHeaders() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -95,7 +96,7 @@ public:
     void setBody(const std::string& body);
     void setUriPath(const std::string& path);
     void setUriExtension(const std::string& extension);
-    // void setMessageBody();
+    void setHeaders(const std::string& key, const std::string& value);
 
     void setStdinOfCGI(const int fd);
     void setStdoutOfCGI(const int fd);
@@ -119,6 +120,16 @@ public:
         CannotOpenCGIPipeException(Response& response);
         virtual const char* what() const throw();
     };
+    class InvalidCGIMessageException: public SendErrorCodeToClientException
+    {
+    private:
+        std::string _msg;
+        Response& _response;
+    public:
+        InvalidCGIMessageException(Response& response);
+        InvalidCGIMessageException(Response& response, const std::string& status_code);
+        virtual const char* what() const throw();
+    };
     /* Util */
     // bool isLocationUri(const std::string& uri, Server* server);
     bool setRouteAndLocationInfo(const std::string& uri, Server* server);
@@ -134,6 +145,11 @@ public:
     std::string getRedirectUri(const Request& request) const;
     std::string getLastModifiedDateTimeOfResource() const;
     std::string getHtmlLangMetaData() const;
+    void preparseCGIMessage();
+    bool parseCGIHeaders(std::string& cgi_message);
+    bool isValidHeaders(std::string& key, std::string& value);
+    bool isValidSP(std::string& str);
+    bool isDuplicatedHeader(std::string& key);
 
     void setTransmittingBody(const std::string& chunked_body);
     void encodeChunkedBody();

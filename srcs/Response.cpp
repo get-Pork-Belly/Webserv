@@ -16,8 +16,8 @@
 */
 
 Response::Response()
-: _status_code("200"), _headers({{"", ""}}), _transfer_type(""), _clients(""),
-_location_info({{"",""}}), _resource_abs_path(""), _route(""),
+: _status_code("200"), _headers(), _transfer_type(""), _clients(""),
+_location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
 _cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
@@ -223,6 +223,12 @@ Response::getResourceFd() const
     return (this->_resoure_fd);
 }
 
+const std::map<std::string, std::string>&
+Response::getHeaders() const
+{
+    return (this->_headers);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -342,6 +348,12 @@ Response::setResourceFd(const int resource_fd)
     this->_resoure_fd = resource_fd;
 }
 
+void
+Response::setHeaders(const std::string& key, const std::string& value)
+{
+    this->_headers[key] = value;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -356,6 +368,18 @@ const char*
 Response::CannotOpenCGIPipeException::what() const throw()
 {
     return ("[CODE 500] Cannot Open CGI Pipe.");
+}
+
+Response::InvalidCGIMessageException::InvalidCGIMessageException(Response& response)
+: _msg("InvalidCGIMessageException: Invalid Response Format: "), _response(response)
+{
+    this->_response.setStatusCode("500");
+}
+
+const char*
+Response::InvalidCGIMessageException::what() const throw()
+{
+    return (this->_msg.c_str());
 }
 
 /*============================================================================*/
@@ -641,13 +665,19 @@ Response::appendContentTypeHeader(std::string& headers)
 {
     Log::trace("> appendContentTypeHeader");
     headers += "Content-Type: ";
-    std::string extension = this->getUriExtension();
-    if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
-        headers += this->getMimeTypeTable().at(extension);
-    else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_HTML)
-        headers += "text/html";
+
+    if (this->getHeaders().find("Content-Type") != this->getHeaders().end())
+        headers += this->getHeaders().at("Content-Type");
     else
-        headers += "application/octet-stream";
+    {
+        std::string extension = this->getUriExtension();
+        if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
+            headers += this->getMimeTypeTable().at(extension);
+        else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_HTML)
+            headers += "text/html";
+        else
+            headers += "application/octet-stream";
+    }
     headers += "\r\n";
     Log::trace("< appendContentTypeHeader");
 }
@@ -680,7 +710,10 @@ void
 Response::appendLocationHeader(std::string& headers, const Request& request)
 {
     headers += "Location: ";
-    headers += this->getRedirectUri(request);
+    if (this->getHeaders().find("Location") != this->getHeaders().end())
+        headers += this->getHeaders().at("Location");
+    else
+        headers += this->getRedirectUri(request);
     headers += "\r\n";
 }
 
@@ -751,7 +784,8 @@ Response::makeHeaders(Request& request)
     if (status_code.compare("200") == 0)
     {
         this->appendContentLocationHeader(headers);
-        if (this->getResourceType() != ResType::AUTO_INDEX)
+        if (this->getResourceType() == ResType::STATIC_RESOURCE || 
+            this->getResourceType() == ResType::INDEX_HTML)
             this->appendLastModifiedHeader(headers);
     }
     else if (status_code.compare("405") == 0)
@@ -903,6 +937,82 @@ Response::getHtmlLangMetaData() const
         return ("");
 
     return (html_tag_block.substr(lang_meta_data_start + 6, lang_meta_data_end - (lang_meta_data_start + 6)));
+}
+
+void
+Response::preparseCGIMessage()
+{
+    Log::trace("> preparseCGIMessage");
+
+    std::string line;
+    std::string cgi_message(this->getBody());
+
+    if (ft::substr(line, cgi_message, "\r\n\r\n") == false)
+        throw (InvalidCGIMessageException(*this));
+    else
+    {
+        if (this->parseCGIHeaders(line) == false)
+            throw (InvalidCGIMessageException(*this));
+    }
+    this->setBody(cgi_message);
+    if (this->getHeaders().find("Status") == this->getHeaders().end())
+        throw (InvalidCGIMessageException(*this));
+    this->setStatusCode(this->_headers.at("Status").substr(0, 3));
+
+    Log::trace("< preparseCGIMessage");
+}
+
+bool
+Response::parseCGIHeaders(std::string& cgi_message)
+{
+    Log::trace("> parseHeaders");
+    std::string key;
+    std::string value;
+    std::string line;
+
+    while (ft::substr(line, cgi_message, "\r\n") && !cgi_message.empty())
+    {
+        if (ft::substr(key, line, ":") == false)
+            return (false);
+        value = ft::ltrim(line, " ");
+        if (this->isValidHeaders(key, value) == false)
+            return (false);
+        this->setHeaders(key, value);
+    }
+    if (ft::substr(key, line, ":") == false)
+        return (false);
+    value = ft::ltrim(line, " ");
+    if (this->isValidHeaders(key, value) == false)
+        return (false);
+    this->setHeaders(key, value);
+    Log::trace("< parseHeaders");
+    return (true);
+}
+
+bool
+Response::isValidHeaders(std::string& key, std::string& value)
+{
+    if (key.empty() || value.empty() ||
+        this->isValidSP(key) == false ||
+        this->isDuplicatedHeader(key) == false)
+        return (false);
+    return (true);
+}
+
+bool
+Response::isValidSP(std::string& str)
+{
+    if (str.find(" ") == std::string::npos)
+        return (true);
+    return (false);
+}
+
+bool
+Response::isDuplicatedHeader(std::string& key)
+{
+    if (this->_headers.find(key) == this->_headers.end())
+        return (true);
+    return (false);
 }
 
 void
