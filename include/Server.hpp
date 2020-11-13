@@ -114,6 +114,8 @@ public:
 
     void setAuthenticateRealm();
 
+    void processIfHeadersNotFound(int fd, const std::string& readed);
+
     /* Server run function */
     void acceptClient();
     void openCGIPipe(int fd);
