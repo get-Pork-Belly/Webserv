@@ -89,7 +89,7 @@ public:
     void parseRequestWithoutBody(char* buf);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
-    void parseChunkedBody(char* buf);
+    void parseChunkedBody(const std::string& body);
 
     /* valid check */
     bool isValidLine(std::vector<std::string>& request_line);

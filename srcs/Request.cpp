@@ -389,11 +389,11 @@ Request::parseHeaders(std::string& req_message)
 }
 
 void
-Request::parseChunkedBody(char* buf)
+Request::parseChunkedBody(const std::string& body)
 {
     int line_len;
     std::string line;
-    std::string req_message(buf);
+    std::string req_message(body);
 
     if (req_message.find("\r\n") == std::string::npos)
     {
