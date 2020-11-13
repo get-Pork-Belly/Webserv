@@ -114,7 +114,7 @@ public:
 
     void setAuthenticateRealm();
 
-    void processIfNotFoundHeaders(int fd, const std::string& readed);
+    void processIfHeadersNotFound(int fd, const std::string& readed);
 
     /* Server run function */
     void acceptClient();
