@@ -22,7 +22,7 @@ _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
 _cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
 _already_encoded_size(0), _send_progress(SendProgress::DEFAULT),
-_receive_progress(ReceiveProgress::FINISH), _resoure_fd(0)
+_receive_progress(ReceiveProgress::DEFAULT), _resoure_fd(0)
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -1045,18 +1045,19 @@ Response::encodeChunkedBody()
         this->setSendProgress(SendProgress::CHUNK_START);
     else if (this->getSendProgress() == SendProgress::CHUNK_START)
         this->setSendProgress(SendProgress::CHUNK_PROGRESS);
-    if (already_encoded_size == raw_body_size &&
-            this->getReceiveProgress() == ReceiveProgress::FINISH)
+    if (already_encoded_size == raw_body_size && 
+                this->getReceiveProgress() == ReceiveProgress::FINISH)
     {
         chunked_body += "0\r\n\r\n";
         this->setSendProgress(SendProgress::FINISH);
     }
     else if (already_encoded_size == raw_body_size &&
-            this->getReceiveProgress() == ReceiveProgress::WAIT_CHILD)
+            this->getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
     {
-        chunked_body += "0\r\n\r\n";
-        this->setSendProgress(SendProgress::WAIT_CHILD);
+        this->setSendProgress(SendProgress::CHUNK_START);
+        this->setReceiveProgress(ReceiveProgress::ON_GOING);
     }
+
     this->setAlreadyEncodedSize(already_encoded_size);
     this->setTransmittingBody(chunked_body);
 
