@@ -82,15 +82,14 @@ enum class SendProgress
     DEFAULT,
     CHUNK_START,
     CHUNK_PROGRESS,
-    WAIT_CHILD,
     FINISH,
 };
 
 enum class ReceiveProgress
 {
+    DEFAULT,
     CGI_BEGIN,
     ON_GOING,
-    WAIT_CHILD,
     FINISH,
 };
 
