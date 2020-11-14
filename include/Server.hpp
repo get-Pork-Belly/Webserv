@@ -81,7 +81,7 @@ public:
     bool isServerSocket(int fd) const;
     bool isClientSocket(int fd) const;
     bool isStaticResource(int fd) const;
-    bool isCGIPipe(int fd) const;
+    // bool isCGIPipe(int fd) const;
 
     /* Server function */
     void init();
@@ -127,6 +127,9 @@ public:
     bool makeEnvpUsingHeaders(char** envp, int fd, int* idx);
     bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
     bool isResponseAllSended(int fd) const;
+
+bool isCGIReadPipe(int fd) const;
+bool isCGIWritePipe(int fd) const;
 
 public:
     class PayloadTooLargeException : public std::exception
