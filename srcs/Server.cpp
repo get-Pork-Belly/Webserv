@@ -19,7 +19,7 @@ Server::Server(ServerManager* server_manager, server_info& server_config, std::m
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
 _request_uri_limit_size(0), _request_header_limit_size(0), 
-_limit_client_body_size(8388608), _default_error_page(""), 
+_limit_client_body_size(150000000), _default_error_page(""), 
 _location_config(location_config)
 {
     try
@@ -758,6 +758,11 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     }
     else
     {
+        // std::cout << "\033[35m\033[01m";
+        // std::cout << "===============================================" << std::endl;
+        std::cout << transfered_body_size << std::endl;
+        // std::cout << "===============================================" << std::endl;
+        // std::cout << "\033[0m";
         if (content_length - transfered_body_size < BUFFER_SIZE)
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
         else
@@ -793,6 +798,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     int receive_size = (BUFFER_SIZE > request.getContentLength()) ? BUFFER_SIZE : request.getContentLength();
     char *buf = (char *)malloc(sizeof(char) * (receive_size + 1));
     ft::memset(static_cast<void *>(buf), 0, receive_size + 1);
+    usleep(1000);
     bytes = read(read_fd_from_cgi, buf, receive_size);
 
     if (bytes > 0)
