@@ -18,7 +18,7 @@
 # include "Response.hpp"
 # include "Exception.hpp"
 
-const int BUFFER_SIZE = 500;
+const int BUFFER_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 8192;
 const int NUM_OF_META_VARIABLES = 18;
 
@@ -81,7 +81,7 @@ public:
     bool isServerSocket(int fd) const;
     bool isClientSocket(int fd) const;
     bool isStaticResource(int fd) const;
-    // bool isCGIPipe(int fd) const;
+    bool isCGIPipe(int fd) const;
 
     /* Server function */
     void init();
