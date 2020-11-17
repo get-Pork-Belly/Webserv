@@ -52,7 +52,7 @@ public:
     const std::string& getAuthType() const;
     const std::string& getRemoteUser() const;
     const std::string& getRemoteIdent() const;
-    const std::string& getChunkedBody();
+    const std::string& getChunkedBody() const;
 
     /* Setter */
     void setMethod(const std::string& method);
