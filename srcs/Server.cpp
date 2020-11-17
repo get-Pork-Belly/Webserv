@@ -442,18 +442,64 @@ Server::receiveRequestChunkedBody(int client_fd)
 {
     Log::trace("> receiveRequestChunkedBody");
     int bytes;
-    char buf[BUFFER_SIZE + 1];
-    Request& req = this->_requests[client_fd];
+    char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
+    Request& request = this->_requests[client_fd];
+    size_t index;
 
-    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
+    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, MSG_PEEK)) > 0)
     {
-        req.appendChunkedBody(buf, bytes);
-        if (bytes < BUFFER_SIZE)
-            req.parseChunkedBody(req.getChunkedBody());
+        if (request.getTargetChunkSize() == -1)
+        {
+            if ((index = std::string(buf).find("\r\n")) != std::string::npos)
+            {
+                if ((bytes = recv(client_fd, buf, index + 2, 0)) > 0)
+                {
+                    int line_len = ft::stoiHex(std::string(buf).substr(0, index));
+                    request.setTargetChunkSize(line_len);
+                }
+                else if (bytes == 0)
+                    this->closeClientSocket(client_fd);
+                else
+                {
+                    //TODO: 에러 객체 변경하기
+                    throw (ReadErrorException());
+                }
+            }
+        }
+        else if (request.getTargetChunkSize() == 0)
+        {
+            if ((bytes= recv(client_fd, buf, 2, 0)) > 0)
+            {
+                if (std::string(buf).compare("\r\n") == 0)
+                    request.setReqInfo(ReqInfo::COMPLETE);
+                else
+                    throw (Request::RequestFormatException(request));
+            }
+            else if (bytes == 0)
+                this->closeClientSocket(client_fd);
+            else
+            //TODO: 에러 객체 변경하기
+                throw (ReadErrorException());
+        }
+        else
+        {
+            if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
+            {
+                request.setTargetChunkSize(-1);
+                request.appendBody(buf, bytes);
+            }
+            else if (bytes == 0)
+                this->closeClientSocket(client_fd);
+            else
+                //TODO: 에러 객체 변경하기
+                throw (ReadErrorException());
+        }
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
+        //TODO: 에러 객체 변경하기
         throw (ReadErrorException());
     Log::trace("< receiveRequestChunkedBody");
 }
