@@ -591,14 +591,14 @@ Response::appendAllowHeader(std::string& headers)
 {
     const std::vector<const std::string> implemented_methods = {
         "GET",
-        // "POST",
-        // "HEAD",
-        // "PUT",
-        // "DELETE",
-        // "CONNECT",
-        // "OPTIONS",
-        // "TRACE",
-        // "PATCH",
+        "POST",
+        "HEAD",
+        "PUT",
+        "DELETE",
+        "CONNECT",
+        "OPTIONS",
+        "TRACE",
+        "PATCH",
     };
 
     headers += "Allow:";
@@ -776,7 +776,6 @@ Response::makeHeaders(Request& request)
         this->appendTransferEncodingHeader(headers);
     else
         this->appendContentLengthHeader(headers);
-
     // Log::printLocationInfo(this->_location_info);
 
     //TODO switch 문 고려
@@ -787,6 +786,8 @@ Response::makeHeaders(Request& request)
         if (this->getResourceType() == ResType::STATIC_RESOURCE || 
             this->getResourceType() == ResType::INDEX_HTML)
             this->appendLastModifiedHeader(headers);
+        if (request.getMethod() == "OPTIONS")
+            this->appendAllowHeader(headers);
     }
     else if (status_code.compare("405") == 0)
         this->appendAllowHeader(headers);
@@ -834,12 +835,24 @@ Response::makeTraceBody(const Request& request)
 }
 
 void
+Response::makeOptionBody()
+{
+    std::string body;
+
+    body = "OPTIONS!";
+    this->setTransmittingBody(body);
+}
+
+void
 Response::makeBody(Request& request)
 {
     Log::trace("> makeBody");
+    const std::string& method = request.getMethod();
 
-    if (request.getMethod() == "TRACE")
+    if (method == "TRACE" && this->getStatusCode() == "200")
         this->makeTraceBody(request);
+    else if (method == "OPTIONS" && this->getStatusCode() == "200")
+        this->makeOptionBody();
     else if (this->getResourceType() == ResType::AUTO_INDEX)
         PageGenerator::makeAutoIndex(*this);
     else if (this->getStatusCode().front() != '2')

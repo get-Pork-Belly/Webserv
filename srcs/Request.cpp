@@ -491,7 +491,7 @@ Request::isValidMethod(const std::string& method)
         method.compare("PUT") == 0 ||
         method.compare("HEAD") == 0 ||
         method.compare("DELETE") == 0 ||
-        method.compare("OPTION") == 0 ||
+        method.compare("OPTIONS") == 0 ||
         method.compare("TRACE") == 0 ||
         method.compare("CONNECT") == 0)
         return (true);

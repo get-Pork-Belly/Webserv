@@ -159,6 +159,7 @@ public:
     void initMimeTypeTable();
     void makeBody(Request& request);
     void makeTraceBody(const Request& request);
+    void makeOptionBody();
     std::string makeHeaders(Request& request);
     std::string makeStatusLine();
 

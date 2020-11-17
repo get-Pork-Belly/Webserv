@@ -496,6 +496,7 @@ Server::makeResponseMessage(int client_fd)
     Log::trace("> makeResponseMessage");
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
+    const std::string& method = request.getMethod();
 
     std::string status_line;
     std::string headers;
@@ -515,13 +516,13 @@ Server::makeResponseMessage(int client_fd)
     switch (send_progress)
     {
     case SendProgress::FINISH:
-        if (request.getMethod() == "HEAD")
+        if (method == "HEAD")
             return ("");
         return (response.getTransmittingBody());
         break;
     case SendProgress::DEFAULT:
         response.setSendProgress(SendProgress::FINISH);
-        if (request.getMethod() == "HEAD")
+        if (method == "HEAD")
             return (status_line + headers);
         response.setSendProgress(SendProgress::FINISH);
         return (status_line + headers + response.getTransmittingBody());
@@ -1033,7 +1034,6 @@ Server::findResourceAbsPath(int client_fd)
     Response& response = this->_responses[client_fd];
     response.setUriPath(path);
     response.setRouteAndLocationInfo(path, this);
-
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
@@ -1186,15 +1186,20 @@ Server::processResponseBody(int client_fd)
 {
     Log::trace("> processResopnseBody");
 
-    std::cout<<"uri: "<<this->_requests[client_fd].getUri()<<std::endl;
     this->findResourceAbsPath(client_fd);
     this->checkAuthenticate(client_fd);
     if (this->_responses[client_fd].isLocationToBeRedirected())
         throw (MustRedirectException(this->_responses[client_fd]));
     this->checkAndSetResourceType(client_fd);
+    if (this->_requests[client_fd].getMethod() == "OPTIONS")
+    {
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+        return ;
+    }
     if (this->_responses[client_fd].getResourceType() == ResType::INDEX_HTML)
         this->setResourceAbsPathAsIndex(client_fd);
     ResType res_type = this->_responses[client_fd].getResourceType();
+
     this->preprocessResponseBody(client_fd, res_type);
     Log::trace("< processResopnseBody");
 }
