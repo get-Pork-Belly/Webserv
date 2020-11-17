@@ -15,6 +15,7 @@ http {
 
             cgi_path /Users/yohlee/Webserv/cgi_DoubleBuffer;
             cgi_path /Users/yohlee/Webserv/blabla;
+            cgi_path /Users/yohlee/Webserv/bigbigbig.out;
         location / {
             cgi_path /Users/yohlee/Webserv/cgi_tester;
             cgi .bin .cgi .bla;
@@ -33,17 +34,4 @@ http {
     
             auth_basic sanam;
             auth_basic_user_file /Users/yohlee/Webserv/.htpasswd;
-    server {
-        server_name second_server;
-        listen       8081;
-        location /first {
-            index  index.html index.htm;
-        }
-        location /second {
-            root  /user/iwoo;
-            index  html;
-            limit_except PUT POST GET
-            index index.html index.htm index.abc;
-        }
-    }
 }
