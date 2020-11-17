@@ -17,6 +17,7 @@ private:
     std::map<std::string, std::string> _headers;
     std::string _protocol;
     std::string _body;
+    std::string _chunked_body;
     std::string _status_code;
     ReqInfo _info;
     bool _is_buffer_left;
@@ -51,7 +52,7 @@ public:
     const std::string& getAuthType() const;
     const std::string& getRemoteUser() const;
     const std::string& getRemoteIdent() const;
-
+    const std::string& getChunkedBody() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -68,7 +69,7 @@ public:
     void setAuthType(const std::string& auth_type);
     void setRemoteUser(const std::string& remote_user);
     void setRemoteIdent(const std::string& remote_ident);
-
+    void setChunkedBody(const std::string& chunked_body);
 
     /* Util */
 
@@ -103,7 +104,7 @@ public:
     bool isDuplicatedHeader(std::string& key);
 
     void appendBody(char* buf, int bytes);
-
+    void appendChunkedBody(char* buf, size_t bytes);
     /* Exception */
 public:
     class RequestFormatException : public std::exception

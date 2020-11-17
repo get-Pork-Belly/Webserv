@@ -447,9 +447,9 @@ Server::receiveRequestChunkedBody(int client_fd)
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
-        req.appendBody(buf, bytes);
+        req.appendChunkedBody(buf, bytes);
         if (bytes < BUFFER_SIZE)
-            req.parseChunkedBody(req.getBody());
+            req.parseChunkedBody(req.getChunkedBody());
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -738,7 +738,14 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
-    content_length = request.getContentLength();
+
+    const std::map<std::string, std::string>& headers = request.getHeaders();
+    std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+    if (it != headers.end())
+        content_length = request.getContentLength();
+    else
+        content_length = request.getBody().length();
+
     transfered_body_size = request.getTransferedBodySize();
     const std::string& body = request.getBody();
 

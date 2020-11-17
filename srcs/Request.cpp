@@ -11,14 +11,14 @@
 
 Request::Request()
 : _method(""), _uri(""), _version(""),
-_protocol(""), _body(""), _status_code("200"),
+_protocol(""), _body(""), _chunked_body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
-_protocol(other._protocol), _body(other._body),
+_protocol(other._protocol), _body(other._body), _chunked_body(other._chunked_body),
 _status_code(other._status_code), _info(other._info),
 _is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
 _transfered_body_size(other._transfered_body_size) {}
@@ -32,6 +32,7 @@ Request::operator=(const Request& other)
     this->_headers = other._headers;
     this->_protocol = other._protocol;
     this->_body = other._body;
+    this->_chunked_body = other._chunked_body;
     this->_status_code = other._status_code;
     this->_info = other._info;
     this->_is_buffer_left = other._is_buffer_left;
@@ -134,6 +135,12 @@ Request::getRemoteIdent() const
     return (this->_remote_ident);
 }
 
+const std::string&
+Request::getChunkedBody()
+{
+    return (this->_chunked_body);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -220,6 +227,12 @@ void
 Request::setRemoteIdent(const std::string& remote_ident)
 {
     this->_remote_ident = remote_ident;
+}
+
+void
+Request::setChunkedBody(const std::string& chunked_body)
+{
+    this->_chunked_body = chunked_body;
 }
 
 /*============================================================================*/
@@ -431,6 +444,12 @@ void
 Request::appendBody(char* buf, int bytes)
 {
     this->setBody(this->getBody() + std::string(buf, bytes));
+}
+
+void
+Request::appendChunkedBody(char* buf, size_t bytes)
+{
+    this->setChunkedBody(this->getChunkedBody() + std::string(buf, bytes));
 }
 
 void
