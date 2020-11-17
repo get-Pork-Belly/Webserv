@@ -19,7 +19,8 @@
 # include "Exception.hpp"
 
 const int BUFFER_SIZE = 6553600;
-const int CHUNKED_LINE_LENGTH = 1024000;
+const int RECEIVE_SOCKET_STREAM_SIZE = 254560;
+const int CHUNKED_LINE_LENGTH = 65536;
 const int NUM_OF_META_VARIABLES = 18;
 
 class ServerManager;
