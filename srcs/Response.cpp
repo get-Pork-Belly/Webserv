@@ -811,11 +811,36 @@ Response::makeHeaders(Request& request)
 }
 
 void
+Response::makeTraceBody(const Request& request)
+{
+    std::string body;
+    body += request.getMethod();
+    body += " ";
+    body += request.getUri();
+    body += " ";
+    body += request.getVersion();
+    body += "\r\n";
+    const std::map<std::string, std::string>& headers = request.getHeaders();
+    for (auto& s : headers)
+    {
+        const std::string& key = s.first;
+        const std::string& value = s.second;
+        body += key;
+        body += ": ";
+        body += value;
+        body += "\r\n";
+    }
+    this->setTransmittingBody(body);
+}
+
+void
 Response::makeBody(Request& request)
 {
     Log::trace("> makeBody");
 
-    if (this->getResourceType() == ResType::AUTO_INDEX)
+    if (request.getMethod() == "TRACE")
+        this->makeTraceBody(request);
+    else if (this->getResourceType() == ResType::AUTO_INDEX)
         PageGenerator::makeAutoIndex(*this);
     else if (this->getStatusCode().front() != '2')
         PageGenerator::makeErrorPage(*this);
