@@ -15,6 +15,7 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
+//TODO: _limit_client_body_size -> ServerGenerator에서 만들어 주도록 변경할 것.
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
