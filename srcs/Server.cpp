@@ -15,6 +15,7 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
+//TODO: _limit_client_body_size -> ServerGenerator에서 만들어 주도록 변경할 것.
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
@@ -800,16 +801,11 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
 
     client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
-    Request& request= this->_requests[client_fd];
 
-    int receive_size = (BUFFER_SIZE > request.getContentLength()) ? BUFFER_SIZE : request.getContentLength();
-    char *buf = (char *)malloc(sizeof(char) * (receive_size + 1));
-    // int receive_size = BUFFER_SIZE;
-    // char buf[receive_size + 1];
-    ft::memset(static_cast<void *>(buf), 0, receive_size + 1);
+    char buf[BUFFER_SIZE + 1];
+    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
     usleep(1000);
-    bytes = read(read_fd_from_cgi, buf, receive_size);
-
+    bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
     if (bytes > 0)
     {
         response.appendBody(buf, bytes);
@@ -827,7 +823,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     }
     else
         throw (CgiInternalServerException(this->_responses[client_fd]));
-    free(buf);
+
     Log::trace("< receiveDataFromCGI");
 }
 
