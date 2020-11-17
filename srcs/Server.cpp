@@ -515,16 +515,25 @@ Server::makeResponseMessage(int client_fd)
     switch (send_progress)
     {
     case SendProgress::FINISH:
+        if (request.getMethod() == "HEAD")
+            return ("");
         return (response.getTransmittingBody());
         break;
     case SendProgress::DEFAULT:
         response.setSendProgress(SendProgress::FINISH);
+        if (request.getMethod() == "HEAD")
+            return (status_line + headers);
+        response.setSendProgress(SendProgress::FINISH);
         return (status_line + headers + response.getTransmittingBody());
         break;
     case SendProgress::CHUNK_START:
+        if (request.getMethod() == "HEAD")
+            return (status_line + headers);
         return (status_line + headers + response.getTransmittingBody());
         break;
     case SendProgress::CHUNK_PROGRESS:
+        if (request.getMethod() == "HEAD")
+            return ("");
         return (response.getTransmittingBody());
         break;
     default:
