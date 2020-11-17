@@ -501,7 +501,7 @@ Server::makeResponseMessage(int client_fd)
     std::string status_line;
     std::string headers;
 
-    if (response.getStatusCode().compare("200") != 0)
+    if (response.getStatusCode().front() != '2')
         response.setResourceType(ResType::ERROR_HTML);
 
     if (response.isRedirection(response.getStatusCode()) == false)
@@ -522,7 +522,7 @@ Server::makeResponseMessage(int client_fd)
         break;
     case SendProgress::DEFAULT:
         response.setSendProgress(SendProgress::FINISH);
-        if (method == "HEAD")
+        if (method == "HEAD" || method == "PUT")
             return (status_line + headers);
         response.setSendProgress(SendProgress::FINISH);
         return (status_line + headers + response.getTransmittingBody());
@@ -838,6 +838,29 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
 }
 
 void
+Server::putFileOnServer(int resource_fd)
+{
+    int bytes;
+    int client_fd = this->_server_manager->getLinkedFdFromFdTable(resource_fd);
+    Request& request = this->_requests[client_fd];
+    const std::string& body = request.getBody();
+
+    int transfered_body_size = request.getTransferedBodySize();
+    int remained = body.length() - transfered_body_size;
+    if (BUFFER_SIZE > remained)
+    {
+        bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), remained);
+        this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+    }
+    else
+    {
+        bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), BUFFER_SIZE);
+        transfered_body_size += BUFFER_SIZE;
+        request.setTransferedBodySize(transfered_body_size);
+    }
+}
+
+void
 Server::run(int fd)
 {
     if (isServerSocket(fd))
@@ -851,7 +874,7 @@ Server::run(int fd)
                 Log::trace(">>> write sequence");
                 if (this->isCGIWritePipe(fd))
                     this->sendDataToCGI(fd);
-                else
+                else if (this->isClientSocket(fd))
                 {
                     std::string response_message = this->makeResponseMessage(fd);
                     // TODO: sendResponse error handling
@@ -872,6 +895,8 @@ Server::run(int fd)
                         this->_responses[fd].init();
                     }
                 }
+                else
+                    this->putFileOnServer(fd);
                 Log::trace("<<< write sequence");
             }
             catch(const SendErrorCodeToClientException& e)
@@ -886,7 +911,6 @@ Server::run(int fd)
             }
             catch(const char* e)
             {
-                //TODO: 에러객체 던지도록 수정
                 std::cerr << e << '\n';
             }
         }
@@ -1087,7 +1111,22 @@ Server::openStaticResource(int client_fd)
     const std::string& path = this->_responses[client_fd].getResourceAbsPath();
     struct stat tmp;
 
-    if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
+    if (this->_requests[client_fd].getMethod() == "PUT")
+    {
+        resource_fd = open(path.c_str(), O_CREAT | O_RDWR, 0666);
+        // resource_fd = open("/Users/sanam/Desktop/Webserv/abcd", O_CREAT | O_RDWR, 0666);
+        // 여기서 파일이 오픈되지 않는다는 건 상위 폴더 자체가 없다는 것.
+        // 409 에러를 보내줄 수 있게 만들자
+        fcntl(resource_fd, F_SETFL, O_NONBLOCK);
+        this->_server_manager->fdSet(resource_fd, FdSet::WRITE);
+        this->_server_manager->setResourceOnFdTable(resource_fd, client_fd);
+        this->_responses[client_fd].setResourceFd(resource_fd);
+        this->_server_manager->updateFdMax(resource_fd);
+        if ((fstat(resource_fd, &tmp)) == -1)
+            throw OpenResourceErrorException(this->_responses[client_fd], errno);
+        this->_responses[client_fd].setFileInfo(tmp);
+    }
+    else if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
     {
         fcntl(resource_fd, F_SETFL, O_NONBLOCK);
         this->_server_manager->fdSet(resource_fd, FdSet::READ);
@@ -1119,6 +1158,7 @@ Server::checkAndSetResourceType(int client_fd)
     Log::trace("> checkAndSetResourceType");
 
     Response& response = this->_responses[client_fd];
+    const std::string& method = this->_requests[client_fd].getMethod();
     response.findAndSetUriExtension();
     if (this->isCGIUri(client_fd, response.getUriExtension()))
     {
@@ -1144,11 +1184,23 @@ Server::checkAndSetResourceType(int client_fd)
     else
     {
         if (errno == ENOTDIR)
+        {
+            if (method == "PUT")
+                response.setStatusCode("204");
             response.setResourceType(ResType::STATIC_RESOURCE);
+        }
         else if (errno == EACCES)
             throw (CannotOpenDirectoryException(this->_responses[client_fd], "403", errno));
         else if (errno == ENOENT)
+        {
+            if (method == "PUT")
+            {
+                response.setResourceType(ResType::STATIC_RESOURCE);
+                response.setStatusCode("201");
+                return ;
+            }
             throw (CannotOpenDirectoryException(this->_responses[client_fd], "404", errno));
+        }
     }
 
     Log::trace("< checkAndSetResourceType");
@@ -1157,7 +1209,7 @@ Server::checkAndSetResourceType(int client_fd)
 void
 Server::preprocessResponseBody(int client_fd, ResType& res_type)
 {
-    Log::trace("> preprocessResponseBody");
+    std::cout << "before " << std::endl;
     switch (res_type)
     {
     case ResType::AUTO_INDEX:

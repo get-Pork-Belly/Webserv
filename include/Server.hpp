@@ -115,6 +115,7 @@ public:
     void setAuthenticateRealm();
 
     void processIfHeadersNotFound(int fd, const std::string& readed);
+    void putFileOnServer(int fd);
 
     /* Server run function */
     void acceptClient();

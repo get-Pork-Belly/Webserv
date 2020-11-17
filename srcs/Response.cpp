@@ -762,6 +762,7 @@ std::string
 Response::makeHeaders(Request& request)
 {
     std::string headers;
+    const std::string& method = request.getMethod();
     
     //TODO 적정 reserve size 구하기
     headers.reserve(200);
@@ -770,12 +771,18 @@ Response::makeHeaders(Request& request)
     this->appendServerHeader(headers);
 
     // Entity headers
-    this->appendContentLanguageHeader(headers);
-    this->appendContentTypeHeader(headers);
-    if (this->isNeedToBeChunkedBody(request))
-        this->appendTransferEncodingHeader(headers);
+    if (method != "PUT")
+    {
+        this->appendContentLanguageHeader(headers);
+        this->appendContentTypeHeader(headers);
+        if (this->isNeedToBeChunkedBody(request))
+            this->appendTransferEncodingHeader(headers);
+        else
+            this->appendContentLengthHeader(headers);
+    }
     else
-        this->appendContentLengthHeader(headers);
+        headers += "Content_Length: 0\r\n";
+
     // Log::printLocationInfo(this->_location_info);
 
     //TODO switch 문 고려
@@ -786,7 +793,7 @@ Response::makeHeaders(Request& request)
         if (this->getResourceType() == ResType::STATIC_RESOURCE || 
             this->getResourceType() == ResType::INDEX_HTML)
             this->appendLastModifiedHeader(headers);
-        if (request.getMethod() == "OPTIONS")
+        if (method == "OPTIONS")
             this->appendAllowHeader(headers);
     }
     else if (status_code.compare("405") == 0)
