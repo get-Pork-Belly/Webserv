@@ -136,7 +136,7 @@ Request::getRemoteIdent() const
 }
 
 const std::string&
-Request::getChunkedBody()
+Request::getChunkedBody() const
 {
     return (this->_chunked_body);
 }
