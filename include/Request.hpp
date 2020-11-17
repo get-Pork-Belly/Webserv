@@ -16,7 +16,7 @@ private:
     std::string _version;
     std::map<std::string, std::string> _headers;
     std::string _protocol;
-    std::string _bodies;
+    std::string _body;
     std::string _status_code;
     ReqInfo _info;
     bool _is_buffer_left;
@@ -41,7 +41,7 @@ public:
     const std::string& getVersion() const;
     const std::map<std::string, std::string>& getHeaders() const;
     const std::string& getProtocol() const;
-    const std::string& getBodies() const;
+    const std::string& getBody() const;
     const std::string& getStatusCode() const;
     const ReqInfo& getReqInfo() const;
     bool getIsBufferLeft() const;
@@ -59,7 +59,7 @@ public:
     void setVersion(const std::string& version);
     void setHeaders(const std::string& key, const std::string& value);
     void setProtocol(const std::string& protocol);
-    void setBodies(const std::string& body);
+    void setBody(const std::string& body);
     void setStatusCode(const std::string& code);
     void setReqInfo(const ReqInfo& info);
     void setIsBufferLeft(const bool& is_left_buffer);
@@ -89,8 +89,7 @@ public:
     void parseRequestWithoutBody(char* buf);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
-    void parseNormalBodies(char* buf);
-    void parseChunkedBody(char* buf);
+    void parseChunkedBody(const std::string& body);
 
     /* valid check */
     bool isValidLine(std::vector<std::string>& request_line);
@@ -102,6 +101,8 @@ public:
     bool isValidHeaderFields(std::string& key);
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
+
+    void appendBody(char* buf, int bytes);
 
     /* Exception */
 public:

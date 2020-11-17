@@ -15,11 +15,12 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
+//TODO: _limit_client_body_size -> ServerGenerator에서 만들어 주도록 변경할 것.
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
 _request_uri_limit_size(0), _request_header_limit_size(0), 
-_limit_client_body_size(BUFFER_SIZE), _default_error_page(""), 
+_limit_client_body_size(150000000), _default_error_page(""), 
 _location_config(location_config)
 {
     try
@@ -373,7 +374,6 @@ Server::receiveRequestWithoutBody(int client_fd)
             this->processIfHeadersNotFound(client_fd, readed);
         else
         {
-            //NOTE: if BUFFER_SIZE is too small to read including "\r\n\r\n", this block always execute. 
             req.setIsBufferLeft(true);
             throw (Request::RequestFormatException(req, "400"));
         }
@@ -400,8 +400,14 @@ Server::receiveRequestNormalBody(int client_fd)
     char buf[BUFFER_SIZE + 1];
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
-    if ((bytes = recv(client_fd, buf, content_length, 0)) > 0)
-        req.parseNormalBodies(buf);
+    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
+    {
+        req.appendBody(buf, bytes);
+        if (req.getBody().length() < static_cast<size_t>(content_length))
+            return ;
+        if (bytes < BUFFER_SIZE)
+            req.setReqInfo(ReqInfo::COMPLETE);
+    }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
@@ -440,7 +446,11 @@ Server::receiveRequestChunkedBody(int client_fd)
     Request& req = this->_requests[client_fd];
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
-        req.parseChunkedBody(buf);
+    {
+        req.appendBody(buf, bytes);
+        if (bytes < BUFFER_SIZE)
+            req.parseChunkedBody(req.getBody());
+    }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
@@ -496,6 +506,7 @@ Server::makeResponseMessage(int client_fd)
     if (response.isRedirection(response.getStatusCode()) == false)
         response.makeBody(request);
 
+    //TODO: 헤더와 스테이터스 라인은 처음에만 만들어 준다. 조건 만들자
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
 
@@ -527,10 +538,12 @@ bool
 Server::sendResponse(const std::string& response_message, int client_fd)
 {
     Log::trace("> sendResponse");
-    std::string tmp;
-    tmp += response_message;
-    // std::cout<<tmp<<std::endl;
-    write(client_fd, tmp.c_str(), tmp.length());
+    // std::cout << "\033[34m\033[01m";
+    // std::cout << "===============================================" << std::endl;
+    // std::cout << response_message << std::endl;
+    // std::cout << "===============================================" << std::endl;
+    // std::cout << "\033[0m";
+    write(client_fd, response_message.c_str(), response_message.length());
     Log::trace("< sendResponse");
     return (true);
 }
@@ -538,22 +551,11 @@ Server::sendResponse(const std::string& response_message, int client_fd)
 bool
 Server::isFdManagedByServer(int fd) const
 {
-    // Log::trace("> isFdManagedByServer");
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
-    // std::cout << "FdType: " << Log::fdTypeToString(this->_server_manager->getFdType(fd)) << std::endl;
-    // std::cout << "Fd: " << fd << std::endl;
-
     if (fd_table[fd].first == FdType::CLIENT_SOCKET)
-    {
-        // Log::trace("< isFdManagedByServer");
         return (isClientOfServer(fd));
-    }
     else if (fd_table[fd].first == FdType::RESOURCE || fd_table[fd].first == FdType::PIPE)
-    {
-        // Log::trace("< isFdManagedByServer");
         return (isClientOfServer(fd_table[fd].second));
-    }
-    // Log::trace("< isFdManagedByServer");
     return (false);
 }
 
@@ -612,6 +614,34 @@ Server::isCGIPipe(int fd) const
         return true;
     }
     Log::trace("< isCGIPipe return false");
+    return false;
+}
+
+bool
+Server::isCGIWritePipe(int fd) const
+{
+    Log::trace("> isCGIWritePipe");
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    if (fd_table[fd].first == FdType::PIPE && this->_responses[fd_table[fd].second].getWriteFdToCGI() == fd)
+    {
+        Log::trace("< isCGIWritePipe return true");
+        return true;
+    }
+    Log::trace("< isCGIWritePipe return false");
+    return false;
+}
+
+bool
+Server::isCGIReadPipe(int fd) const
+{
+    Log::trace("> isCGIReadPipe");
+    const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
+    if (fd_table[fd].first == FdType::PIPE && this->_responses[fd_table[fd].second].getReadFdFromCGI() == fd)
+    {
+        Log::trace("< isCGIReadPipe return true");
+        return true;
+    }
+    Log::trace("< isCGIReadPipe return false");
     return false;
 }
 
@@ -691,48 +721,69 @@ Server::acceptClient()
     Log::trace("< acceptClient");
 }
 
+//TODO: URI가 CGI라면 Request Body를 바로 CGI한테 보내줘도 되지 않을까?
+//TODO: Chunked로 CGI왔을 때도 꼭 테스트 해보기....
+//TODO: CGI 요청이 chunked로 올 수도 있음. 이 때에는 content-Length로 비교할 수 없다.
+
 void
 Server::sendDataToCGI(int write_fd_to_cgi)
 {
-    //NOTE: FD는 writeFdToCGI
     Log::trace("> sendDataToCGI");
     int bytes;
     int client_fd;
     int content_length;
     int transfered_body_size;
-    const char* body;
 
     bytes = 0;
     client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
     content_length = request.getContentLength();
-    //TODO: 만약 Content_length가 0 이 아니면서 GET, HEAD로 온 요청이라면
-    // 이미 앞에서 걸러질것이므로 if의 조건에 != "POST" 가 있을 필요가 없다.
-    // 확실하게 앞에서 걸러 진다면 TODO를 지우자.
+    transfered_body_size = request.getTransferedBodySize();
+    const std::string& body = request.getBody();
+
     if (content_length == 0 || request.getMethod() != "POST")
     {
         this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
         return ;
     }
-    transfered_body_size = request.getTransferedBodySize();
-    body = request.getBodies().c_str();
-    bytes = write(write_fd_to_cgi, &body[transfered_body_size], content_length);
-    if (bytes > 0)
-    {
-        transfered_body_size += bytes;
-        request.setTransferedBodySize(transfered_body_size);
-        if (transfered_body_size == content_length)
-            this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-    }
-    else if (bytes == 0)
-        throw (CgiInternalServerException(this->_responses[client_fd]));
-    else
-        throw (CgiInternalServerException(this->_responses[client_fd]));
 
+    if (content_length < BUFFER_SIZE)
+    {
+        bytes = write(write_fd_to_cgi, body.c_str(), body.length());
+        if (bytes > 0)
+        {
+            if (bytes < BUFFER_SIZE)
+                this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
+        }
+    }
+    else
+    {
+        // std::cout << "\033[35m\033[01m";
+        // std::cout << "===============================================" << std::endl;
+        std::cout << transfered_body_size << std::endl;
+        // std::cout << "===============================================" << std::endl;
+        // std::cout << "\033[0m";
+        if (content_length - transfered_body_size < BUFFER_SIZE)
+            bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
+        else
+            bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], BUFFER_SIZE);
+        if (bytes > 0)
+        {
+            request.setTransferedBodySize(transfered_body_size + bytes);
+            this->_server_manager->fdSet(response.getReadFdFromCGI(), FdSet::READ);
+            this->_server_manager->fdClr(client_fd, FdSet::READ);
+        }
+    }
+    if (bytes == 0)
+        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
+    else if (bytes < 0)
+        throw (CgiInternalServerException(this->_responses[client_fd]));
     Log::trace("< sendDataToCGI");
 }
 
+//TODO: buf를 동적할당 구조 변경해주기 - 안했을 시 매우 큰 payload를 감당하지 못함.
+//NOTE: 멤버 변수로 만들어서 처음 딱 한번만 할당하고 마지막에 할당 해제 해주게 수정하기.
 void
 Server::receiveDataFromCGI(int read_fd_from_cgi)
 {
@@ -740,31 +791,29 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     int bytes;
     int client_fd;
     int status;
-    char buf[BUFFER_SIZE + 1];
 
     client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
 
+    char buf[BUFFER_SIZE + 1];
     ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-    bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE + 1);
+    usleep(1000);
+    bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
     if (bytes > 0)
     {
         response.appendBody(buf, bytes);
         if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
             response.preparseCGIMessage();
-        //NOTE: BUFFER SIZE보다 읽은 것이 같거나 컸으면, 다시 한 번 버퍼를 확인해 보아야 함.
-        if (bytes < BUFFER_SIZE)
-        {
-            response.setReceiveProgress(ReceiveProgress::FINISH);
-            this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
-        //NOTE waitpid의 타이밍을 잘 잡자.
-            waitpid(response.getCGIPid(), &status, 0);
-        }
+        this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
         response.setReceiveProgress(ReceiveProgress::ON_GOING);
     }
-    //TODO: return 0 확인하기
     else if (bytes == 0)
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+    {
+        waitpid(response.getCGIPid(), &status, 0);
+        this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
+        response.setReceiveProgress(ReceiveProgress::FINISH);
+    }
     else
         throw (CgiInternalServerException(this->_responses[client_fd]));
 
@@ -783,7 +832,7 @@ Server::run(int fd)
             try
             {
                 Log::trace(">>> write sequence");
-                if (this->isCGIPipe(fd))
+                if (this->isCGIWritePipe(fd))
                     this->sendDataToCGI(fd);
                 else
                 {
@@ -794,7 +843,10 @@ Server::run(int fd)
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
-                        this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
+                        if (this->_responses[fd].getResourceFd() != 0)
+                            this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
+                        else
+                            this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
                     }
                     if (this->isResponseAllSended(fd))
                     {
@@ -808,7 +860,7 @@ Server::run(int fd)
             catch(const SendErrorCodeToClientException& e)
             {
                 int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+                this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCGI(), FdSet::WRITE, client_fd, FdSet::WRITE);
                 this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ);
             }
             catch(const std::exception& e)
@@ -825,7 +877,7 @@ Server::run(int fd)
         {
             try
             {
-                if (this->isCGIPipe(fd)) 
+                if (this->isCGIReadPipe(fd))
                     this->receiveDataFromCGI(fd);
                 else if (this->isStaticResource(fd))
                     this->readStaticResource(fd);
@@ -994,7 +1046,6 @@ Server::readStaticResource(int resource_fd)
         else
         {
             this->_responses[client_socket].setReceiveProgress(ReceiveProgress::ON_GOING);
-            this->_responses[client_socket].setResourceFd(resource_fd);
             this->_server_manager->fdClr(resource_fd, FdSet::READ);
             this->_server_manager->fdSet(client_socket, FdSet::WRITE);
         }
@@ -1002,7 +1053,7 @@ Server::readStaticResource(int resource_fd)
     else if (bytes == 0)
     {
         this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-        throw (ReadErrorException());
+        // throw (ReadErrorException());
     }
     else
     {
@@ -1025,6 +1076,7 @@ Server::openStaticResource(int client_fd)
         fcntl(resource_fd, F_SETFL, O_NONBLOCK);
         this->_server_manager->fdSet(resource_fd, FdSet::READ);
         this->_server_manager->setResourceOnFdTable(resource_fd, client_fd);
+        this->_responses[client_fd].setResourceFd(resource_fd);
         this->_server_manager->updateFdMax(resource_fd);
         if ((fstat(resource_fd, &tmp)) == -1)
             throw OpenResourceErrorException(this->_responses[client_fd], errno);

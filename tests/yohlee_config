@@ -1,37 +1,38 @@
 http { 
     include mime.types;
-    root /goinfre/yohlee/Webserv/
+    root /Users/yohlee/Webserv/
     server {
         server_name first_server;
         listen       8080;
 
         location /folder {
-            cgi_path /goinfre/yohlee/Webserv/cgi_tester;
+            cgi_path /Users/yohlee/Webserv/cgi_tester;
 
             cgi .bin .cgi .bla;
             autoindex on;
-            root /goinfre/yohlee/Webserv/tests/;
+            root /Users/yohlee/Webserv/tests/;
         }
 
+            cgi_path /Users/yohlee/Webserv/cgi_DoubleBuffer;
+            cgi_path /Users/yohlee/Webserv/blabla;
         location / {
-            cgi_path /goinfre/yohlee/Webserv/cgi_tester;
-
+            cgi_path /Users/yohlee/Webserv/cgi_tester;
             cgi .bin .cgi .bla;
             autoindex on;
-            root /goinfre/yohlee/Webserv/;
+            root /Users/yohlee/Webserv/;
 
-            auth_basic sanam;
-            auth_basic_user_file /goinfre/yohlee/Webserv/.htpasswd;
         }
 
         location /directory {
-            root 		/goinfre/yohlee/Webserv/www/YoupiBanane;
+            root 		/Users/yohlee/Webserv/www/YoupiBanane;
             index 		youpi.bad_extension;
             cgi 		.bla;
-            cgi_path    /goinfre/yohlee/Webserv/cgi_tester;
+            cgi_path    /Users/yohlee/Webserv/cgi_tester;
         }
     }
     
+            auth_basic sanam;
+            auth_basic_user_file /Users/yohlee/Webserv/.htpasswd;
     server {
         server_name second_server;
         listen       8081;

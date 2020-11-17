@@ -128,6 +128,9 @@ public:
     bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
     bool isResponseAllSended(int fd) const;
 
+bool isCGIReadPipe(int fd) const;
+bool isCGIWritePipe(int fd) const;
+
 public:
     class PayloadTooLargeException : public std::exception
     {
