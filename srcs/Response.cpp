@@ -1051,12 +1051,6 @@ Response::encodeChunkedBody()
         chunked_body += "0\r\n\r\n";
         this->setSendProgress(SendProgress::FINISH);
     }
-    else if (already_encoded_size == raw_body_size &&
-            this->getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
-    {
-        this->setSendProgress(SendProgress::CHUNK_START);
-        this->setReceiveProgress(ReceiveProgress::ON_GOING);
-    }
 
     this->setAlreadyEncodedSize(already_encoded_size);
     this->setTransmittingBody(chunked_body);
