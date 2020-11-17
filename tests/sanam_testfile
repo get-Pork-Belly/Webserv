@@ -9,10 +9,9 @@ http {
             cgi .bin .cgi .bla;
             autoindex on;
             root /Users/sanam/Desktop/Webserv/;
-            auth_basic sanam;
-            auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpasswd;
         }
-
+        auth_basic sanam;
+        auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpasswd;
         location /directory {
             root /Users/sanam/Desktop/Webserv/www/YoupiBanane;
             index youpi.bad_extension;
