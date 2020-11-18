@@ -239,6 +239,14 @@ public:
     public:
         virtual const char* what() const throw();
     };
+    class NotAllowedMethodException : public SendErrorCodeToClientException
+    {
+        private:
+            Response& _response;
+        public:
+            NotAllowedMethodException(Response& response);
+            virtual const char* what() const throw();
+    };
 };
 
 #endif

@@ -300,6 +300,18 @@ Server::UnchunkedErrorException::what() const throw()
     return ("[CODE 901] Chunked request couldn't receive or Receive error");
 }
 
+Server::NotAllowedMethodException::NotAllowedMethodException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("405");
+}
+
+const char*
+Server::NotAllowedMethodException::what() const throw()
+{
+    return ("[CODE 405] Not Allowed Method");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
@@ -1154,6 +1166,7 @@ Server::checkAuthenticate(int client_fd)
 }
 
 //TODO: 함수명이 기능을 담지 못함, 수정 필요함!
+//NOTE: 1. 
 void
 Server::findResourceAbsPath(int client_fd)
 {
@@ -1379,15 +1392,20 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
     response.setStatusCode("204");
 
     Log::trace("< deleteResourceOfUri");
-}    
+}
 
 void
 Server::processResponseBody(int client_fd)
 {
     Log::trace("> processResopnseBody");
 
+    //NOTE: 수정 필요함
     this->findResourceAbsPath(client_fd);
     this->checkAuthenticate(client_fd);
+    if (this->_responses[client_fd].isLimitExceptInLocation() && 
+        !(this->_responses[client_fd].isAllowedMethod(this->_requests[client_fd].getMethod())))
+            throw(NotAllowedMethodException(this->_responses[client_fd]));
+    
     if (this->_responses[client_fd].isLocationToBeRedirected())
         throw (MustRedirectException(this->_responses[client_fd]));
     if (this->_requests[client_fd].getMethod().compare("DELETE") == 0)
