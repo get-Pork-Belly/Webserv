@@ -869,7 +869,7 @@ Response::makeBody(Request& request)
     else if (this->isNeedToBeChunkedBody(request))
         this->encodeChunkedBody();
     else
-        this->setTransmittingBody(this->getBody() + "\r\n");
+        this->setTransmittingBody(this->getBody());
 
     Log::trace("< makeBody");
 }

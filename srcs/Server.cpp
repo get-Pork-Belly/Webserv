@@ -479,6 +479,7 @@ Server::receiveRequestChunkedBody(int client_fd)
                     throw (ReadErrorException());
                 }
             }
+            //TODO: find 실패시 예외처리
         }
         else if (request.getTargetChunkSize() == 0)
         {
@@ -507,7 +508,7 @@ Server::receiveRequestChunkedBody(int client_fd)
                 if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
                 {
                     request.setTargetChunkSize(-1);
-                    request.appendBody(buf, bytes);
+                    request.appendBody(buf, bytes - 2);
                 }
                 else if (bytes == 0)
                     this->closeClientSocket(client_fd);
@@ -906,6 +907,8 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     Log::trace("< receiveDataFromCGI");
 }
 
+int wrote_bytes;
+
 void
 Server::putFileOnServer(int resource_fd)
 {
@@ -919,12 +922,16 @@ Server::putFileOnServer(int resource_fd)
     if (BUFFER_SIZE > remained)
     {
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), remained);
+        wrote_bytes += bytes;
+        std::cout<<"\033[1;30;43m"<<"wrote_bytes: "<<wrote_bytes<<"\033[0m"<<std::endl;
         this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
     }
     else
     {
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), BUFFER_SIZE);
-        transfered_body_size += BUFFER_SIZE;
+        wrote_bytes += bytes;
+        std::cout<<"\033[1;30;43m"<<"wrote_bytes: "<<wrote_bytes<<"\033[0m"<<std::endl;
+        transfered_body_size += bytes;
         request.setTransferedBodySize(transfered_body_size);
     }
 }
@@ -1187,7 +1194,11 @@ Server::openStaticResource(int client_fd)
     {
         resource_fd = open(path.c_str(), O_CREAT | O_RDWR, 0666);
         if (resource_fd < 0)
+        {
+            std::cout<<"\033[1;37;41m"<<"Open error in openStaticResource"<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;30;43m"<<"Path: "<<path.c_str()<<"\033[0m"<<std::endl;
             throw CgiInternalServerException(this->_responses[client_fd]);
+        }
         // resource_fd = open("/Users/sanam/Desktop/Webserv/abcd", O_CREAT | O_RDWR, 0666);
         // 여기서 파일이 오픈되지 않는다는 건 상위 폴더 자체가 없다는 것.
         // 409 에러를 보내줄 수 있게 만들자
