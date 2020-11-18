@@ -460,6 +460,27 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
 }
 
 void
+Server::receiveChunkData(int client_fd, int receive_size, int target_chunk_size)
+{
+    Log::trace("> receiveChunkData");
+
+    int bytes;
+    char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
+    Request& request = this->_requests[client_fd];
+
+    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    if ((bytes = recv(client_fd, buf, receive_size, 0)) > 0)
+        request.parseChunkDataAndSetChunkSize(buf, bytes, target_chunk_size);
+    else if (bytes == 0)
+        this->closeClientSocket(client_fd);
+    else
+        //TODO: 에러 객체 변경하기
+        throw (ReadErrorException());
+
+    Log::trace("< receiveChunkData");
+}
+
+void
 Server::receiveRequestChunkedBody(int client_fd)
 {
     Log::trace("> receiveRequestChunkedBody");
@@ -503,28 +524,9 @@ Server::receiveRequestChunkedBody(int client_fd)
         else
         {
             if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
-            {
-                // this->receiveChunkData(client_fd, request.getTargetChunkSize() + 2, -1);
-                if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
-                    request.parseChunkDataAndSetChunkSize(buf, bytes, -1);
-                else if (bytes == 0)
-                    this->closeClientSocket(client_fd);
-                else
-                    //TODO: 에러 객체 변경하기
-                    throw (ReadErrorException());
-            }
+                this->receiveChunkData(client_fd, request.getTargetChunkSize() + 2, -1);
             else
-            {
-                // this->receiveChunkData(client_fd, RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
-                if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, 0)) > 0)
-                    request.parseChunkDataAndSetChunkSize(buf, bytes, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
-                else if (bytes == 0)
-                    this->closeClientSocket(client_fd);
-                else
-                    //TODO: 에러 객체 변경하기
-                    throw (ReadErrorException());
-            }
-
+                this->receiveChunkData(client_fd, RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
         }
     }
     else if (bytes == 0)
