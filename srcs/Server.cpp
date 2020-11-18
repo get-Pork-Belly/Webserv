@@ -1114,10 +1114,7 @@ Server::readStaticResource(int resource_fd)
         }
     }
     else if (bytes == 0)
-    {
         this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-        // throw (ReadErrorException());
-    }
     else
     {
         this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
