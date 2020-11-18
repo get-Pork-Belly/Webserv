@@ -219,6 +219,14 @@ public:
             CannotPutOnDirectoryException(Response& response);
             virtual const char* what() const throw();
     };
+    class TargetResourceConflictException : public SendErrorCodeToClientException
+    {
+        private:
+            Response& _response;
+        public:
+            TargetResourceConflictException(Response& response);
+            virtual const char* what() const throw();
+    };
 };
 
 #endif
