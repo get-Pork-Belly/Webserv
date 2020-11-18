@@ -166,10 +166,10 @@ Server::setAuthenticateRealm()
 /******************************  Exception  ***********************************/
 /*============================================================================*/
 
-Server::PayloadTooLargeException::PayloadTooLargeException(Request& request) 
-: _request(request)
+Server::PayloadTooLargeException::PayloadTooLargeException(Response& response) 
+: _response(response)
 {
-    this->_request.setStatusCode("413");
+    this->_response.setStatusCode("413");
 }
 
 const char*
@@ -440,7 +440,7 @@ Server::receiveRequestNormalBody(int client_fd)
 
     int content_length = request.getContentLength();
     if (content_length > this->_limit_client_body_size)
-        throw (PayloadTooLargeException(request));
+        throw (PayloadTooLargeException(this->_responses[client_fd]));
 
     char buf[BUFFER_SIZE + 1];
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
@@ -1397,10 +1397,18 @@ Server::processResponseBody(int client_fd)
 
     //NOTE: 수정 필요함
     this->findResourceAbsPath(client_fd);
+
+    const location_info& location_info = this->_responses[client_fd].getLocationInfo();
+    if (location_info.find("limit_client_body_size") != location_info.end())
+    {
+        if (this->_requests[client_fd].getBody().length() > static_cast<unsigned int>(std::stoi(location_info.at("limit_client_body_size"))))
+            throw (PayloadTooLargeException(this->_responses[client_fd]));
+    }
+
     this->checkAuthenticate(client_fd);
     if (this->_responses[client_fd].isLimitExceptInLocation() && 
         !(this->_responses[client_fd].isAllowedMethod(this->_requests[client_fd].getMethod())))
-            throw(NotAllowedMethodException(this->_responses[client_fd]));
+            throw (NotAllowedMethodException(this->_responses[client_fd]));
     
     if (this->_responses[client_fd].isLocationToBeRedirected())
         throw (MustRedirectException(this->_responses[client_fd]));
@@ -1520,6 +1528,11 @@ Server::makeEnvpUsingHeaders(char** envp, int client_fd, int* idx)
         if (!(envp[(*idx)++] = ft::strdup("CONTENT_TYPE=" + it->second)))
             return (false);
     }
+    for (auto& kv : headers)
+    {
+        if (!(envp[(*idx)++] = ft::strdup("HTTP_" + kv.first + "=" + kv.second)))
+            return (false);
+    }
     return (true);
 }
 
@@ -1552,9 +1565,12 @@ Server::makeCGIEnvp(int client_fd)
     Log::trace("> makeCGIEnvp");
     int idx = 0;
     char** envp;
-    if (!(envp = (char **)malloc(sizeof(char *) * NUM_OF_META_VARIABLES)))
+    int num_of_envp;
+
+    num_of_envp = NUM_OF_META_VARIABLES + this->_requests[client_fd].getHeaders().size();
+    if (!(envp = (char **)malloc(sizeof(char *) * num_of_envp)))
         throw (InternalServerException(this->_responses[client_fd]));
-    for (int i = 0; i < NUM_OF_META_VARIABLES; i++)
+    for (int i = 0; i < num_of_envp; i++)
         envp[i] = nullptr;
     if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
         !this->makeEnvpUsingResponse(envp, client_fd, &idx) ||
