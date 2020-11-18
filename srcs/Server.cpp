@@ -469,8 +469,13 @@ Server::receiveRequestChunkedBody(int client_fd)
         }
         else if (request.getTargetChunkSize() == 0)
         {
-            if ((bytes= recv(client_fd, buf, 2, 0)) > 0)
+            if ((bytes= recv(client_fd, buf, 3, 0)) > 0)
             {
+                if (bytes != 2)
+                {
+                    request.setIsBufferLeft(true);
+                    throw (Request::RequestFormatException(request));
+                }
                 if (std::string(buf).compare("\r\n") == 0)
                     request.setReqInfo(ReqInfo::COMPLETE);
                 else
