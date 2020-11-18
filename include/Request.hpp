@@ -17,7 +17,6 @@ private:
     std::map<std::string, std::string> _headers;
     std::string _protocol;
     std::string _body;
-    std::string _chunked_body;
     std::string _status_code;
     ReqInfo _info;
     bool _is_buffer_left;
@@ -53,7 +52,6 @@ public:
     const std::string& getAuthType() const;
     const std::string& getRemoteUser() const;
     const std::string& getRemoteIdent() const;
-    const std::string& getChunkedBody() const;
     int getTargetChunkSize() const;
 
     /* Setter */
@@ -71,7 +69,6 @@ public:
     void setAuthType(const std::string& auth_type);
     void setRemoteUser(const std::string& remote_user);
     void setRemoteIdent(const std::string& remote_ident);
-    void setChunkedBody(const std::string& chunked_body);
     void setTargetChunkSize(const int target_size);
 
     /* Util */
@@ -93,7 +90,6 @@ public:
     void parseRequestWithoutBody(char* buf);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
-    void parseChunkedBody(const std::string& body);
 
     /* valid check */
     bool isValidLine(std::vector<std::string>& request_line);
@@ -107,7 +103,10 @@ public:
     bool isDuplicatedHeader(std::string& key);
 
     void appendBody(char* buf, int bytes);
-    void appendChunkedBody(char* buf, size_t bytes);
+
+    void parseTargetChunkSize(const std::string& chunk_size_line);
+    void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
+
     /* Exception */
 public:
     class RequestFormatException : public std::exception

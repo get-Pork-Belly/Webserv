@@ -20,7 +20,10 @@
 
 const int BUFFER_SIZE = 6553600;
 const int RECEIVE_SOCKET_STREAM_SIZE = 254560;
+const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
+const int DEFAULT_TARGET_CHUNK_SIZE = -1;
+const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
 
 class ServerManager;
@@ -131,8 +134,12 @@ public:
     bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
     bool isResponseAllSended(int fd) const;
 
-bool isCGIReadPipe(int fd) const;
-bool isCGIWritePipe(int fd) const;
+    bool isCGIReadPipe(int fd) const;
+    bool isCGIWritePipe(int fd) const;
+
+    void receiveChunkSize(int fd, size_t index_of_crlf);
+    void receiveChunkData(int client_fd, int receive_size, int target_chunk_size);
+    void receiveLastChunkData(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception
@@ -213,19 +220,24 @@ public:
     };
     class CannotPutOnDirectoryException : public SendErrorCodeToClientException
     {
-        private:
-            Response& _response;
-        public:
-            CannotPutOnDirectoryException(Response& response);
-            virtual const char* what() const throw();
+    private:
+        Response& _response;
+    public:
+        CannotPutOnDirectoryException(Response& response);
+        virtual const char* what() const throw();
     };
     class TargetResourceConflictException : public SendErrorCodeToClientException
     {
-        private:
-            Response& _response;
-        public:
-            TargetResourceConflictException(Response& response);
-            virtual const char* what() const throw();
+    private:
+        Response& _response;
+    public:
+        TargetResourceConflictException(Response& response);
+        virtual const char* what() const throw();
+    };
+    class UnchunkedErrorException : public SendErrorCodeToClientException
+    {
+    public:
+        virtual const char* what() const throw();
     };
     class NotAllowedMethodException : public SendErrorCodeToClientException
     {

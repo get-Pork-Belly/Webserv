@@ -294,6 +294,12 @@ Server::TargetResourceConflictException::what() const throw()
     return ("[CODE 409] Target resource conflict exception");
 }
 
+const char*
+Server::UnchunkedErrorException::what() const throw()
+{
+    return ("[CODE 901] Chunked request couldn't receive or Receive error");
+}
+
 Server::NotAllowedMethodException::NotAllowedMethodException(Response& response)
 : _response(response)
 {
@@ -353,13 +359,13 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
 {
     Log::trace("> readBufferUntilHeaders");
     int bytes;
-    Request& req = this->_requests[client_fd];
+    Request& request = this->_requests[client_fd];
 
     ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
     if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
-        req.parseRequestWithoutBody(buf);
+        request.parseRequestWithoutBody(buf);
     else if (bytes == 0)
-        throw (Request::RequestFormatException(req, "400"));
+        throw (Request::RequestFormatException(request, "400"));
     else
         throw (ReadErrorException());
     Log::trace("< readBufferUntilHeaders");
@@ -389,7 +395,7 @@ Server::receiveRequestWithoutBody(int client_fd)
     char buf[BUFFER_SIZE + 1];
     size_t header_end_pos = 0;
     std::string readed;
-    Request& req = this->_requests[client_fd];
+    Request& request = this->_requests[client_fd];
 
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
@@ -399,19 +405,19 @@ Server::receiveRequestWithoutBody(int client_fd)
         {
             if (static_cast<size_t>(bytes) == header_end_pos + 4)
             {
-                req.setIsBufferLeft(false);
-                req.setReqInfo(ReqInfo::COMPLETE);
+                request.setIsBufferLeft(false);
+                request.setReqInfo(ReqInfo::COMPLETE);
             }
             else
-                req.setIsBufferLeft(true);
+                request.setIsBufferLeft(true);
             this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
         }
         else if ((header_end_pos = readed.find("\r\n")) != std::string::npos)
             this->processIfHeadersNotFound(client_fd, readed);
         else
         {
-            req.setIsBufferLeft(true);
-            throw (Request::RequestFormatException(req, "400"));
+            request.setIsBufferLeft(true);
+            throw (Request::RequestFormatException(request, "400"));
         }
     }
     else if (bytes == 0)
@@ -427,22 +433,22 @@ Server::receiveRequestNormalBody(int client_fd)
     Log::trace("> receiveRequestNormalBody");
 
     int bytes;
-    Request& req = this->_requests[client_fd];
+    Request& request = this->_requests[client_fd];
 
-    int content_length = req.getContentLength();
+    int content_length = request.getContentLength();
     if (content_length > this->_limit_client_body_size)
-        throw (PayloadTooLargeException(req));
+        throw (PayloadTooLargeException(request));
 
     char buf[BUFFER_SIZE + 1];
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
-        req.appendBody(buf, bytes);
-        if (req.getBody().length() < static_cast<size_t>(content_length))
+        request.appendBody(buf, bytes);
+        if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;
         if (bytes < BUFFER_SIZE)
-            req.setReqInfo(ReqInfo::COMPLETE);
+            request.setReqInfo(ReqInfo::COMPLETE);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -458,13 +464,13 @@ Server::clearRequestBuffer(int client_fd)
     Log::trace("> clearRequestBuffer");
     int bytes;
     char buf[BUFFER_SIZE + 1];
-    Request& req = this->_requests[client_fd];
+    Request& request = this->_requests[client_fd];
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
         if (bytes == BUFFER_SIZE)
             return ;
-        req.setReqInfo(ReqInfo::COMPLETE);
+        request.setReqInfo(ReqInfo::COMPLETE);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -474,92 +480,107 @@ Server::clearRequestBuffer(int client_fd)
 }
 
 void
+Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
+{
+    Log::trace("> receiveChunkSize");
+
+    int bytes;
+    char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
+    Request& request = this->_requests[client_fd];
+
+    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
+        request.parseTargetChunkSize(buf);
+    else if (bytes == 0)
+        this->closeClientSocket(client_fd);
+    else
+        throw (UnchunkedErrorException());
+    Log::trace("< receiveChunkSize");
+}
+
+void
+Server::receiveChunkData(int client_fd, int receive_size, int target_chunk_size)
+{
+    Log::trace("> receiveChunkData");
+
+    int bytes;
+    char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
+    Request& request = this->_requests[client_fd];
+
+    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    if ((bytes = recv(client_fd, buf, receive_size, 0)) > 0)
+        request.parseChunkDataAndSetChunkSize(buf, bytes, target_chunk_size);
+    else if (bytes == 0)
+        this->closeClientSocket(client_fd);
+    else
+        throw (UnchunkedErrorException());
+
+    Log::trace("< receiveChunkData");
+}
+
+void
+Server::receiveLastChunkData(int client_fd)
+{
+    Log::trace("> receiveLastChunkData");
+
+    int bytes;
+    char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
+    Request& request = this->_requests[client_fd];
+
+    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    if ((bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0)) > 0)
+    {
+        if (bytes != CRLF_SIZE)
+        {
+            request.setIsBufferLeft(true);
+            throw (Request::RequestFormatException(request, "400"));
+        }
+        if (std::string(buf).compare("\r\n") == 0)
+            request.setReqInfo(ReqInfo::COMPLETE);
+        else
+            throw (Request::RequestFormatException(request, "400"));
+    }
+    else if (bytes == 0)
+        this->closeClientSocket(client_fd);
+    else
+        throw (UnchunkedErrorException());
+
+    Log::trace("< receiveLastChunkData");
+}
+
+void
 Server::receiveRequestChunkedBody(int client_fd)
 {
     Log::trace("> receiveRequestChunkedBody");
     int bytes;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
-    size_t index;
+    size_t index_of_crlf;
 
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, MSG_PEEK)) > 0)
     {
-        if (request.getTargetChunkSize() == -1)
+        if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
         {
-            if ((index = std::string(buf).find("\r\n")) != std::string::npos)
-            {
-                if ((bytes = recv(client_fd, buf, index + 2, 0)) > 0)
-                {
-                    int line_len = ft::stoiHex(std::string(buf).substr(0, index));
-                    request.setTargetChunkSize(line_len);
-                }
-                else if (bytes == 0)
-                    this->closeClientSocket(client_fd);
-                else
-                {
-                    //TODO: 에러 객체 변경하기
-                    throw (ReadErrorException());
-                }
-            }
-            //TODO: find 실패시 예외처리
+            if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
+                this->receiveChunkSize(client_fd, index_of_crlf);
+            else
+                throw (Request::RequestFormatException(request, "400"));
         }
         else if (request.getTargetChunkSize() == 0)
-        {
-            if ((bytes= recv(client_fd, buf, 3, 0)) > 0)
-            {
-                if (bytes != 2)
-                {
-                    request.setIsBufferLeft(true);
-                    throw (Request::RequestFormatException(request));
-                }
-                if (std::string(buf).compare("\r\n") == 0)
-                    request.setReqInfo(ReqInfo::COMPLETE);
-                else
-                    throw (Request::RequestFormatException(request));
-            }
-            else if (bytes == 0)
-                this->closeClientSocket(client_fd);
-            else
-            //TODO: 에러 객체 변경하기
-                throw (ReadErrorException());
-        }
+            this->receiveLastChunkData(client_fd);
         else
         {
             if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
-            {
-                if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
-                {
-                    request.setTargetChunkSize(-1);
-                    request.appendBody(buf, bytes - 2);
-                }
-                else if (bytes == 0)
-                    this->closeClientSocket(client_fd);
-                else
-                    //TODO: 에러 객체 변경하기
-                    throw (ReadErrorException());
-            }
+                this->receiveChunkData(client_fd, request.getTargetChunkSize() + CRLF_SIZE, DEFAULT_TARGET_CHUNK_SIZE);
             else
-            {
-                if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, 0)) > 0)
-                {
-                    request.setTargetChunkSize(request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
-                    request.appendBody(buf, bytes);
-                }
-                else if (bytes == 0)
-                    this->closeClientSocket(client_fd);
-                else
-                    //TODO: 에러 객체 변경하기
-                    throw (ReadErrorException());
-            }
-
+                this->receiveChunkData(client_fd, RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
         }
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        //TODO: 에러 객체 변경하기
-        throw (ReadErrorException());
+        throw (UnchunkedErrorException());
     Log::trace("< receiveRequestChunkedBody");
 }
 
@@ -828,10 +849,6 @@ Server::acceptClient()
     Log::trace("< acceptClient");
 }
 
-//TODO: URI가 CGI라면 Request Body를 바로 CGI한테 보내줘도 되지 않을까?
-//TODO: Chunked로 CGI왔을 때도 꼭 테스트 해보기....
-//TODO: CGI 요청이 chunked로 올 수도 있음. 이 때에는 content-Length로 비교할 수 없다.
-
 void
 Server::sendDataToCGI(int write_fd_to_cgi)
 {
@@ -862,21 +879,21 @@ Server::sendDataToCGI(int write_fd_to_cgi)
         return ;
     }
 
-    if (content_length < BUFFER_SIZE)
+    if (content_length < SEND_PIPE_STREAM_SIZE)
     {
         bytes = write(write_fd_to_cgi, body.c_str(), body.length());
         if (bytes > 0)
         {
-            if (bytes < BUFFER_SIZE)
+            if (bytes < SEND_PIPE_STREAM_SIZE)
                 this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
         }
     }
     else
     {
-        if (content_length - transfered_body_size < BUFFER_SIZE)
+        if (content_length - transfered_body_size < SEND_PIPE_STREAM_SIZE)
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
         else
-            bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], BUFFER_SIZE);
+            bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], SEND_PIPE_STREAM_SIZE);
         if (bytes > 0)
         {
             request.setTransferedBodySize(transfered_body_size + bytes);
@@ -891,8 +908,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     Log::trace("< sendDataToCGI");
 }
 
-//TODO: buf를 동적할당 구조 변경해주기 - 안했을 시 매우 큰 payload를 감당하지 못함.
-//NOTE: 멤버 변수로 만들어서 처음 딱 한번만 할당하고 마지막에 할당 해제 해주게 수정하기.
 void
 Server::receiveDataFromCGI(int read_fd_from_cgi)
 {
@@ -930,8 +945,6 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     Log::trace("< receiveDataFromCGI");
 }
 
-int wrote_bytes;
-
 void
 Server::putFileOnServer(int resource_fd)
 {
@@ -945,15 +958,11 @@ Server::putFileOnServer(int resource_fd)
     if (BUFFER_SIZE > remained)
     {
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), remained);
-        wrote_bytes += bytes;
-        std::cout<<"\033[1;30;43m"<<"wrote_bytes: "<<wrote_bytes<<"\033[0m"<<std::endl;
         this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
     }
     else
     {
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), BUFFER_SIZE);
-        wrote_bytes += bytes;
-        std::cout<<"\033[1;30;43m"<<"wrote_bytes: "<<wrote_bytes<<"\033[0m"<<std::endl;
         transfered_body_size += bytes;
         request.setTransferedBodySize(transfered_body_size);
     }
@@ -1194,10 +1203,7 @@ Server::readStaticResource(int resource_fd)
         }
     }
     else if (bytes == 0)
-    {
         this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-        // throw (ReadErrorException());
-    }
     else
     {
         this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
@@ -1218,11 +1224,7 @@ Server::openStaticResource(int client_fd)
     {
         resource_fd = open(path.c_str(), O_CREAT | O_RDWR, 0666);
         if (resource_fd < 0)
-        {
-            std::cout<<"\033[1;37;41m"<<"Open error in openStaticResource"<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;30;43m"<<"Path: "<<path.c_str()<<"\033[0m"<<std::endl;
             throw InternalServerException(this->_responses[client_fd]);
-        }
         // resource_fd = open("/Users/sanam/Desktop/Webserv/abcd", O_CREAT | O_RDWR, 0666);
         // 여기서 파일이 오픈되지 않는다는 건 상위 폴더 자체가 없다는 것.
         // 409 에러를 보내줄 수 있게 만들자
@@ -1320,7 +1322,6 @@ Server::checkAndSetResourceType(int client_fd)
 void
 Server::preprocessResponseBody(int client_fd, ResType& res_type)
 {
-    std::cout << "before " << std::endl;
     switch (res_type)
     {
     case ResType::AUTO_INDEX:
