@@ -13,6 +13,7 @@ http {
             root /Users/iwoo/Documents/Webserv/;
         }
         location /put_test {
+            limit_except PUT;
             root /Users/iwoo/Documents/Webserv/tests/put_test;
             cgi .bla;
             cgi_path /Users/iwoo/Documents/Webserv/cgi_tester;
@@ -23,8 +24,10 @@ http {
             root /Users/iwoo/Documents/Webserv/tests;
         }
         location /directory { 
-            limit_except GET;
+            limit_except GET POST;
             index youpi.bad_extension;
+            cgi .bla;
+            cgi_path /Users/iwoo/Documents/Webserv/cgi_tester;
             root /Users/iwoo/Documents/Webserv/YoupiBanane;
         }
     }
