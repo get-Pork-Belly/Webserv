@@ -246,14 +246,14 @@ Server::CgiMethodErrorException::what() const throw()
     return ("[CODE 400] CGI can handle only GET HEAD POST");
 }
 
-Server::CgiInternalServerException::CgiInternalServerException(Response& response)
+Server::InternalServerException::InternalServerException(Response& response)
 : _response(response)
 {
     this->_response.setStatusCode("500");
 }
 
 const char*
-Server::CgiInternalServerException::what() const throw()
+Server::InternalServerException::what() const throw()
 {
     return ("[CODE 500] Server Internal error");
 }
@@ -268,6 +268,30 @@ const char*
 Server::AuthenticateErrorException::what() const throw()
 {
     return ("");
+}
+
+Server::CannotPutOnDirectoryException::CannotPutOnDirectoryException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("409");
+}
+
+const char*
+Server::CannotPutOnDirectoryException::what() const throw()
+{
+    return ("[CODE 409] Cannot put on directory exception");
+}
+
+Server::TargetResourceConflictException::TargetResourceConflictException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("409");
+}
+
+const char*
+Server::TargetResourceConflictException::what() const throw()
+{
+    return ("[CODE 409] Target resource conflict exception");
 }
 
 /*============================================================================*/
@@ -466,6 +490,7 @@ Server::receiveRequestChunkedBody(int client_fd)
                     throw (ReadErrorException());
                 }
             }
+            //TODO: find 실패시 예외처리
         }
         else if (request.getTargetChunkSize() == 0)
         {
@@ -494,7 +519,7 @@ Server::receiveRequestChunkedBody(int client_fd)
                 if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
                 {
                     request.setTargetChunkSize(-1);
-                    request.appendBody(buf, bytes);
+                    request.appendBody(buf, bytes - 2);
                 }
                 else if (bytes == 0)
                     this->closeClientSocket(client_fd);
@@ -564,16 +589,16 @@ Server::makeResponseMessage(int client_fd)
     Log::trace("> makeResponseMessage");
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
+    const std::string& method = request.getMethod();
 
     std::string status_line;
     std::string headers;
 
-    if (response.getStatusCode().compare("200") != 0)
+    if (response.getStatusCode().front() != '2')
         response.setResourceType(ResType::ERROR_HTML);
 
     if (response.isRedirection(response.getStatusCode()) == false)
         response.makeBody(request);
-
     //TODO: 헤더와 스테이터스 라인은 처음에만 만들어 준다. 조건 만들자
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
@@ -583,23 +608,30 @@ Server::makeResponseMessage(int client_fd)
     switch (send_progress)
     {
     case SendProgress::FINISH:
+        if (method == "HEAD")
+            return ("");
         return (response.getTransmittingBody());
         break;
     case SendProgress::DEFAULT:
         response.setSendProgress(SendProgress::FINISH);
+        if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
+            return (status_line + headers);
         return (status_line + headers + response.getTransmittingBody());
         break;
     case SendProgress::CHUNK_START:
+        if (request.getMethod() == "HEAD")
+            return (status_line + headers);
         return (status_line + headers + response.getTransmittingBody());
         break;
     case SendProgress::CHUNK_PROGRESS:
+        if (request.getMethod() == "HEAD")
+            return ("");
         return (response.getTransmittingBody());
         break;
     default:
         break;
     }
     return (status_line + headers + response.getTransmittingBody());
-
 }
 
 bool
@@ -843,7 +875,7 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     if (bytes == 0)
         this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
     else if (bytes < 0)
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     Log::trace("< sendDataToCGI");
 }
 
@@ -881,9 +913,38 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
         response.setReceiveProgress(ReceiveProgress::FINISH);
     }
     else
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
 
     Log::trace("< receiveDataFromCGI");
+}
+
+int wrote_bytes;
+
+void
+Server::putFileOnServer(int resource_fd)
+{
+    int bytes;
+    int client_fd = this->_server_manager->getLinkedFdFromFdTable(resource_fd);
+    Request& request = this->_requests[client_fd];
+    const std::string& body = request.getBody();
+
+    int transfered_body_size = request.getTransferedBodySize();
+    int remained = body.length() - transfered_body_size;
+    if (BUFFER_SIZE > remained)
+    {
+        bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), remained);
+        wrote_bytes += bytes;
+        std::cout<<"\033[1;30;43m"<<"wrote_bytes: "<<wrote_bytes<<"\033[0m"<<std::endl;
+        this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+    }
+    else
+    {
+        bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), BUFFER_SIZE);
+        wrote_bytes += bytes;
+        std::cout<<"\033[1;30;43m"<<"wrote_bytes: "<<wrote_bytes<<"\033[0m"<<std::endl;
+        transfered_body_size += bytes;
+        request.setTransferedBodySize(transfered_body_size);
+    }
 }
 
 void
@@ -900,7 +961,7 @@ Server::run(int fd)
                 Log::trace(">>> write sequence");
                 if (this->isCGIWritePipe(fd))
                     this->sendDataToCGI(fd);
-                else
+                else if (this->isClientSocket(fd))
                 {
                     std::string response_message = this->makeResponseMessage(fd);
                     // TODO: sendResponse error handling
@@ -921,6 +982,8 @@ Server::run(int fd)
                         this->_responses[fd].init();
                     }
                 }
+                else
+                    this->putFileOnServer(fd);
                 Log::trace("<<< write sequence");
             }
             catch(const SendErrorCodeToClientException& e)
@@ -935,7 +998,6 @@ Server::run(int fd)
             }
             catch(const char* e)
             {
-                //TODO: 에러객체 던지도록 수정
                 std::cerr << e << '\n';
             }
         }
@@ -1086,7 +1148,6 @@ Server::findResourceAbsPath(int client_fd)
     Response& response = this->_responses[client_fd];
     response.setUriPath(path);
     response.setRouteAndLocationInfo(path, this);
-
     std::string root = response.getLocationInfo().at("root");
     if (response.getRoute() != "/")
         root.pop_back();
@@ -1140,7 +1201,28 @@ Server::openStaticResource(int client_fd)
     const std::string& path = this->_responses[client_fd].getResourceAbsPath();
     struct stat tmp;
 
-    if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
+    if (this->_requests[client_fd].getMethod() == "PUT")
+    {
+        resource_fd = open(path.c_str(), O_CREAT | O_RDWR, 0666);
+        if (resource_fd < 0)
+        {
+            std::cout<<"\033[1;37;41m"<<"Open error in openStaticResource"<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;30;43m"<<"Path: "<<path.c_str()<<"\033[0m"<<std::endl;
+            throw InternalServerException(this->_responses[client_fd]);
+        }
+        // resource_fd = open("/Users/sanam/Desktop/Webserv/abcd", O_CREAT | O_RDWR, 0666);
+        // 여기서 파일이 오픈되지 않는다는 건 상위 폴더 자체가 없다는 것.
+        // 409 에러를 보내줄 수 있게 만들자
+        fcntl(resource_fd, F_SETFL, O_NONBLOCK);
+        this->_server_manager->fdSet(resource_fd, FdSet::WRITE);
+        this->_server_manager->setResourceOnFdTable(resource_fd, client_fd);
+        this->_responses[client_fd].setResourceFd(resource_fd);
+        this->_server_manager->updateFdMax(resource_fd);
+        if ((fstat(resource_fd, &tmp)) == -1)
+            throw OpenResourceErrorException(this->_responses[client_fd], errno);
+        this->_responses[client_fd].setFileInfo(tmp);
+    }
+    else if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
     {
         fcntl(resource_fd, F_SETFL, O_NONBLOCK);
         this->_server_manager->fdSet(resource_fd, FdSet::READ);
@@ -1172,6 +1254,7 @@ Server::checkAndSetResourceType(int client_fd)
     Log::trace("> checkAndSetResourceType");
 
     Response& response = this->_responses[client_fd];
+    const std::string& method = this->_requests[client_fd].getMethod();
     response.findAndSetUriExtension();
     if (this->isCGIUri(client_fd, response.getUriExtension()))
     {
@@ -1184,6 +1267,8 @@ Server::checkAndSetResourceType(int client_fd)
     {
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
+        if (method.compare("PUT") == 0)
+            throw (CannotPutOnDirectoryException(response));
         if (this->isIndexFileExist(client_fd))
             response.setResourceType(ResType::INDEX_HTML);
         else
@@ -1197,11 +1282,23 @@ Server::checkAndSetResourceType(int client_fd)
     else
     {
         if (errno == ENOTDIR)
+        {
+            if (method == "PUT")
+                response.setStatusCode("204");
             response.setResourceType(ResType::STATIC_RESOURCE);
+        }
         else if (errno == EACCES)
             throw (CannotOpenDirectoryException(this->_responses[client_fd], "403", errno));
         else if (errno == ENOENT)
+        {
+            if (method == "PUT")
+            {
+                response.setResourceType(ResType::STATIC_RESOURCE);
+                response.setStatusCode("201");
+                return ;
+            }
             throw (CannotOpenDirectoryException(this->_responses[client_fd], "404", errno));
+        }
     }
 
     Log::trace("< checkAndSetResourceType");
@@ -1210,7 +1307,7 @@ Server::checkAndSetResourceType(int client_fd)
 void
 Server::preprocessResponseBody(int client_fd, ResType& res_type)
 {
-    Log::trace("> preprocessResponseBody");
+    std::cout << "before " << std::endl;
     switch (res_type)
     {
     case ResType::AUTO_INDEX:
@@ -1235,19 +1332,67 @@ Server::preprocessResponseBody(int client_fd, ResType& res_type)
 }
 
 void
+Server::deleteResourceOfUri(int client_fd, const std::string& path)
+{
+    Log::trace("> deleteResourceOfUri");
+
+    Response& response = this->_responses[client_fd];
+    DIR* dir_ptr;
+    if ((dir_ptr = opendir(path.c_str())) != NULL)
+    {
+        if (path.back() != '/')
+            throw (CannotOpenDirectoryException(response, "409", errno));
+        response.setDirectoryEntry(dir_ptr);
+        closedir(dir_ptr);
+        std::vector<std::string> directory_entry = ft::split(response.getDirectoryEntry(), " ");
+        for (std::string& entry : directory_entry)
+        {
+            if (entry != "./" && entry != "../")
+                this->deleteResourceOfUri(client_fd, path + entry);
+        }
+        if (rmdir(path.c_str()) == -1)
+            throw (InternalServerException(response));
+    }
+    else
+    {
+        if (errno == ENOTDIR) // dicrectory가 아니다ㅏ. -> unlink
+        {
+            if (unlink(path.c_str()) == -1)
+                throw (TargetResourceConflictException(response));
+        }
+        else
+            throw (CannotOpenDirectoryException(response, "404", errno));
+    }
+    response.setStatusCode("204");
+
+    Log::trace("< deleteResourceOfUri");
+}    
+
+void
 Server::processResponseBody(int client_fd)
 {
     Log::trace("> processResopnseBody");
 
-    std::cout<<"uri: "<<this->_requests[client_fd].getUri()<<std::endl;
     this->findResourceAbsPath(client_fd);
     this->checkAuthenticate(client_fd);
     if (this->_responses[client_fd].isLocationToBeRedirected())
         throw (MustRedirectException(this->_responses[client_fd]));
+    if (this->_requests[client_fd].getMethod().compare("DELETE") == 0)
+    {
+        this->deleteResourceOfUri(client_fd, this->_responses[client_fd].getResourceAbsPath());
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+        return ;
+    }
     this->checkAndSetResourceType(client_fd);
+    if (this->_requests[client_fd].getMethod().compare("OPTIONS") == 0)
+    {
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+        return ;
+    }
     if (this->_responses[client_fd].getResourceType() == ResType::INDEX_HTML)
         this->setResourceAbsPathAsIndex(client_fd);
     ResType res_type = this->_responses[client_fd].getResourceType();
+
     this->preprocessResponseBody(client_fd, res_type);
     Log::trace("< processResopnseBody");
 }
@@ -1261,9 +1406,9 @@ Server::openCGIPipe(int client_fd)
     int pipe2[2];
 
     if (pipe(pipe1) < 0)
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     if (pipe(pipe2) < 0)
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
 
     int stdin_of_cgi = pipe1[0];
     int stdout_of_cgi = pipe2[1];
@@ -1379,7 +1524,7 @@ Server::makeCGIEnvp(int client_fd)
     int idx = 0;
     char** envp;
     if (!(envp = (char **)malloc(sizeof(char *) * NUM_OF_META_VARIABLES)))
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     for (int i = 0; i < NUM_OF_META_VARIABLES; i++)
         envp[i] = nullptr;
     if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
@@ -1388,7 +1533,7 @@ Server::makeCGIEnvp(int client_fd)
         !this->makeEnvpUsingEtc(envp, client_fd, &idx))
     {
         ft::doubleFree(&envp);
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     }
     return (envp);
 }
@@ -1401,7 +1546,7 @@ Server::makeCGIArgv(int client_fd)
     Response& response = this->_responses[client_fd];
 
     if (!(argv = (char **)malloc(sizeof(char *) * 3)))
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     const location_info& location_info =
             this->getLocationConfig().at(this->_responses[client_fd].getRoute());
     for (int i = 0; i < 3; i++)
@@ -1410,17 +1555,17 @@ Server::makeCGIArgv(int client_fd)
     if (it == location_info.end())
     {
         ft::doubleFree(&argv);
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     }
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
     {
         ft::doubleFree(&argv);
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     }
     if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
     {
         ft::doubleFree(&argv);
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     }
     Log::trace("< makeCGIArgv");
     return (argv);
@@ -1450,24 +1595,24 @@ Server::forkAndExecuteCGI(int client_fd)
     if (!(argv = this->makeCGIArgv(client_fd)))
     {
         ft::doubleFree(&argv);
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     }
     if (!(envp = this->makeCGIEnvp(client_fd)))
     {
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     }
     if ((pid = fork()) < 0)
-        throw (CgiInternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(this->_responses[client_fd]));
     else if (pid == 0)
     {
         close(response.getWriteFdToCGI());
         close(response.getReadFdFromCGI());
         if (dup2(stdin_of_cgi, 0) < 0)
-            throw (CgiInternalServerException(this->_responses[client_fd]));
+            throw (InternalServerException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
-            throw (CgiInternalServerException(this->_responses[client_fd]));
+            throw (InternalServerException(this->_responses[client_fd]));
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
         exit(ret);
