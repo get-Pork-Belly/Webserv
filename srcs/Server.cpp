@@ -454,10 +454,7 @@ Server::receiveRequestChunkedBody(int client_fd)
             if ((index = std::string(buf).find("\r\n")) != std::string::npos)
             {
                 if ((bytes = recv(client_fd, buf, index + 2, 0)) > 0)
-                {
-                    int line_len = ft::stoiHex(std::string(buf).substr(0, index));
-                    request.setTargetChunkSize(line_len);
-                }
+                    request.parseTargetChunkSize(buf);
                 else if (bytes == 0)
                     this->closeClientSocket(client_fd);
                 else
@@ -465,6 +462,10 @@ Server::receiveRequestChunkedBody(int client_fd)
                     //TODO: 에러 객체 변경하기
                     throw (ReadErrorException());
                 }
+            }
+            else
+            {
+                //TODO: 예외처리하기
             }
         }
         else if (request.getTargetChunkSize() == 0)
@@ -492,10 +493,7 @@ Server::receiveRequestChunkedBody(int client_fd)
             if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
             {
                 if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
-                {
-                    request.setTargetChunkSize(-1);
-                    request.appendBody(buf, bytes);
-                }
+                    request.parseChunkDataAndSetChunkSize(buf, bytes, -1);
                 else if (bytes == 0)
                     this->closeClientSocket(client_fd);
                 else
@@ -505,10 +503,7 @@ Server::receiveRequestChunkedBody(int client_fd)
             else
             {
                 if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, 0)) > 0)
-                {
-                    request.setTargetChunkSize(request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
-                    request.appendBody(buf, bytes);
-                }
+                    request.parseChunkDataAndSetChunkSize(buf, bytes, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
                 else if (bytes == 0)
                     this->closeClientSocket(client_fd);
                 else
