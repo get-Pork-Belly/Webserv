@@ -506,7 +506,6 @@ Server::makeResponseMessage(int client_fd)
 
     if (response.isRedirection(response.getStatusCode()) == false)
         response.makeBody(request);
-
     //TODO: 헤더와 스테이터스 라인은 처음에만 만들어 준다. 조건 만들자
     headers = response.makeHeaders(request);
     status_line = response.makeStatusLine();
@@ -522,9 +521,8 @@ Server::makeResponseMessage(int client_fd)
         break;
     case SendProgress::DEFAULT:
         response.setSendProgress(SendProgress::FINISH);
-        if (method == "HEAD" || method == "PUT")
+        if (method == "HEAD" || (method == "PUT" && response.getStatusCode().front() == '2'))
             return (status_line + headers);
-        response.setSendProgress(SendProgress::FINISH);
         return (status_line + headers + response.getTransmittingBody());
         break;
     case SendProgress::CHUNK_START:
@@ -541,7 +539,6 @@ Server::makeResponseMessage(int client_fd)
         break;
     }
     return (status_line + headers + response.getTransmittingBody());
-
 }
 
 bool
@@ -1114,6 +1111,8 @@ Server::openStaticResource(int client_fd)
     if (this->_requests[client_fd].getMethod() == "PUT")
     {
         resource_fd = open(path.c_str(), O_CREAT | O_RDWR, 0666);
+        if (resource_fd < 0)
+            throw CgiInternalServerException(this->_responses[client_fd]);
         // resource_fd = open("/Users/sanam/Desktop/Webserv/abcd", O_CREAT | O_RDWR, 0666);
         // 여기서 파일이 오픈되지 않는다는 건 상위 폴더 자체가 없다는 것.
         // 409 에러를 보내줄 수 있게 만들자

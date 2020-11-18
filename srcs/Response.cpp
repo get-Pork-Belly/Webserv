@@ -710,7 +710,9 @@ void
 Response::appendLocationHeader(std::string& headers, const Request& request)
 {
     headers += "Location: ";
-    if (this->getHeaders().find("Location") != this->getHeaders().end())
+    if (this->getStatusCode() == "201")
+        headers += this->getResourceAbsPath();
+    else if (this->getHeaders().find("Location") != this->getHeaders().end())
         headers += this->getHeaders().at("Location");
     else
         headers += this->getRedirectUri(request);
@@ -780,8 +782,17 @@ Response::makeHeaders(Request& request)
         else
             this->appendContentLengthHeader(headers);
     }
+    else if (this->getStatusCode().front() != '2')
+    {
+        this->appendContentLanguageHeader(headers);
+        this->appendContentTypeHeader(headers);
+        if (this->isNeedToBeChunkedBody(request))
+            this->appendTransferEncodingHeader(headers);
+        else
+            this->appendContentLengthHeader(headers);
+    }
     else
-        headers += "Content_Length: 0\r\n";
+        headers += "Content-Length: 0\r\n";
 
     // Log::printLocationInfo(this->_location_info);
 
