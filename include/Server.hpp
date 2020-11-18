@@ -142,12 +142,12 @@ public:
     void receiveLastChunkData(int fd);
 
 public:
-    class PayloadTooLargeException : public std::exception
+    class PayloadTooLargeException : public SendErrorCodeToClientException
     {
     private:
-        Request& _request;
+        Response& _response;
     public:
-        PayloadTooLargeException(Request& request);
+        PayloadTooLargeException(Response& response);
         virtual const char* what() const throw();
     };
     class ReadErrorException : public std::exception
