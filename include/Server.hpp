@@ -20,6 +20,7 @@
 
 const int BUFFER_SIZE = 6553600;
 const int RECEIVE_SOCKET_STREAM_SIZE = 254560;
+const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
 const int NUM_OF_META_VARIABLES = 18;
 
@@ -131,6 +132,9 @@ public:
 
     bool isCGIReadPipe(int fd) const;
     bool isCGIWritePipe(int fd) const;
+
+    void receiveChunkSize(int fd);
+    void receiveChunkData(int client_fd, int receive_size, int target_chunk_size);
 
 public:
     class PayloadTooLargeException : public std::exception
