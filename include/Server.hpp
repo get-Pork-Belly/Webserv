@@ -137,6 +137,7 @@ public:
 
     void receiveChunkSize(int fd, size_t index_of_crlf);
     void receiveChunkData(int client_fd, int receive_size, int target_chunk_size);
+    void receiveLastChunkData(int fd);
 
 public:
     class PayloadTooLargeException : public std::exception

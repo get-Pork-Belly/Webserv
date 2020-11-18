@@ -505,6 +505,37 @@ Server::receiveChunkData(int client_fd, int receive_size, int target_chunk_size)
 }
 
 void
+Server::receiveLastChunkData(int client_fd)
+{
+    Log::trace("> receiveLastChunkData");
+
+    int bytes;
+    char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
+    Request& request = this->_requests[client_fd];
+
+    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    if ((bytes = recv(client_fd, buf, 3, 0)) > 0)
+    {
+        if (bytes != 2)
+        {
+            request.setIsBufferLeft(true);
+            throw (Request::RequestFormatException(request));
+        }
+        if (std::string(buf).compare("\r\n") == 0)
+            request.setReqInfo(ReqInfo::COMPLETE);
+        else
+            throw (Request::RequestFormatException(request));
+    }
+    else if (bytes == 0)
+        this->closeClientSocket(client_fd);
+    else
+    //TODO: 에러 객체 변경하기
+        throw (ReadErrorException());
+
+    Log::trace("< receiveLastChunkData");
+}
+
+void
 Server::receiveRequestChunkedBody(int client_fd)
 {
     Log::trace("> receiveRequestChunkedBody");
@@ -522,30 +553,11 @@ Server::receiveRequestChunkedBody(int client_fd)
                 this->receiveChunkSize(client_fd, index_of_crlf);
             else
             {
-                //TODO: 예외처리하기
-            }
             //TODO: find 실패시 예외처리
+            }
         }
         else if (request.getTargetChunkSize() == 0)
-        {
-            if ((bytes= recv(client_fd, buf, 3, 0)) > 0)
-            {
-                if (bytes != 2)
-                {
-                    request.setIsBufferLeft(true);
-                    throw (Request::RequestFormatException(request));
-                }
-                if (std::string(buf).compare("\r\n") == 0)
-                    request.setReqInfo(ReqInfo::COMPLETE);
-                else
-                    throw (Request::RequestFormatException(request));
-            }
-            else if (bytes == 0)
-                this->closeClientSocket(client_fd);
-            else
-            //TODO: 에러 객체 변경하기
-                throw (ReadErrorException());
-        }
+            this->receiveLastChunkData(client_fd);
         else
         {
             if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
@@ -1311,7 +1323,6 @@ Server::checkAndSetResourceType(int client_fd)
 void
 Server::preprocessResponseBody(int client_fd, ResType& res_type)
 {
-    std::cout << "before " << std::endl;
     switch (res_type)
     {
     case ResType::AUTO_INDEX:
