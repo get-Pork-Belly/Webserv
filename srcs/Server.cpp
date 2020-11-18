@@ -862,6 +862,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
 
     char buf[BUFFER_SIZE + 1];
     ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+    //TODO: usleep 필요 여부와 적정 수치 조정 필요함.
     // usleep(1000);
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
     if (bytes > 0)
