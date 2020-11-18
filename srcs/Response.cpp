@@ -773,26 +773,17 @@ Response::makeHeaders(Request& request)
     this->appendServerHeader(headers);
 
     // Entity headers
-    if (method != "PUT")
-    {
-        this->appendContentLanguageHeader(headers);
-        this->appendContentTypeHeader(headers);
-        if (this->isNeedToBeChunkedBody(request))
-            this->appendTransferEncodingHeader(headers);
-        else
-            this->appendContentLengthHeader(headers);
-    }
-    else if (this->getStatusCode().front() != '2')
-    {
-        this->appendContentLanguageHeader(headers);
-        this->appendContentTypeHeader(headers);
-        if (this->isNeedToBeChunkedBody(request))
-            this->appendTransferEncodingHeader(headers);
-        else
-            this->appendContentLengthHeader(headers);
-    }
-    else
+    if (method == "PUT" && this->getStatusCode().front() == '2')
         headers += "Content-Length: 0\r\n";
+    else
+    {
+        this->appendContentLanguageHeader(headers);
+        this->appendContentTypeHeader(headers);
+        if (this->isNeedToBeChunkedBody(request))
+            this->appendTransferEncodingHeader(headers);
+        else
+            this->appendContentLengthHeader(headers);
+    }
 
     // Log::printLocationInfo(this->_location_info);
 
