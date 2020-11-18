@@ -19,9 +19,10 @@ http {
             cgi_path /Users/iwoo/Documents/Webserv/cgi_tester;
         }
         location /post_body {
-            limit_body_size 100;
+            limit_client_body_size 100;
             limit_except POST;
-            root /Users/iwoo/Documents/Webserv/tests;
+            index index.html;
+            root /Users/iwoo/Documents/Webserv/tests/folder;
         }
         location /directory { 
             limit_except GET POST;
