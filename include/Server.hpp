@@ -218,19 +218,24 @@ public:
     };
     class CannotPutOnDirectoryException : public SendErrorCodeToClientException
     {
-        private:
-            Response& _response;
-        public:
-            CannotPutOnDirectoryException(Response& response);
-            virtual const char* what() const throw();
+    private:
+        Response& _response;
+    public:
+        CannotPutOnDirectoryException(Response& response);
+        virtual const char* what() const throw();
     };
     class TargetResourceConflictException : public SendErrorCodeToClientException
     {
-        private:
-            Response& _response;
-        public:
-            TargetResourceConflictException(Response& response);
-            virtual const char* what() const throw();
+    private:
+        Response& _response;
+    public:
+        TargetResourceConflictException(Response& response);
+        virtual const char* what() const throw();
+    };
+    class UnchunkedErrorException : public SendErrorCodeToClientException
+    {
+    public:
+        virtual const char* what() const throw();
     };
 };
 

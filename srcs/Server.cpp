@@ -294,6 +294,12 @@ Server::TargetResourceConflictException::what() const throw()
     return ("[CODE 409] Target resource conflict exception");
 }
 
+const char*
+Server::UnchunkedErrorException::what() const throw()
+{
+    return ("[CODE 901] Chunked request couldn't receive or Receive error");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
@@ -476,10 +482,7 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-    {
-        //TODO: 에러 객체 변경하기
-        throw (ReadErrorException());
-    }
+        throw (UnchunkedErrorException());
     Log::trace("< receiveChunkSize");
 }
 
@@ -498,8 +501,7 @@ Server::receiveChunkData(int client_fd, int receive_size, int target_chunk_size)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        //TODO: 에러 객체 변경하기
-        throw (ReadErrorException());
+        throw (UnchunkedErrorException());
 
     Log::trace("< receiveChunkData");
 }
@@ -519,18 +521,17 @@ Server::receiveLastChunkData(int client_fd)
         if (bytes != 2)
         {
             request.setIsBufferLeft(true);
-            throw (Request::RequestFormatException(request));
+            throw (Request::RequestFormatException(request, "400"));
         }
         if (std::string(buf).compare("\r\n") == 0)
             request.setReqInfo(ReqInfo::COMPLETE);
         else
-            throw (Request::RequestFormatException(request));
+            throw (Request::RequestFormatException(request, "400"));
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-    //TODO: 에러 객체 변경하기
-        throw (ReadErrorException());
+        throw (UnchunkedErrorException());
 
     Log::trace("< receiveLastChunkData");
 }
@@ -552,9 +553,7 @@ Server::receiveRequestChunkedBody(int client_fd)
             if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
                 this->receiveChunkSize(client_fd, index_of_crlf);
             else
-            {
-            //TODO: find 실패시 예외처리
-            }
+                throw (Request::RequestFormatException(request, "400"));
         }
         else if (request.getTargetChunkSize() == 0)
             this->receiveLastChunkData(client_fd);
@@ -569,8 +568,7 @@ Server::receiveRequestChunkedBody(int client_fd)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        //TODO: 에러 객체 변경하기
-        throw (ReadErrorException());
+        throw (UnchunkedErrorException());
     Log::trace("< receiveRequestChunkedBody");
 }
 
