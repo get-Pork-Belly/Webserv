@@ -108,6 +108,9 @@ public:
 
     void appendBody(char* buf, int bytes);
     void appendChunkedBody(char* buf, size_t bytes);
+
+    void parseTargetChunkSize(const std::string& chunk_size_line);
+
     /* Exception */
 public:
     class RequestFormatException : public std::exception

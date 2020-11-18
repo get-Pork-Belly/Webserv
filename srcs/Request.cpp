@@ -416,6 +416,17 @@ Request::parseHeaders(std::string& req_message)
 }
 
 void
+Request::parseTargetChunkSize(const std::string& chunk_size_line)
+{
+    int target_chunk_size;
+    
+    target_chunk_size = ft::stoiHex(chunk_size_line);
+    if (target_chunk_size == -1)
+        throw (RequestFormatException(*this));
+    this->setTargetChunkSize(target_chunk_size);
+}
+
+void
 Request::parseChunkedBody(const std::string& body)
 {
     int line_len = 0;
