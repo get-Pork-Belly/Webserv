@@ -282,6 +282,17 @@ Server::CannotPutOnDirectoryException::what() const throw()
     return ("[CODE 409] Cannot put on directory exception");
 }
 
+Server::TargetResourceConflictException::TargetResourceConflictException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("409");
+}
+
+const char*
+Server::TargetResourceConflictException::what() const throw()
+{
+    return ("[CODE 409] Target resource conflict exception");
+}
 
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
@@ -1324,37 +1335,36 @@ void
 Server::deleteResourceOfUri(int client_fd, const std::string& path)
 {
     Log::trace("> deleteResourceOfUri");
-    // path: folder/
-    // entry: a.txt  b.txt c_folder
-    // folder/a.txt folder/b.txt folder/c_folder/
-    std::cout<<"\033[1;30;43m"<<"path: "<< path<<"\033[0m"<<std::endl;
+
     Response& response = this->_responses[client_fd];
     DIR* dir_ptr;
     if ((dir_ptr = opendir(path.c_str())) != NULL)
     {
+        if (path.back() != '/')
+            throw (CannotOpenDirectoryException(response, "409", errno));
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
         std::vector<std::string> directory_entry = ft::split(response.getDirectoryEntry(), " ");
         for (std::string& entry : directory_entry)
         {
-            std::cout<<"entry: "<<entry<<std::endl;
             if (entry != "./" && entry != "../")
                 this->deleteResourceOfUri(client_fd, path + entry);
         }
-        rmdir(path.c_str());
+        if (rmdir(path.c_str()) == -1)
+            throw (InternalServerException(response));
     }
     else
     {
         if (errno == ENOTDIR) // dicrectory가 아니다ㅏ. -> unlink
         {
-            if (unlink(path.c_str()) == -1) // unlink 실패시엔 500 에러. 권한이 없는 경우에도 500에러
-                throw (InternalServerException(response));
+            if (unlink(path.c_str()) == -1)
+                throw (TargetResourceConflictException(response));
         }
-        else if (errno == EACCES) // 접근권한 x error 409
-            throw (CannotOpenDirectoryException(response, "403", errno));
-        else if (errno == ENOENT) // URI가 존재하지 않는다 --> 404
+        else
             throw (CannotOpenDirectoryException(response, "404", errno));
     }
+    response.setStatusCode("204");
+
     Log::trace("< deleteResourceOfUri");
 }    
 
