@@ -22,6 +22,8 @@ const int BUFFER_SIZE = 6553600;
 const int RECEIVE_SOCKET_STREAM_SIZE = 254560;
 const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
+const int DEFAULT_TARGET_CHUNK_SIZE = -1;
+const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
 
 class ServerManager;

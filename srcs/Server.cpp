@@ -477,7 +477,7 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
     Request& request = this->_requests[client_fd];
 
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
-    if ((bytes = recv(client_fd, buf, index_of_crlf + 2, 0)) > 0)
+    if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
         request.parseTargetChunkSize(buf);
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -516,9 +516,9 @@ Server::receiveLastChunkData(int client_fd)
     Request& request = this->_requests[client_fd];
 
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
-    if ((bytes = recv(client_fd, buf, 3, 0)) > 0)
+    if ((bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0)) > 0)
     {
-        if (bytes != 2)
+        if (bytes != CRLF_SIZE)
         {
             request.setIsBufferLeft(true);
             throw (Request::RequestFormatException(request, "400"));
@@ -548,7 +548,7 @@ Server::receiveRequestChunkedBody(int client_fd)
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, MSG_PEEK)) > 0)
     {
-        if (request.getTargetChunkSize() == -1)
+        if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
         {
             if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
                 this->receiveChunkSize(client_fd, index_of_crlf);
@@ -560,7 +560,7 @@ Server::receiveRequestChunkedBody(int client_fd)
         else
         {
             if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
-                this->receiveChunkData(client_fd, request.getTargetChunkSize() + 2, -1);
+                this->receiveChunkData(client_fd, request.getTargetChunkSize() + CRLF_SIZE, DEFAULT_TARGET_CHUNK_SIZE);
             else
                 this->receiveChunkData(client_fd, RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
         }
