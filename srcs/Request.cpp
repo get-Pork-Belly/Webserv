@@ -427,6 +427,16 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
 }
 
 void
+Request::parseChunkData(char* buf, size_t bytes, int target_chunk_size)
+{
+    this->setTargetChunkSize(target_chunk_size);
+    if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
+        this->appendBody(buf, bytes);
+    else
+        this->appendBody(buf, bytes - 2);
+}
+
+void
 Request::parseChunkedBody(const std::string& body)
 {
     int line_len = 0;
