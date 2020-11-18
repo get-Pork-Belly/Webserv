@@ -549,9 +549,18 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
         }
         if (index == 0)
         {
-            this->_route = "/";
-            this->_location_info = location_config["/"];
-            break ;
+            if (location_config.find(uri) != location_config.end())
+            {
+                this->_route = uri;
+                this->_location_info = location_config[this->_route];
+                break ;
+            }
+            else
+            {
+                this->_route = "/";
+                this->_location_info = location_config["/"];
+                break ;
+            }
         }
     }
     Log::trace("< setRouteAndLocationInfo");
