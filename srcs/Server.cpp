@@ -317,13 +317,13 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
 {
     Log::trace("> readBufferUntilHeaders");
     int bytes;
-    Request& req = this->_requests[client_fd];
+    Request& request = this->_requests[client_fd];
 
     ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
     if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
-        req.parseRequestWithoutBody(buf);
+        request.parseRequestWithoutBody(buf);
     else if (bytes == 0)
-        throw (Request::RequestFormatException(req, "400"));
+        throw (Request::RequestFormatException(request, "400"));
     else
         throw (ReadErrorException());
     Log::trace("< readBufferUntilHeaders");
@@ -353,7 +353,7 @@ Server::receiveRequestWithoutBody(int client_fd)
     char buf[BUFFER_SIZE + 1];
     size_t header_end_pos = 0;
     std::string readed;
-    Request& req = this->_requests[client_fd];
+    Request& request = this->_requests[client_fd];
 
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
@@ -363,19 +363,19 @@ Server::receiveRequestWithoutBody(int client_fd)
         {
             if (static_cast<size_t>(bytes) == header_end_pos + 4)
             {
-                req.setIsBufferLeft(false);
-                req.setReqInfo(ReqInfo::COMPLETE);
+                request.setIsBufferLeft(false);
+                request.setReqInfo(ReqInfo::COMPLETE);
             }
             else
-                req.setIsBufferLeft(true);
+                request.setIsBufferLeft(true);
             this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
         }
         else if ((header_end_pos = readed.find("\r\n")) != std::string::npos)
             this->processIfHeadersNotFound(client_fd, readed);
         else
         {
-            req.setIsBufferLeft(true);
-            throw (Request::RequestFormatException(req, "400"));
+            request.setIsBufferLeft(true);
+            throw (Request::RequestFormatException(request, "400"));
         }
     }
     else if (bytes == 0)
@@ -391,22 +391,22 @@ Server::receiveRequestNormalBody(int client_fd)
     Log::trace("> receiveRequestNormalBody");
 
     int bytes;
-    Request& req = this->_requests[client_fd];
+    Request& request = this->_requests[client_fd];
 
-    int content_length = req.getContentLength();
+    int content_length = request.getContentLength();
     if (content_length > this->_limit_client_body_size)
-        throw (PayloadTooLargeException(req));
+        throw (PayloadTooLargeException(request));
 
     char buf[BUFFER_SIZE + 1];
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
-        req.appendBody(buf, bytes);
-        if (req.getBody().length() < static_cast<size_t>(content_length))
+        request.appendBody(buf, bytes);
+        if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;
         if (bytes < BUFFER_SIZE)
-            req.setReqInfo(ReqInfo::COMPLETE);
+            request.setReqInfo(ReqInfo::COMPLETE);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -422,13 +422,13 @@ Server::clearRequestBuffer(int client_fd)
     Log::trace("> clearRequestBuffer");
     int bytes;
     char buf[BUFFER_SIZE + 1];
-    Request& req = this->_requests[client_fd];
+    Request& request = this->_requests[client_fd];
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
         if (bytes == BUFFER_SIZE)
             return ;
-        req.setReqInfo(ReqInfo::COMPLETE);
+        request.setReqInfo(ReqInfo::COMPLETE);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
