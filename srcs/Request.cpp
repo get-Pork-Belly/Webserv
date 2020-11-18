@@ -355,6 +355,9 @@ Request::parseRequestWithoutBody(char* buf)
     {
         if (this->parseHeaders(line) == false)
             throw (RequestFormatException(*this));
+        std::cout<<"\033[1;37;41m"<<"==================parseHeaders complete"<<"\033[0m"<<std::endl;
+        std::cout<<*this<<std::endl;
+        std::cout<<"\033[1;37;41m"<<"==================parseHeaders complete"<<"\033[0m"<<std::endl;
     }
     this->updateReqInfo();
     Log::trace("< parseRequestWithoutBody");
@@ -402,7 +405,7 @@ Request::parseHeaders(std::string& req_message)
     return (true);
 }
 
-int received;
+// int received;
 
 void
 Request::parseTargetChunkSize(const std::string& chunk_size_line)
@@ -411,8 +414,8 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
 
     target_chunk_size = ft::stoiHex(chunk_size_line);
     
-    received += target_chunk_size;
-    std::cout<<"\033[1;30;43m"<<"received: "<<received<<"\033[0m"<<std::endl;
+    // received += target_chunk_size;
+    // std::cout<<"\033[1;30;43m"<<"received: "<<received<<"\033[0m"<<std::endl;
     if (target_chunk_size == -1)
         throw (RequestFormatException(*this));
     this->setTargetChunkSize(target_chunk_size);
