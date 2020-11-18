@@ -270,6 +270,19 @@ Server::AuthenticateErrorException::what() const throw()
     return ("");
 }
 
+Server::CannotPutOnDirectoryException::CannotPutOnDirectoryException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("409");
+}
+
+const char*
+Server::CannotPutOnDirectoryException::what() const throw()
+{
+    return ("[CODE 409] Cannot put on directory exception");
+}
+
+
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
@@ -1170,6 +1183,8 @@ Server::checkAndSetResourceType(int client_fd)
     {
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
+        if (method.compare("PUT") == 0)
+            throw (CannotPutOnDirectoryException(response));
         if (this->isIndexFileExist(client_fd))
             response.setResourceType(ResType::INDEX_HTML);
         else

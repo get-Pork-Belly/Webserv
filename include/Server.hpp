@@ -209,6 +209,14 @@ public:
         AuthenticateErrorException(Response& res, const std::string& status_code);
         virtual const char* what() const throw();
     };
+    class CannotPutOnDirectoryException : public SendErrorCodeToClientException
+    {
+        private:
+            Response& _response;
+        public:
+            CannotPutOnDirectoryException(Response& response);
+            virtual const char* what() const throw();
+    };
 };
 
 #endif
