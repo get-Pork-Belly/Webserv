@@ -484,16 +484,33 @@ Server::receiveRequestChunkedBody(int client_fd)
         }
         else
         {
-            if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
+            if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
             {
-                request.setTargetChunkSize(-1);
-                request.appendBody(buf, bytes);
+                if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
+                {
+                    request.setTargetChunkSize(-1);
+                    request.appendBody(buf, bytes);
+                }
+                else if (bytes == 0)
+                    this->closeClientSocket(client_fd);
+                else
+                    //TODO: 에러 객체 변경하기
+                    throw (ReadErrorException());
             }
-            else if (bytes == 0)
-                this->closeClientSocket(client_fd);
             else
-                //TODO: 에러 객체 변경하기
-                throw (ReadErrorException());
+            {
+                if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, 0)) > 0)
+                {
+                    request.setTargetChunkSize(request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
+                    request.appendBody(buf, bytes);
+                }
+                else if (bytes == 0)
+                    this->closeClientSocket(client_fd);
+                else
+                    //TODO: 에러 객체 변경하기
+                    throw (ReadErrorException());
+            }
+
         }
     }
     else if (bytes == 0)
