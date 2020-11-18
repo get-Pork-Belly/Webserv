@@ -12,14 +12,14 @@
 //TODO: target_chunk_size 상수화 하기
 Request::Request()
 : _method(""), _uri(""), _version(""),
-_protocol(""), _body(""), _chunked_body(""), _status_code("200"),
+_protocol(""), _body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0), _target_chunk_size(-1) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
 _version(other._version), _headers(other._headers),
-_protocol(other._protocol), _body(other._body), _chunked_body(other._chunked_body),
+_protocol(other._protocol), _body(other._body),
 _status_code(other._status_code), _info(other._info),
 _is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
 _transfered_body_size(other._transfered_body_size), _target_chunk_size(other._target_chunk_size) {}
@@ -33,7 +33,6 @@ Request::operator=(const Request& other)
     this->_headers = other._headers;
     this->_protocol = other._protocol;
     this->_body = other._body;
-    this->_chunked_body = other._chunked_body;
     this->_status_code = other._status_code;
     this->_info = other._info;
     this->_is_buffer_left = other._is_buffer_left;
@@ -137,12 +136,6 @@ Request::getRemoteIdent() const
     return (this->_remote_ident);
 }
 
-const std::string&
-Request::getChunkedBody() const
-{
-    return (this->_chunked_body);
-}
-
 int
 Request::getTargetChunkSize() const
 {
@@ -235,12 +228,6 @@ void
 Request::setRemoteIdent(const std::string& remote_ident)
 {
     this->_remote_ident = remote_ident;
-}
-
-void
-Request::setChunkedBody(const std::string& chunked_body)
-{
-    this->_chunked_body = chunked_body;
 }
 
 void
@@ -419,7 +406,7 @@ void
 Request::parseTargetChunkSize(const std::string& chunk_size_line)
 {
     int target_chunk_size;
-    
+
     target_chunk_size = ft::stoiHex(chunk_size_line);
     if (target_chunk_size == -1)
         throw (RequestFormatException(*this));
@@ -437,59 +424,9 @@ Request::parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_
 }
 
 void
-Request::parseChunkedBody(const std::string& body)
-{
-    int line_len = 0;
-    std::string line;
-    std::string req_message(body);
-
-    std::cout << "\033[31m\033[01m";
-    std::cout << "===============================================" << std::endl;
-    std::cout << "in parseChunkedBody" << std::endl;
-    std::cout << "===============================================" << std::endl;
-    std::cout << "\033[0m";
-
-    if (req_message.find("\r\n") == std::string::npos)
-    {
-        this->setStatusCode("400");
-        throw (RequestFormatException(*this));
-    }
-    while (ft::substr(line, req_message, "\r\n") && !req_message.empty())
-    {
-        line_len = ft::stoiHex(line);
-        if (line_len == 0)
-        {
-            this->setReqInfo(ReqInfo::COMPLETE);
-            return ;
-        }
-        else if (line_len != -1)
-        {
-            if (ft::substr(line, req_message, "\r\n") && !req_message.empty())
-                this->_body += line.substr(0, line_len) + "\r\n";
-            else
-            {
-                std::cout<<"\033[1;30;43m"<<"Line_len:" <<line_len<<"\033[0m"<<std::endl;
-                std::cout<<"\033[1;30;43m"<<"Request_message: "<<req_message<<"\033[0m"<<std::endl;
-                this->setStatusCode("400");
-                std::cout<<"\033[1;37;41m"<<"Throw 1"<<"\033[0m"<<std::endl;
-                throw (RequestFormatException(*this));
-            }
-        }
-        else
-            throw (RequestFormatException(*this));
-    }
-}
-
-void
 Request::appendBody(char* buf, int bytes)
 {
     this->setBody(this->getBody() + std::string(buf, bytes));
-}
-
-void
-Request::appendChunkedBody(char* buf, size_t bytes)
-{
-    this->setChunkedBody(this->getChunkedBody() + std::string(buf, bytes));
 }
 
 void
