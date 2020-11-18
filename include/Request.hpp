@@ -26,6 +26,7 @@ private:
     std::string _remote_user;
     std::string _remote_ident;
     std::string _auth_type;
+    int _target_chunk_size;
 
 public:
     /* Constructor */
@@ -53,6 +54,7 @@ public:
     const std::string& getRemoteUser() const;
     const std::string& getRemoteIdent() const;
     const std::string& getChunkedBody() const;
+    int getTargetChunkSize() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -70,6 +72,7 @@ public:
     void setRemoteUser(const std::string& remote_user);
     void setRemoteIdent(const std::string& remote_ident);
     void setChunkedBody(const std::string& chunked_body);
+    void setTargetChunkSize(const int target_size);
 
     /* Util */
 
@@ -117,6 +120,7 @@ public:
         RequestFormatException(Request& req);
         virtual const char* what() const throw();
     };
+
 };
 
 std::ostream& operator<<(std::ostream& out, Request& object);
