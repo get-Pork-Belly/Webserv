@@ -117,6 +117,7 @@ public:
 
     void processIfHeadersNotFound(int fd, const std::string& readed);
     void putFileOnServer(int fd);
+    void deleteResourceOfUri(int fd,const std::string& path);
 
     /* Server run function */
     void acceptClient();
@@ -193,12 +194,12 @@ public:
         CgiMethodErrorException(Response& response);
         virtual const char* what() const throw();
     };
-    class CgiInternalServerException : public SendErrorCodeToClientException
+    class InternalServerException : public SendErrorCodeToClientException
     {
     private:
         Response& _response;
     public:
-        CgiInternalServerException(Response& response);
+        InternalServerException(Response& response);
         virtual const char* what() const throw();
     };
     class AuthenticateErrorException : public SendErrorCodeToClientException
