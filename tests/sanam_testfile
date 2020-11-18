@@ -6,13 +6,20 @@ http {
         listen       8080;
 
         location / {
+            limit_except GET POST;
             cgi .bin .cgi .bla;
             autoindex on;
             root /Users/sanam/Desktop/Webserv/;
-            auth_basic sanam;
-            auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpasswd;
         }
 
+        location /test {
+            limit_except GET;
+            cgi .bin .cgi .bla;
+            autoindex on;
+            root /Users/sanam/Desktop/Webserv/;
+        }
+        auth_basic sanam;
+        auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpasswd;
         location /directory {
             root /Users/sanam/Desktop/Webserv/www/YoupiBanane;
             index youpi.bad_extension;

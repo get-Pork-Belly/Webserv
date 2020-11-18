@@ -248,6 +248,7 @@ Response::setResourceAbsPath(const std::string& path)
 void
 Response::setDirectoryEntry(DIR* dir_ptr)
 {
+    this->_directory_entry = "";
     struct dirent* entry = NULL;
     while ((entry = readdir(dir_ptr)) != NULL)
     {
@@ -591,14 +592,14 @@ Response::appendAllowHeader(std::string& headers)
 {
     const std::vector<const std::string> implemented_methods = {
         "GET",
-        // "POST",
-        // "HEAD",
-        // "PUT",
-        // "DELETE",
-        // "CONNECT",
-        // "OPTIONS",
-        // "TRACE",
-        // "PATCH",
+        "POST",
+        "HEAD",
+        "PUT",
+        "DELETE",
+        "CONNECT",
+        "OPTIONS",
+        "TRACE",
+        "PATCH",
     };
 
     headers += "Allow:";
@@ -710,7 +711,9 @@ void
 Response::appendLocationHeader(std::string& headers, const Request& request)
 {
     headers += "Location: ";
-    if (this->getHeaders().find("Location") != this->getHeaders().end())
+    if (this->getStatusCode() == "201")
+        headers += this->getResourceAbsPath();
+    else if (this->getHeaders().find("Location") != this->getHeaders().end())
         headers += this->getHeaders().at("Location");
     else
         headers += this->getRedirectUri(request);
@@ -762,6 +765,7 @@ std::string
 Response::makeHeaders(Request& request)
 {
     std::string headers;
+    const std::string& method = request.getMethod();
     
     //TODO 적정 reserve size 구하기
     headers.reserve(200);
@@ -770,12 +774,17 @@ Response::makeHeaders(Request& request)
     this->appendServerHeader(headers);
 
     // Entity headers
-    this->appendContentLanguageHeader(headers);
-    this->appendContentTypeHeader(headers);
-    if (this->isNeedToBeChunkedBody(request))
-        this->appendTransferEncodingHeader(headers);
+    if (method == "PUT" && this->getStatusCode().front() == '2')
+        headers += "Content-Length: 0\r\n";
     else
-        this->appendContentLengthHeader(headers);
+    {
+        this->appendContentLanguageHeader(headers);
+        this->appendContentTypeHeader(headers);
+        if (this->isNeedToBeChunkedBody(request))
+            this->appendTransferEncodingHeader(headers);
+        else
+            this->appendContentLengthHeader(headers);
+    }
 
     // Log::printLocationInfo(this->_location_info);
 
@@ -787,6 +796,8 @@ Response::makeHeaders(Request& request)
         if (this->getResourceType() == ResType::STATIC_RESOURCE || 
             this->getResourceType() == ResType::INDEX_HTML)
             this->appendLastModifiedHeader(headers);
+        if (method == "OPTIONS")
+            this->appendAllowHeader(headers);
     }
     else if (status_code.compare("405") == 0)
         this->appendAllowHeader(headers);
@@ -811,18 +822,55 @@ Response::makeHeaders(Request& request)
 }
 
 void
+Response::makeTraceBody(const Request& request)
+{
+    std::string body;
+    body += request.getMethod();
+    body += " ";
+    body += request.getUri();
+    body += " ";
+    body += request.getVersion();
+    body += "\r\n";
+    const std::map<std::string, std::string>& headers = request.getHeaders();
+    for (auto& s : headers)
+    {
+        const std::string& key = s.first;
+        const std::string& value = s.second;
+        body += key;
+        body += ": ";
+        body += value;
+        body += "\r\n";
+    }
+    this->setTransmittingBody(body);
+}
+
+void
+Response::makeOptionBody()
+{
+    std::string body;
+
+    body = "OPTIONS!";
+    this->setTransmittingBody(body);
+}
+
+void
 Response::makeBody(Request& request)
 {
     Log::trace("> makeBody");
+    const std::string& method = request.getMethod();
 
-    if (this->getResourceType() == ResType::AUTO_INDEX)
+    if (method == "TRACE" && this->getStatusCode() == "200")
+        this->makeTraceBody(request);
+    else if (method == "OPTIONS" && this->getStatusCode() == "200")
+        this->makeOptionBody();
+    else if (this->getResourceType() == ResType::AUTO_INDEX)
         PageGenerator::makeAutoIndex(*this);
     else if (this->getStatusCode().front() != '2')
         PageGenerator::makeErrorPage(*this);
     else if (this->isNeedToBeChunkedBody(request))
         this->encodeChunkedBody();
     else
-        this->setTransmittingBody(this->getBody() + "\r\n");
+        this->setTransmittingBody(this->getBody());
 
     Log::trace("< makeBody");
 }
