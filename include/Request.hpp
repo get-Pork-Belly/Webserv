@@ -110,7 +110,7 @@ public:
     void appendChunkedBody(char* buf, size_t bytes);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
-    void parseChunkData(char* buf, size_t bytes, int target_chunk_size);
+    void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
 
     /* Exception */
 public:

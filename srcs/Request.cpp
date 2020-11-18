@@ -427,13 +427,13 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
 }
 
 void
-Request::parseChunkData(char* buf, size_t bytes, int target_chunk_size)
+Request::parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size)
 {
-    this->setTargetChunkSize(target_chunk_size);
     if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
         this->appendBody(buf, bytes);
     else
         this->appendBody(buf, bytes - 2);
+    this->setTargetChunkSize(next_target_chunk_size);
 }
 
 void
