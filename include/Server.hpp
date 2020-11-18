@@ -168,9 +168,7 @@ public:
         CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num);
         virtual const char* what() const throw();
     };
-    class IndexNoExistException : public SendErrorCodeToClientException
-    {
-    private:
+    class IndexNoExistException : public SendErrorCodeToClientException { private:
         Response& _response;
     public:
         IndexNoExistException(Response& response);
@@ -225,6 +223,14 @@ public:
             Response& _response;
         public:
             TargetResourceConflictException(Response& response);
+            virtual const char* what() const throw();
+    };
+    class NotAllowedMethodException : public SendErrorCodeToClientException
+    {
+        private:
+            Response& _response;
+        public:
+            NotAllowedMethodException(Response& response);
             virtual const char* what() const throw();
     };
 };
