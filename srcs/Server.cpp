@@ -104,7 +104,10 @@ Server::setResourceAbsPathAsIndex(int fd)
         if (dir_entry.find(index) != std::string::npos)
         {
             response.setResourceType(ResType::STATIC_RESOURCE);
-            response.setResourceAbsPath(path + index);
+            if (path.back() == '/')
+                response.setResourceAbsPath(path + index);
+            else
+                response.setResourceAbsPath(path + "/" + index);
         }
     }
 }
@@ -225,13 +228,13 @@ Server::OpenResourceErrorException::what() const throw()
 Server::IndexNoExistException::IndexNoExistException(Response& response)
 : _response(response)
 {
-    this->_response.setStatusCode("403");
+    this->_response.setStatusCode("404");
 }
 
 const char*
 Server::IndexNoExistException::what() const throw()
 {
-    return ("[CODE 403] No index & Autoindex off");
+    return ("[CODE 404] No index & Autoindex off");
 }
 
 Server::CgiMethodErrorException::CgiMethodErrorException(Response& response)
@@ -849,6 +852,8 @@ Server::acceptClient()
     Log::trace("< acceptClient");
 }
 
+int transfered;
+
 void
 Server::sendDataToCGI(int write_fd_to_cgi)
 {
@@ -894,6 +899,8 @@ Server::sendDataToCGI(int write_fd_to_cgi)
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
         else
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], SEND_PIPE_STREAM_SIZE);
+        transfered += bytes;
+        std::cout<<"\033[1;30;43m"<<transfered<<"\033[0m"<<std::endl;
         if (bytes > 0)
         {
             request.setTransferedBodySize(transfered_body_size + bytes);
@@ -1171,10 +1178,11 @@ Server::findResourceAbsPath(int client_fd)
     response.setUriPath(path);
     response.setRouteAndLocationInfo(path, this);
     std::string root = response.getLocationInfo().at("root");
-    if (response.getRoute() != "/")
-        root.pop_back();
+    // if (response.getRoute() != "/")
+    //     root.pop_back();
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
+    // /Users/iwoo/Documents/Webserv/YoupiBanane/youpi.bad_extension
     Log::trace("< findResourceAbsPath");
 }
 
@@ -1409,7 +1417,9 @@ Server::processResponseBody(int client_fd)
         return ;
     }
     if (this->_responses[client_fd].getResourceType() == ResType::INDEX_HTML)
+    {
         this->setResourceAbsPathAsIndex(client_fd);
+    }
     ResType res_type = this->_responses[client_fd].getResourceType();
 
     this->preprocessResponseBody(client_fd, res_type);
