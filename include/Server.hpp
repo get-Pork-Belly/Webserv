@@ -133,8 +133,7 @@ public:
     bool isCGIReadPipe(int fd) const;
     bool isCGIWritePipe(int fd) const;
 
-    void receiveChunkSize(int fd);
-    void receiveChunkData(int client_fd, int receive_size, int target_chunk_size);
+    void receiveChunkSize(int fd, size_t index_of_crlf);
 
 public:
     class PayloadTooLargeException : public std::exception

@@ -438,31 +438,43 @@ Server::clearRequestBuffer(int client_fd)
 }
 
 void
+Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
+{
+    Log::trace("> receiveChunkSize");
+
+    int bytes;
+    char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
+    Request& request = this->_requests[client_fd];
+
+    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    if ((bytes = recv(client_fd, buf, index_of_crlf + 2, 0)) > 0)
+        request.parseTargetChunkSize(buf);
+    else if (bytes == 0)
+        this->closeClientSocket(client_fd);
+    else
+    {
+        //TODO: 에러 객체 변경하기
+        throw (ReadErrorException());
+    }
+    Log::trace("< receiveChunkSize");
+}
+
+void
 Server::receiveRequestChunkedBody(int client_fd)
 {
     Log::trace("> receiveRequestChunkedBody");
     int bytes;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
-    size_t index;
+    size_t index_of_crlf;
 
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, MSG_PEEK)) > 0)
     {
         if (request.getTargetChunkSize() == -1)
         {
-            if ((index = std::string(buf).find("\r\n")) != std::string::npos)
-            {
-                if ((bytes = recv(client_fd, buf, index + 2, 0)) > 0)
-                    request.parseTargetChunkSize(buf);
-                else if (bytes == 0)
-                    this->closeClientSocket(client_fd);
-                else
-                {
-                    //TODO: 에러 객체 변경하기
-                    throw (ReadErrorException());
-                }
-            }
+            if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
+                this->receiveChunkSize(client_fd, index_of_crlf);
             else
             {
                 //TODO: 예외처리하기
@@ -492,6 +504,7 @@ Server::receiveRequestChunkedBody(int client_fd)
         {
             if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
             {
+                // this->receiveChunkData(client_fd, request.getTargetChunkSize() + 2, -1);
                 if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
                     request.parseChunkDataAndSetChunkSize(buf, bytes, -1);
                 else if (bytes == 0)
@@ -502,6 +515,7 @@ Server::receiveRequestChunkedBody(int client_fd)
             }
             else
             {
+                // this->receiveChunkData(client_fd, RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
                 if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, 0)) > 0)
                     request.parseChunkDataAndSetChunkSize(buf, bytes, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
                 else if (bytes == 0)
@@ -779,6 +793,8 @@ Server::acceptClient()
     Log::trace("< acceptClient");
 }
 
+int transfered;
+
 void
 Server::sendDataToCGI(int write_fd_to_cgi)
 {
@@ -809,21 +825,21 @@ Server::sendDataToCGI(int write_fd_to_cgi)
         return ;
     }
 
-    if (content_length < BUFFER_SIZE)
+    if (content_length < SEND_PIPE_STREAM_SIZE)
     {
         bytes = write(write_fd_to_cgi, body.c_str(), body.length());
         if (bytes > 0)
         {
-            if (bytes < BUFFER_SIZE)
+            if (bytes < SEND_PIPE_STREAM_SIZE)
                 this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
         }
     }
     else
     {
-        if (content_length - transfered_body_size < BUFFER_SIZE)
+        if (content_length - transfered_body_size < SEND_PIPE_STREAM_SIZE)
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
         else
-            bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], BUFFER_SIZE);
+            bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], SEND_PIPE_STREAM_SIZE);
         if (bytes > 0)
         {
             request.setTransferedBodySize(transfered_body_size + bytes);
