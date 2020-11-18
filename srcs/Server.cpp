@@ -784,10 +784,6 @@ Server::acceptClient()
     Log::trace("< acceptClient");
 }
 
-//TODO: URI가 CGI라면 Request Body를 바로 CGI한테 보내줘도 되지 않을까?
-//TODO: Chunked로 CGI왔을 때도 꼭 테스트 해보기....
-//TODO: CGI 요청이 chunked로 올 수도 있음. 이 때에는 content-Length로 비교할 수 없다.
-
 void
 Server::sendDataToCGI(int write_fd_to_cgi)
 {
