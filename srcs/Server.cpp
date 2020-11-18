@@ -843,8 +843,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     Log::trace("< sendDataToCGI");
 }
 
-//TODO: buf를 동적할당 구조 변경해주기 - 안했을 시 매우 큰 payload를 감당하지 못함.
-//NOTE: 멤버 변수로 만들어서 처음 딱 한번만 할당하고 마지막에 할당 해제 해주게 수정하기.
 void
 Server::receiveDataFromCGI(int read_fd_from_cgi)
 {
