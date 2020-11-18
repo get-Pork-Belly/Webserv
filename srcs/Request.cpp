@@ -9,11 +9,12 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
+//TODO: target_chunk_size 상수화 하기
 Request::Request()
 : _method(""), _uri(""), _version(""),
 _protocol(""), _body(""), _chunked_body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
-_ip_address(""), _transfered_body_size(0) {}
+_ip_address(""), _transfered_body_size(0), _target_chunk_size(-1) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
@@ -21,7 +22,7 @@ _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _body(other._body), _chunked_body(other._chunked_body),
 _status_code(other._status_code), _info(other._info),
 _is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
-_transfered_body_size(other._transfered_body_size) {}
+_transfered_body_size(other._transfered_body_size), _target_chunk_size(other._target_chunk_size) {}
 
 Request&
 Request::operator=(const Request& other)
@@ -38,6 +39,7 @@ Request::operator=(const Request& other)
     this->_is_buffer_left = other._is_buffer_left;
     this->_ip_address = other._ip_address;
     this->_transfered_body_size = other._transfered_body_size;
+    this->_target_chunk_size = other._target_chunk_size;
     return (*this);
 }
 
@@ -141,6 +143,12 @@ Request::getChunkedBody() const
     return (this->_chunked_body);
 }
 
+int
+Request::getTargetChunkSize() const
+{
+    return (this->_target_chunk_size);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -233,6 +241,12 @@ void
 Request::setChunkedBody(const std::string& chunked_body)
 {
     this->_chunked_body = chunked_body;
+}
+
+void
+Request::setTargetChunkSize(const int target_size)
+{
+    this->_target_chunk_size = target_size;
 }
 
 /*============================================================================*/
@@ -404,9 +418,15 @@ Request::parseHeaders(std::string& req_message)
 void
 Request::parseChunkedBody(const std::string& body)
 {
-    int line_len;
+    int line_len = 0;
     std::string line;
     std::string req_message(body);
+
+    std::cout << "\033[31m\033[01m";
+    std::cout << "===============================================" << std::endl;
+    std::cout << "in parseChunkedBody" << std::endl;
+    std::cout << "===============================================" << std::endl;
+    std::cout << "\033[0m";
 
     if (req_message.find("\r\n") == std::string::npos)
     {
@@ -415,7 +435,6 @@ Request::parseChunkedBody(const std::string& body)
     }
     while (ft::substr(line, req_message, "\r\n") && !req_message.empty())
     {
-        std::cout << "linelen: " << line_len << std::endl;
         line_len = ft::stoiHex(line);
         if (line_len == 0)
         {
@@ -428,15 +447,15 @@ Request::parseChunkedBody(const std::string& body)
                 this->_body += line.substr(0, line_len) + "\r\n";
             else
             {
+                std::cout<<"\033[1;30;43m"<<"Line_len:" <<line_len<<"\033[0m"<<std::endl;
+                std::cout<<"\033[1;30;43m"<<"Request_message: "<<req_message<<"\033[0m"<<std::endl;
                 this->setStatusCode("400");
+                std::cout<<"\033[1;37;41m"<<"Throw 1"<<"\033[0m"<<std::endl;
                 throw (RequestFormatException(*this));
             }
         }
         else
-        {
-            this->setStatusCode("400");
             throw (RequestFormatException(*this));
-        }
     }
 }
 

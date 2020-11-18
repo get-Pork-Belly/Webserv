@@ -442,18 +442,86 @@ Server::receiveRequestChunkedBody(int client_fd)
 {
     Log::trace("> receiveRequestChunkedBody");
     int bytes;
-    char buf[BUFFER_SIZE + 1];
-    Request& req = this->_requests[client_fd];
+    char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
+    Request& request = this->_requests[client_fd];
+    size_t index;
 
-    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
+    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, MSG_PEEK)) > 0)
     {
-        req.appendChunkedBody(buf, bytes);
-        if (bytes < BUFFER_SIZE)
-            req.parseChunkedBody(req.getChunkedBody());
+        if (request.getTargetChunkSize() == -1)
+        {
+            if ((index = std::string(buf).find("\r\n")) != std::string::npos)
+            {
+                if ((bytes = recv(client_fd, buf, index + 2, 0)) > 0)
+                {
+                    int line_len = ft::stoiHex(std::string(buf).substr(0, index));
+                    request.setTargetChunkSize(line_len);
+                }
+                else if (bytes == 0)
+                    this->closeClientSocket(client_fd);
+                else
+                {
+                    //TODO: 에러 객체 변경하기
+                    throw (ReadErrorException());
+                }
+            }
+        }
+        else if (request.getTargetChunkSize() == 0)
+        {
+            if ((bytes= recv(client_fd, buf, 3, 0)) > 0)
+            {
+                if (bytes != 2)
+                {
+                    request.setIsBufferLeft(true);
+                    throw (Request::RequestFormatException(request));
+                }
+                if (std::string(buf).compare("\r\n") == 0)
+                    request.setReqInfo(ReqInfo::COMPLETE);
+                else
+                    throw (Request::RequestFormatException(request));
+            }
+            else if (bytes == 0)
+                this->closeClientSocket(client_fd);
+            else
+            //TODO: 에러 객체 변경하기
+                throw (ReadErrorException());
+        }
+        else
+        {
+            if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
+            {
+                if ((bytes = recv(client_fd, buf, request.getTargetChunkSize() + 2, 0)) > 0)
+                {
+                    request.setTargetChunkSize(-1);
+                    request.appendBody(buf, bytes);
+                }
+                else if (bytes == 0)
+                    this->closeClientSocket(client_fd);
+                else
+                    //TODO: 에러 객체 변경하기
+                    throw (ReadErrorException());
+            }
+            else
+            {
+                if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, 0)) > 0)
+                {
+                    request.setTargetChunkSize(request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE);
+                    request.appendBody(buf, bytes);
+                }
+                else if (bytes == 0)
+                    this->closeClientSocket(client_fd);
+                else
+                    //TODO: 에러 객체 변경하기
+                    throw (ReadErrorException());
+            }
+
+        }
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
+        //TODO: 에러 객체 변경하기
         throw (ReadErrorException());
     Log::trace("< receiveRequestChunkedBody");
 }
@@ -538,11 +606,6 @@ bool
 Server::sendResponse(const std::string& response_message, int client_fd)
 {
     Log::trace("> sendResponse");
-    // std::cout << "\033[34m\033[01m";
-    // std::cout << "===============================================" << std::endl;
-    // std::cout << response_message << std::endl;
-    // std::cout << "===============================================" << std::endl;
-    // std::cout << "\033[0m";
     write(client_fd, response_message.c_str(), response_message.length());
     Log::trace("< sendResponse");
     return (true);
@@ -766,11 +829,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     }
     else
     {
-        // std::cout << "\033[35m\033[01m";
-        // std::cout << "===============================================" << std::endl;
-        std::cout << transfered_body_size << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "\033[0m";
         if (content_length - transfered_body_size < BUFFER_SIZE)
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
         else
@@ -804,7 +862,8 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
 
     char buf[BUFFER_SIZE + 1];
     ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-    usleep(1000);
+    //TODO: usleep 필요 여부와 적정 수치 조정 필요함.
+    // usleep(1000);
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
     if (bytes > 0)
     {
@@ -893,7 +952,10 @@ Server::run(int fd)
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
+                    {
+                        this->_server_manager->fdClr(fd, FdSet::READ);
                         this->processResponseBody(fd);
+                    }
                 }
             }
             catch(const SendErrorCodeToClientException& e)

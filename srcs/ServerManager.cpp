@@ -255,6 +255,7 @@ ServerManager::updateFdMax(int fd)
 void
 ServerManager::initServers()
 {
+    signal(SIGPIPE, SIG_IGN);
     ServerGenerator server_generator(this);
     server_generator.generateServers(this->_servers);
 }
