@@ -817,6 +817,8 @@ Response::makeHeaders(Request& request)
         this->appendRetryAfterHeader(headers, status_code);
     }
     
+    //TODO: connection close 타이밍 확인
+    headers += "Connection: close\r\n";
     headers += "\r\n";
     return (headers);
 }
