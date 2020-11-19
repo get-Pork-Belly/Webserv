@@ -301,7 +301,7 @@ Server::TargetResourceConflictException::what() const throw()
 const char*
 Server::UnchunkedErrorException::what() const throw()
 {
-    return ("[CODE 901] Chunked request couldn't receive or Receive error");
+    return ("[CODE 902] Chunked request couldn't receive or Receive error");
 }
 
 Server::NotAllowedMethodException::NotAllowedMethodException(Response& response)
@@ -314,6 +314,12 @@ const char*
 Server::NotAllowedMethodException::what() const throw()
 {
     return ("[CODE 405] Not Allowed Method");
+}
+
+const char*
+Server::CannotWriteToClientException::what() const throw()
+{
+    return ("[CODE 901] Cannot write to client");
 }
 
 /*============================================================================*/
@@ -737,7 +743,9 @@ Server::makeResponseMessage(int client_fd)
     return (status_line + headers + response.getTransmittingBody());
 }
 
-bool
+int sended_bytes;
+
+void
 Server::sendResponse(const std::string& response_message, int client_fd)
 {
     Log::trace("> sendResponse");
@@ -745,12 +753,22 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     gettimeofday(&from, NULL);
 
 
-    write(client_fd, response_message.c_str(), response_message.length());
+    int bytes = 0;
 
+    bytes = write(client_fd, response_message.c_str(), response_message.length());
+    if (bytes > 0)
+    {
+        sended_bytes += bytes;
+        std::cout<<"\033[1;44;37m"<<sended_bytes<<"\033[0m"<<std::endl;
+    }
+    else if (bytes == 0)
+        throw (CannotWriteToClientException());
+    else
+        throw (CannotWriteToClientException());
+    
 
     Log::printTimeDiff(from);
     Log::trace("< sendResponse");
-    return (true);
 }
 
 bool
@@ -1136,9 +1154,7 @@ Server::run(int fd)
                 else if (this->isClientSocket(fd))
                 {
                     std::string response_message = this->makeResponseMessage(fd);
-                    // TODO: sendResponse error handling
-                    if (!(sendResponse(response_message, fd)))
-                        std::cerr<<"Error: sendResponse"<<std::endl;
+                    this->sendResponse(response_message, fd);
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
@@ -1168,6 +1184,11 @@ Server::run(int fd)
             }
             catch(const std::exception& e)
             {
+                if (this->_responses[fd].getResourceFd() != 0)
+                    this->closeFdAndUpdateFdTable(this->_responses[fd].getResourceFd(), FdSet::READ);
+                else
+                    this->closeFdAndUpdateFdTable(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
+                this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
             }
             catch(const char* e)

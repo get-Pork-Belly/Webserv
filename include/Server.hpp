@@ -18,8 +18,8 @@
 # include "Response.hpp"
 # include "Exception.hpp"
 
-const int BUFFER_SIZE = 6553600;
-const int RECEIVE_SOCKET_STREAM_SIZE = 254560;
+const int BUFFER_SIZE = 65536;
+const int RECEIVE_SOCKET_STREAM_SIZE = 65536;
 const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
 const int DEFAULT_TARGET_CHUNK_SIZE = -1;
@@ -97,7 +97,7 @@ public:
     void receiveRequestChunkedBody(int fd);
     void clearRequestBuffer(int fd);
     std::string makeResponseMessage(int fd);
-    bool sendResponse(const std::string& response_meesage, int fd);
+    void sendResponse(const std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
@@ -246,6 +246,11 @@ public:
         public:
             NotAllowedMethodException(Response& response);
             virtual const char* what() const throw();
+    };
+    class CannotWriteToClientException : public std::exception
+    {
+    public:
+        virtual const char* what() const throw();
     };
 };
 
