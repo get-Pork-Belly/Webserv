@@ -855,8 +855,13 @@ Response::makeHeaders(Request& request)
         this->appendRetryAfterHeader(headers, status_code);
     }
     
-    //TODO: connection close 타이밍 확인
-    headers += "Connection: close\r\n";
+    //NOTE: error code를 응답하는 경우를 제외하고는 keep-alive
+    //TODO: 인증헤더 관련하여서도 keep-alive인지 확인할 것.
+    //TODO: request의 헤더가 close이면 close로 처리시킬 것.
+    if (status_code[0] != '2') // || isRequestConnectionClose())
+        headers += "Connection: close\r\n";
+    else
+        headers += "Connection: keep-alive\r\n";
     headers += "\r\n";
 
     Log::printTimeDiff(from);
