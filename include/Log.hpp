@@ -38,6 +38,7 @@ public:
     static void printTimeDiff(timeval from, int log_level);
 
     static std::string fdTypeToString(const FdType& type);
+    static std::string reqInfoToString(const ReqInfo& req_info);
     static std::string resTypeToString(const ResType& type);
     static std::string sendProgressToString(const SendProgress& progress);
     static void printLocationConfig(const std::map<std::string, location_info>& loc_config);

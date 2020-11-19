@@ -261,6 +261,32 @@ Log::resTypeToString(const ResType& type)
 }
 
 std::string
+Log::reqInfoToString(const ReqInfo& req_info)
+{
+    switch (req_info)
+    {
+    case ReqInfo::READY:
+        return ("READY");
+
+    case ReqInfo::COMPLETE:
+        return ("COMPLETE");
+
+    case ReqInfo::NORMAL_BODY:
+        return ("NORMAL_BODY");
+
+    case ReqInfo::CHUNKED_BODY:
+        return ("CHUNKED_BODY");
+
+    case ReqInfo::MUST_CLEAR:
+        return ("MUST_CLEAR");
+
+    default:
+        return ("NOT YET REGISTED IN reqInfoToString");
+        break;
+    }
+}
+
+std::string
 Log::sendProgressToString(const SendProgress& progress)
 {
     switch (progress)
