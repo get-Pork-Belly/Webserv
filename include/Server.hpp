@@ -183,7 +183,7 @@ public:
         IndexNoExistException(Response& response);
         virtual const char* what() const throw();
     };
-    class OpenResourceErrorException : public std::exception
+    class OpenResourceErrorException : public SendErrorCodeToClientException
     {
     private:
         Response& _response;

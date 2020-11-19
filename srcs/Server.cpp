@@ -760,12 +760,22 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     {
         sended_bytes += bytes;
         std::cout<<"\033[1;44;37m"<<sended_bytes<<"\033[0m"<<std::endl;
+        std::cout<<"\033[1;44;37m"<<"SendProgress: "<<(int)this->_responses[client_fd].getSendProgress()<<"\033[0m"<<std::endl;
+        std::cout<<response_message<<std::endl;
     }
     else if (bytes == 0)
+    {
+        // std::cout<<"\033[1;44;37m"<<"Debug 1"<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;44;37m"<<"SendProgress: "<<(int)this->_responses[client_fd].getSendProgress()<<"\033[0m"<<std::endl;
+        // std::cout<<response_message<<std::endl;
+        // this->_responses[client_fd].setSendProgress(SendProgress::FINISH);
         throw (CannotWriteToClientException());
+    }
     else
+    {
+        std::cout<<"\033[1;44;37m"<<"Debug 2"<<"\033[0m"<<std::endl;
         throw (CannotWriteToClientException());
-    
+    }
 
     Log::printTimeDiff(from);
     Log::trace("< sendResponse");
@@ -1226,6 +1236,8 @@ Server::run(int fd)
                     this->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);
                     this->closeFdAndUpdateFdTable(response.getWriteFdToCGI(), FdSet::WRITE);
                 }
+                //TODO: static resource 추가
+                // else if (this->_)
             }
             catch(const Request::RequestFormatException& e)
             {
@@ -1401,7 +1413,7 @@ Server::readStaticResource(int resource_fd)
     else
     {
         this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-        throw (ReadErrorException());
+        throw (InternalServerException(this->_responses[client_socket]));
     }
 
     
