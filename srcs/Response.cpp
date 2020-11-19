@@ -971,7 +971,7 @@ Response::isNeedToBeChunkedBody(const Request& request) const
         return (false);
 
     //NOTE: 아래 기준은 임의로 정한 것임.
-    if (this->_file_info.st_size > BUFFER_SIZE)
+    if (this->_file_info.st_size > BUFFER_SIZE && request.getMethod() != "PUT")
         return (true);
     if (this->getResourceType() == ResType::CGI)
         return (true);
