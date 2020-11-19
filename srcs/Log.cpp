@@ -105,8 +105,8 @@ Log::closeClient(Server& server, int client_fd)
 void
 Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
 {
-    if (DEBUG == 0)
-        return ;
+    // if (DEBUG == 0)
+    //     return ;
 
     int server_fd = server.getServerSocket();
     int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
@@ -124,8 +124,8 @@ Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
 void
 Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
 {
-    if (DEBUG == 0)
-        return ;
+    // if (DEBUG == 0)
+    //     return ;
 
     int server_fd = server.getServerSocket();
     int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;

@@ -280,6 +280,10 @@ ServerManager::runServers()
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
+
+        // std::cout<<"\033[1;44;37m"<<"Before select!"<<"\033[0m"<<std::endl;
+        // Log::printFdCopySets(*this);
+        // Log::printFdSets(*this);
         if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, 
             &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
         {
@@ -293,6 +297,9 @@ ServerManager::runServers()
         }
         else
         {
+        // std::cout<<"\033[1;44;37m"<<"After select!"<<"\033[0m"<<std::endl;
+        // Log::printFdCopySets(*this);
+        // Log::printFdSets(*this);
             for (int fd = 0; fd < this->getFdMax() + 1; fd++)
             {
                 if (this->fdIsSet(fd, FdSet::ALL))
