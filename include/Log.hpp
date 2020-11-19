@@ -35,6 +35,7 @@ public:
 
     // trace
     static void trace(const std::string& message);
+    static void printTimeDiff(timeval from);
 
     static std::string fdTypeToString(const FdType& type);
     static std::string resTypeToString(const ResType& type);

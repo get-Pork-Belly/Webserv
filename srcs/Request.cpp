@@ -279,6 +279,9 @@ void
 Request::updateReqInfo()
 {
     Log::trace("> updateReqInfo");
+    timeval from;
+    gettimeofday(&from, NULL);
+
     if (this->getReqInfo() == ReqInfo::COMPLETE)
         return ;
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
@@ -289,6 +292,8 @@ Request::updateReqInfo()
         this->setReqInfo(ReqInfo::NORMAL_BODY);
     else if (this->isChunkedBody())
         this->setReqInfo(ReqInfo::CHUNKED_BODY);
+
+    Log::printTimeDiff(from);
     Log::trace("< updateReqInfo");
 }
 
@@ -339,6 +344,9 @@ void
 Request::parseRequestWithoutBody(char* buf)
 {
     Log::trace("> parseRequestWithoutBody");
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::string line;
     std::string req_message(buf);
 
@@ -355,11 +363,10 @@ Request::parseRequestWithoutBody(char* buf)
     {
         if (this->parseHeaders(line) == false)
             throw (RequestFormatException(*this));
-        std::cout<<"\033[1;37;41m"<<"==================parseHeaders complete"<<"\033[0m"<<std::endl;
-        std::cout<<*this<<std::endl;
-        std::cout<<"\033[1;37;41m"<<"==================parseHeaders complete"<<"\033[0m"<<std::endl;
     }
     this->updateReqInfo();
+
+    Log::printTimeDiff(from);
     Log::trace("< parseRequestWithoutBody");
 }
 
@@ -367,6 +374,9 @@ bool
 Request::parseRequestLine(std::string& req_message)
 {
     Log::trace("> parseRequestLine");
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::vector<std::string> request_line = ft::split(req_message, " ");
     
     if (this->isValidLine(request_line) == false)
@@ -374,6 +384,8 @@ Request::parseRequestLine(std::string& req_message)
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
     this->setVersion(request_line[2]);
+
+    Log::printTimeDiff(from);
     Log::trace("< parseRequestLine");
     return (true);
 }
@@ -382,6 +394,9 @@ bool
 Request::parseHeaders(std::string& req_message)
 {
     Log::trace("> parseHeaders");
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::string key;
     std::string value;
     std::string line;
@@ -401,6 +416,9 @@ Request::parseHeaders(std::string& req_message)
     if (this->isValidHeaders(key, value) == false)
         return (this->updateStatusCodeAndReturn("400", false));
     this->setHeaders(key, value);
+
+
+    Log::printTimeDiff(from);
     Log::trace("< parseHeaders");
     return (true);
 }
