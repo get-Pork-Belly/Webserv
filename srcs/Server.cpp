@@ -344,7 +344,6 @@ Server::init()
     this->_server_address.sin_family = AF_INET;
     this->_server_address.sin_addr.s_addr = ft::hToNL(INADDR_ANY);
     this->_server_address.sin_port = ft::hToNS(stoi(this->_port));
-    std::cout << "Server addres: " << this->_server_address.sin_addr.s_addr << std::endl;
 
     if (bind(this->_server_socket, reinterpret_cast<struct sockaddr *>(&this->_server_address),
         static_cast<socklen_t>(sizeof(this->_server_address))))
@@ -1006,6 +1005,7 @@ Server::run(int fd)
                     if (this->isResponseAllSended(fd))
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
+                        this->_server_manager->fdSet(fd, FdSet::READ);
                         this->_requests[fd].init();
                         this->_responses[fd].init();
                     }
@@ -1333,15 +1333,12 @@ Server::preprocessResponseBody(int client_fd, ResType& res_type)
     switch (res_type)
     {
     case ResType::AUTO_INDEX:
-        std::cout << "Auto index page will be generated" << std::endl;
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
         break ;
     case ResType::STATIC_RESOURCE:
-        std::cout << "Static resource will be opened" << std::endl;
         this->openStaticResource(client_fd);
         break ;
     case ResType::CGI:
-        std::cout << "CGIpipe will be opened" << std::endl;
         this->openCGIPipe(client_fd);
         this->forkAndExecuteCGI(client_fd);
         this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
