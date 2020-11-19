@@ -278,7 +278,7 @@ std::ostream& operator<< (std::ostream& out, Request& object)
 void
 Request::updateReqInfo()
 {
-    Log::trace("> updateReqInfo");
+    Log::trace("> updateReqInfo", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -293,8 +293,8 @@ Request::updateReqInfo()
     else if (this->isChunkedBody())
         this->setReqInfo(ReqInfo::CHUNKED_BODY);
 
-    Log::printTimeDiff(from);
-    Log::trace("< updateReqInfo");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< updateReqInfo", 2);
 }
 
 bool
@@ -343,7 +343,7 @@ Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& r
 void
 Request::parseRequestWithoutBody(char* buf)
 {
-    Log::trace("> parseRequestWithoutBody");
+    Log::trace("> parseRequestWithoutBody", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -366,14 +366,14 @@ Request::parseRequestWithoutBody(char* buf)
     }
     this->updateReqInfo();
 
-    Log::printTimeDiff(from);
-    Log::trace("< parseRequestWithoutBody");
+    Log::printTimeDiff(from, 1);
+    Log::trace("< parseRequestWithoutBody", 1);
 }
 
 bool
 Request::parseRequestLine(std::string& req_message)
 {
-    Log::trace("> parseRequestLine");
+    Log::trace("> parseRequestLine", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -385,15 +385,15 @@ Request::parseRequestLine(std::string& req_message)
     this->setUri(request_line[1]);
     this->setVersion(request_line[2]);
 
-    Log::printTimeDiff(from);
-    Log::trace("< parseRequestLine");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< parseRequestLine", 2);
     return (true);
 }
 
 bool
 Request::parseHeaders(std::string& req_message)
 {
-    Log::trace("> parseHeaders");
+    Log::trace("> parseHeaders", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -418,8 +418,8 @@ Request::parseHeaders(std::string& req_message)
     this->setHeaders(key, value);
 
 
-    Log::printTimeDiff(from);
-    Log::trace("< parseHeaders");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< parseHeaders", 2);
     return (true);
 }
 

@@ -182,23 +182,23 @@ Log::error(const std::string& error)
 
 
 void
-Log::printTimeDiff(timeval from)
+Log::printTimeDiff(timeval from, int log_level)
 {
     timeval t;
     gettimeofday(&t, NULL);
     std::string diff = std::to_string((t.tv_sec - from.tv_sec) * 1000000 + (t.tv_usec - from.tv_usec));
     diff.push_back(' ');
 
-    if (DEBUG != 2)
+    if (DEBUG < log_level)
         return ;
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
     write(fd, diff.c_str(), diff.length());
 }
 
 void
-Log::trace(const std::string& trace)
+Log::trace(const std::string& trace, int log_level)
 {
-    if (DEBUG != 2)
+    if (DEBUG < log_level)
         return ;
 
     std::string line;
@@ -259,6 +259,31 @@ Log::resTypeToString(const ResType& type)
         break;
     }
 }
+
+std::string
+Log::sendProgressToString(const SendProgress& progress)
+{
+    switch (progress)
+    {
+    case SendProgress::DEFAULT:
+        return ("DEFAULT");
+
+    case SendProgress::CHUNK_START:
+        return ("CHUNK_START");
+
+    case SendProgress::CHUNK_PROGRESS:
+        return ("CHUNK_PROGRESS");
+
+    case SendProgress::FINISH:
+        return ("FINISH");
+
+    default:
+        return ("NOT YET REGISTED IN sendProgress");
+        break;
+    }
+}
+
+
 
 void
 Log::printLocationConfig(const std::map<std::string, location_info>& loc_config)

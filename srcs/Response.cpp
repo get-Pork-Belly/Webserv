@@ -521,7 +521,7 @@ Response::initMimeTypeTable()
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
-    Log::trace("> setRouteAndLocationInfo");
+    Log::trace("> setRouteAndLocationInfo", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -567,15 +567,15 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
         }
     }
 
-    Log::printTimeDiff(from);
-    Log::trace("< setRouteAndLocationInfo");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< setRouteAndLocationInfo", 2);
     return (false);
 }
 
 std::string
 Response::makeStatusLine()
 {
-    Log::trace("> makeStatusLine");
+    Log::trace("> makeStatusLine", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -587,8 +587,8 @@ Response::makeStatusLine()
     status_line += this->getStatusMessage(this->getStatusCode());
     status_line += "\r\n";
 
-    Log::printTimeDiff(from);
-    Log::trace("< makeStatusLine");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< makeStatusLine", 2);
     return (status_line);
 }
 
@@ -683,7 +683,7 @@ Response::appendContentLocationHeader(std::string& headers)
 void
 Response::appendContentTypeHeader(std::string& headers)
 {
-    Log::trace("> appendContentTypeHeader");
+    Log::trace("> appendContentTypeHeader", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -703,8 +703,8 @@ Response::appendContentTypeHeader(std::string& headers)
     }
     headers += "\r\n";
 
-    Log::printTimeDiff(from);
-    Log::trace("< appendContentTypeHeader");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< appendContentTypeHeader", 2);
 }
 
 std::string
@@ -747,7 +747,7 @@ Response::appendLocationHeader(std::string& headers, const Request& request)
 void
 Response::appendRetryAfterHeader(std::string& headers, const std::string& status_code)
 {
-    Log::trace("> appendRetryAfterHeader");
+    Log::trace("> appendRetryAfterHeader", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -764,21 +764,21 @@ Response::appendRetryAfterHeader(std::string& headers, const std::string& status
     }
     headers += "\r\n";
 
-    Log::printTimeDiff(from);
-    Log::trace("< appendRetryAfterHeader");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< appendRetryAfterHeader", 2);
 }
 
 void
 Response::appendTransferEncodingHeader(std::string& headers)
 {
-    Log::trace("> appendTransferEncodingHeader");
+    Log::trace("> appendTransferEncodingHeader", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
     headers += "Transfer-Encoding: chunked\r\n";
 
-    Log::printTimeDiff(from);
-    Log::trace("< appendTransferEncodingHeader");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< appendTransferEncodingHeader", 2);
 }
 
 void
@@ -798,7 +798,7 @@ Response::appendAuthenticateHeader(std::string& headers)
 std::string
 Response::makeHeaders(Request& request)
 {
-    Log::trace("> makeHeaders");
+    Log::trace("> makeHeaders", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -864,8 +864,8 @@ Response::makeHeaders(Request& request)
         headers += "Connection: keep-alive\r\n";
     headers += "\r\n";
 
-    Log::printTimeDiff(from);
-    Log::trace("< makeHeaders");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< makeHeaders", 2);
     return (headers);
 }
 
@@ -904,7 +904,7 @@ Response::makeOptionBody()
 void
 Response::makeBody(Request& request)
 {
-    Log::trace("> makeBody");
+    Log::trace("> makeBody", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -923,8 +923,8 @@ Response::makeBody(Request& request)
     else
         this->setTransmittingBody(this->getBody());
 
-    Log::printTimeDiff(from);
-    Log::trace("< makeBody");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< makeBody", 2);
 }
 
 bool
@@ -1002,7 +1002,7 @@ Response::getRedirectStatusCode() const
 std::string
 Response::getRedirectUri(const Request& request) const
 {
-    Log::trace("> getRedirectUri");
+    Log::trace("> getRedirectUri", 2);
     timeval from;
     gettimeofday(&from, NULL);
     //TODO: find 실패하지 않도록 invalid 여부는 처음 서버 만들 때 잘 확인할 것.
@@ -1013,8 +1013,8 @@ Response::getRedirectUri(const Request& request) const
     size_t offset = requested_uri.find(this->getRoute());
     requested_uri.replace(offset, this->getRoute().length(), redirect_route);
 
-    Log::printTimeDiff(from);
-    Log::trace("< getRedirectUri");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< getRedirectUri", 2);
     return (requested_uri);
 }
 
@@ -1045,7 +1045,7 @@ Response::getHtmlLangMetaData() const
 void
 Response::preparseCGIMessage()
 {
-    Log::trace("> preparseCGIMessage");
+    Log::trace("> preparseCGIMessage", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1064,14 +1064,14 @@ Response::preparseCGIMessage()
         throw (InvalidCGIMessageException(*this));
     this->setStatusCode(this->_headers.at("Status").substr(0, 3));
 
-    Log::printTimeDiff(from);
-    Log::trace("< preparseCGIMessage");
+    Log::printTimeDiff(from, 1);
+    Log::trace("< preparseCGIMessage", 1);
 }
 
 bool
 Response::parseCGIHeaders(std::string& cgi_message)
 {
-    Log::trace("> parseHeaders");
+    Log::trace("> parseHeaders", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1095,8 +1095,8 @@ Response::parseCGIHeaders(std::string& cgi_message)
         return (false);
     this->setHeaders(key, value);
 
-    Log::printTimeDiff(from);
-    Log::trace("< parseHeaders");
+    Log::printTimeDiff(from, 1);
+    Log::trace("< parseHeaders", 1);
     return (true);
 }
 
@@ -1129,7 +1129,7 @@ Response::isDuplicatedHeader(std::string& key)
 void
 Response::encodeChunkedBody()
 {
-    Log::trace("> encodeChunkedBody");
+    Log::trace("> encodeChunkedBody", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1169,8 +1169,8 @@ Response::encodeChunkedBody()
     this->setAlreadyEncodedSize(already_encoded_size);
     this->setTransmittingBody(chunked_body);
 
-    Log::printTimeDiff(from);
-    Log::trace("< encodeChunkedBody");
+    Log::printTimeDiff(from, 1);
+    Log::trace("< encodeChunkedBody", 1);
 }
 
 void
