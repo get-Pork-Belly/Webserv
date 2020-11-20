@@ -422,7 +422,7 @@ Server::receiveRequestWithoutBody(int client_fd)
     {
         // buf[bytes] = 0;
         readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
+        std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
 
         readed = std::string(buf);
         if ((header_end_pos = readed.find("\r\n\r\n")) != std::string::npos)
@@ -472,6 +472,8 @@ Server::receiveRequestNormalBody(int client_fd)
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
+        readed_bytes += bytes;
+        std::cout<<"\033[1;33m"<<"in receiveRequestNormalBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.appendBody(buf, bytes);
         if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;
@@ -529,7 +531,11 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
 
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
+    {
+        readed_bytes += bytes;
+        std::cout<<"\033[1;33m"<<"in receiveChunkSie readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.parseTargetChunkSize(buf);
+    }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
@@ -553,7 +559,11 @@ Server::receiveChunkData(int client_fd, int receive_size, int target_chunk_size)
 
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, receive_size, 0)) > 0)
+    {
+        readed_bytes += bytes;
+        std::cout<<"\033[1;33m"<<"in receiveChunkSie readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.parseChunkDataAndSetChunkSize(buf, bytes, target_chunk_size);
+    }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
@@ -579,6 +589,8 @@ Server::receiveLastChunkData(int client_fd)
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0)) > 0)
     {
+        readed_bytes += bytes;
+        std::cout<<"\033[1;33m"<<"in receiveLastChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         if (bytes != CRLF_SIZE)
         {
             request.setIsBufferLeft(true);
@@ -1441,7 +1453,7 @@ Server::openStaticResource(int client_fd)
 
     if (this->_requests[client_fd].getMethod() == "PUT")
     {
-        resource_fd = open(path.c_str(), O_CREAT | O_RDWR, 0666);
+        resource_fd = open(path.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);
         if (resource_fd < 0)
             throw InternalServerException(this->_responses[client_fd]);
         // resource_fd = open("/Users/sanam/Desktop/Webserv/abcd", O_CREAT | O_RDWR, 0666);
