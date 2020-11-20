@@ -116,7 +116,6 @@ public:
         Request& _req;
     public:
         RequestFormatException(Request& req, const std::string& status_code);
-        RequestFormatException(Request& req);
         virtual const char* what() const throw();
     };
 

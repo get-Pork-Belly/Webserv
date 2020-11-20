@@ -14,7 +14,7 @@ Request::Request()
 : _method(""), _uri(""), _version(""),
 _protocol(""), _body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
-_ip_address(""), _transfered_body_size(0), _target_chunk_size(-1) {}
+_ip_address(""), _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE) {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
@@ -246,9 +246,6 @@ Request::RequestFormatException::RequestFormatException(Request& req, const std:
     this->_req.setStatusCode(status_code);
 }
 
-Request::RequestFormatException::RequestFormatException(Request& req)
-: _msg("RequestFormatException: Invalid Request Format: "), _req(req) {}
-
 const char*
 Request::RequestFormatException::what() const throw()
 {
@@ -322,7 +319,9 @@ Request::isNormalBody() const
 bool
 Request::isChunkedBody() const
 {
-    return ((this->getReqInfo() == ReqInfo::COMPLETE) ? false : !isNormalBody());
+    if (this->getReqInfo() == ReqInfo::COMPLETE)
+        return (false);
+    return (!isNormalBody());
 }
 
 
@@ -355,14 +354,14 @@ Request::parseRequestWithoutBody(char* buf)
     else
     {
         if (this->parseRequestLine(line) == false)
-            throw (RequestFormatException(*this));
+            throw (RequestFormatException(*this, "400"));
     }
     if (ft::substr(line, req_message, "\r\n\r\n") == false)
         throw (RequestFormatException(*this, "400"));
     else
     {
         if (this->parseHeaders(line) == false)
-            throw (RequestFormatException(*this));
+            throw (RequestFormatException(*this, "400"));
     }
     this->updateReqInfo();
 
@@ -435,7 +434,9 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
     // received += target_chunk_size;
     // std::cout<<"\033[1;30;43m"<<"received: "<<received<<"\033[0m"<<std::endl;
     if (target_chunk_size == -1)
-        throw (RequestFormatException(*this));
+    {
+        throw (RequestFormatException(*this, "400"));
+    }
     this->setTargetChunkSize(target_chunk_size);
 }
 
