@@ -373,9 +373,12 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
     int bytes;
     Request& request = this->_requests[client_fd];
 
-    ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
+    // ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
     if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
+    {
+        buf[bytes] = 0;
         request.parseRequestWithoutBody(buf, bytes);
+    }
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
     else
@@ -399,7 +402,7 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& readed)
         if (bytes != crlf_size)
             throw (ReadErrorException());
     }
-    std::cout<<"\033[1;31m"<<"Infinity loof"<<"\033[0m"<<std::endl;
+    // std::cout<<"\033[1;31m"<<"Infinity loof"<<"\033[0m"<<std::endl;
 }
 
 long long int readed_bytes;
@@ -421,26 +424,27 @@ Server::receiveRequestWithoutBody(int client_fd)
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
     bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
-    int tmp = bytes;
-    //TODO recv 여러번
-    for (size_t i = 0; i < 100; i++)
-    {
-        bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
-        if (tmp != bytes)
-        {
-            std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;36m"<<"old_bytes: "<<tmp<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;36m"<<"new_bytes: "<<bytes<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
-        }
-        tmp = bytes;
-    }
+    usleep(200);
+    // int tmp = bytes;
+    // //TODO recv 여러번
+    // for (size_t i = 0; i < 200; i++)
+    // {
+    //     bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
+    //     if (tmp != bytes)
+    //     {
+    //         // std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
+    //         // std::cout<<"\033[1;36m"<<"old_bytes: "<<tmp<<"\033[0m"<<std::endl;
+    //         // std::cout<<"\033[1;36m"<<"new_bytes: "<<bytes<<"\033[0m"<<std::endl;
+    //         // std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
+    //     }
+    //     tmp = bytes;
+    // }
     
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
         // buf[bytes] = 0;
-        readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
+        // readed_bytes += bytes;
+        // std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
 
         readed = std::string(buf, bytes);
         if ((header_end_pos = readed.find("\r\n\r\n")) != std::string::npos)
@@ -458,9 +462,9 @@ Server::receiveRequestWithoutBody(int client_fd)
             // body가 필요치않은데, 얘가 body에 해당하는걸 이어서 보낼 수도 있겠다??
             if (static_cast<size_t>(bytes) == header_end_pos + 4)
             {
-                std::cout<<"\033[1;36m"<<" Wow buffer is not left..??"<<"\033[0m"<<std::endl;
-                std::cout<<"\033[1;36m"<<" bytes: "<<bytes<<"\033[0m"<<std::endl;
-                std::cout<<"\033[1;36m"<<" header_end_pos: "<<header_end_pos<<"\033[0m"<<std::endl;
+                // std::cout<<"\033[1;36m"<<" Wow buffer is not left..??"<<"\033[0m"<<std::endl;
+                // std::cout<<"\033[1;36m"<<" bytes: "<<bytes<<"\033[0m"<<std::endl;
+                // std::cout<<"\033[1;36m"<<" header_end_pos: "<<header_end_pos<<"\033[0m"<<std::endl;
                 request.setIsBufferLeft(false);
                 request.setReqInfo(ReqInfo::COMPLETE);
             }
@@ -500,12 +504,13 @@ Server::receiveRequestNormalBody(int client_fd)
         throw (PayloadTooLargeException(this->_responses[client_fd]));
 
     char buf[BUFFER_SIZE + 1];
-    ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+    // ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
 
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
-        readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"in receiveRequestNormalBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
+        buf[bytes] = 0;
+        // readed_bytes += bytes;
+        // std::cout<<"\033[1;33m"<<"in receiveRequestNormalBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.appendBody(buf, bytes);
         if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;
@@ -592,18 +597,19 @@ Server::receiveChunkData(int client_fd, int receive_size)
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, receive_size, 0)) > 0)
     {
-        readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"in receiveChunkData bytes: "<<bytes<<"\033[0m"<<std::endl;
-        std::cout<<"\033[1;33m"<<"in receiveChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
+        buf[bytes] = 0;
+        // readed_bytes += bytes;
+        // std::cout<<"\033[1;33m"<<"in receiveChunkData bytes: "<<bytes<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;33m"<<"in receiveChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.setReceivedChunkDataSize(request.getReceivedChunkDataSize() + bytes);
         request.parseChunkData(buf, bytes);
     }
     else if (bytes == 0)
     {
-        std::cout<<"\033[1;31m"<<"received Bytes: 0"<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;31m"<<"received Bytes: 0"<<"\033[0m"<<std::endl;
         this->closeClientSocket(client_fd);
     }
     else
@@ -626,11 +632,12 @@ Server::receiveLastChunkData(int client_fd)
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0)) > 0)
     {
-        readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"in receiveLastChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
+        buf[bytes] = 0;
+        // readed_bytes += bytes;
+        // std::cout<<"\033[1;33m"<<"in receiveLastChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         if (bytes != CRLF_SIZE)
         {
             request.setIsBufferLeft(true);
@@ -666,9 +673,26 @@ Server::receiveRequestChunkedBody(int client_fd)
     Request& request = this->_requests[client_fd];
     size_t index_of_crlf;
 
-    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
+    // int tmp = bytes;
+    usleep(250);
+    // for (size_t i = 0; i < 200; i++)
+    // {
+    //     bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
+    //     if (tmp != bytes)
+    //     {
+    //         // std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
+    //         // std::cout<<"\033[1;36m"<<"old_bytes: "<<tmp<<"\033[0m"<<std::endl;
+    //         // std::cout<<"\033[1;36m"<<"new_bytes: "<<bytes<<"\033[0m"<<std::endl;
+    //         // std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
+    //     }
+    //     tmp = bytes;
+    // }
+
+    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, MSG_PEEK)) > 0)
     {
+        buf[bytes] = 0;
         if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
         {
             if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
@@ -817,17 +841,17 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-    usleep(1000);
+    // usleep(1000);
 
     int bytes = 0;
 
     bytes = write(client_fd, response_message.c_str(), response_message.length());
     if (bytes > 0)
     {
-        sended_bytes += bytes;
+        // sended_bytes += bytes;
         // std::cout<<response_message<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
     }
     else if (bytes == 0)
     {
@@ -839,7 +863,7 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     }
     else
     {
-        std::cout<<"\033[1;44;37m"<<"Debug 2"<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;44;37m"<<"Debug 2"<<"\033[0m"<<std::endl;
         throw (CannotWriteToClientException());
     }
 
@@ -1080,7 +1104,7 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     timeval from;
     gettimeofday(&from, NULL);
 
-    usleep(1000);
+    usleep(500);
 
     int bytes;
     int client_fd;
@@ -1116,8 +1140,8 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     {
         bytes = write(write_fd_to_cgi, body.c_str(), body.length());
         
-            transfered_bytes += bytes;
-            std::cout<<"\033[1;30;43m"<<"in if: transfered_bytes: "<<transfered_bytes<<"\033[0m"<<std::endl;
+            // transfered_bytes += bytes;
+            // std::cout<<"\033[1;30;43m"<<"in if: transfered_bytes: "<<transfered_bytes<<"\033[0m"<<std::endl;
            
         if (bytes > 0)
         {
@@ -1127,24 +1151,18 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     }
     else
     {
-
         if (content_length - transfered_body_size < SEND_PIPE_STREAM_SIZE)
-        {
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
-            if (bytes == -1)
-            {
-                // throw ();
-            }
-            else if (bytes != content_length - transfered_body_size)
-            {
-                // selct 거쳐서 다시한번 write해야함.
-            }
-        }
         else
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], SEND_PIPE_STREAM_SIZE);
 
-            transfered_bytes += bytes;
-            std::cout<<"\033[1;30;43m"<<"in else: transfered_bytes: "<<transfered_bytes<<"\033[0m"<<std::endl;
+            // std::cout << "\033[34m\033[01m";
+            // std::cout << "===============================================" << std::endl;
+            // std::cout << "content_length: " << content_length << std::endl;
+            // std::cout << "transfered_body_size: " << transfered_body_size << std::endl;
+            // std::cout << "bytes: " << bytes << std::endl;
+            // std::cout << "===============================================" << std::endl;
+            // std::cout << "\033[0m";
 
         if (bytes > 0)
         {
@@ -1179,12 +1197,13 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     Response& response = this->_responses[client_fd];
 
     char buf[BUFFER_SIZE + 1];
-    ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+    // ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
     //TODO: usleep 필요 여부와 적정 수치 조정 필요함.
     // usleep(1000);
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
     if (bytes > 0)
     {
+        buf[bytes] = 0;
         response.appendBody(buf, bytes);
         if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
             response.preparseCGIMessage();
@@ -1194,6 +1213,11 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     }
     else if (bytes == 0)
     {
+        // std::cout << "\033[34m\033[01m";
+        // std::cout << "===============================================" << std::endl;
+        // std::cout << "read bytes 0" << std::endl;
+        // std::cout << "===============================================" << std::endl;
+        // std::cout << "\033[0m";
         waitpid(response.getCGIPid(), &status, 0);
         this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
         response.setReceiveProgress(ReceiveProgress::FINISH);
@@ -1225,20 +1249,20 @@ Server::putFileOnServer(int resource_fd)
         {
             // body_size: 0
             // transfered_body_size: 0
-            std::cout<<"\033[1;31m"<<"body_size: "<<body.length()<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;31m"<<"transfered_body_size: "<<transfered_body_size<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;31m"<<"BUFFER_SIZE: "<<BUFFER_SIZE<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;31m"<<"put byte is 0"<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"body_size: "<<body.length()<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"transfered_body_size: "<<transfered_body_size<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"BUFFER_SIZE: "<<BUFFER_SIZE<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"put byte is 0"<<"\033[0m"<<std::endl;
             sleep(50000);
         }
         else if (bytes < 0)
         {
-            std::cout<<"\033[1;31m"<<"put byte is "<<bytes<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"put byte is "<<bytes<<"\033[0m"<<std::endl;
             sleep(50000);
         }
 
         put_bytes += bytes;
-        std::cout<<"\033[1;37;41m"<<"put_bytes: "<<put_bytes<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;37;41m"<<"put_bytes: "<<put_bytes<<"\033[0m"<<std::endl;
 
         this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
     }
@@ -1247,20 +1271,20 @@ Server::putFileOnServer(int resource_fd)
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), BUFFER_SIZE);
         if (bytes == 0)
         {
-            std::cout<<"\033[1;31m"<<"body_size: "<<body.length()<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;31m"<<"transfered_body_size: "<<transfered_body_size<<"\033[0m"<<std::endl;
-            std::cout<<"\033[1;31m"<<"put byte is 0"<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"body_size: "<<body.length()<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"transfered_body_size: "<<transfered_body_size<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"put byte is 0"<<"\033[0m"<<std::endl;
             sleep(50000);
         }
         else if (bytes < 0)
         {
-            std::cout<<"\033[1;31m"<<"put byte is "<<bytes<<"\033[0m"<<std::endl;
+            // std::cout<<"\033[1;31m"<<"put byte is "<<bytes<<"\033[0m"<<std::endl;
             sleep(50000);
             throw (InternalServerException(this->_responses[resource_fd]));
         }
 
         put_bytes += bytes;
-        std::cout<<"\033[1;37;41m"<<"put_bytes: "<<put_bytes<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;37;41m"<<"put_bytes: "<<put_bytes<<"\033[0m"<<std::endl;
 
         transfered_body_size += bytes;
         request.setTransferedBodySize(transfered_body_size);
@@ -1528,9 +1552,10 @@ Server::readStaticResource(int resource_fd)
     int bytes;
     int client_socket = this->_server_manager->getFdTable()[resource_fd].second;
 
-    ft::memset(buf, 0, BUFFER_SIZE + 1);
+    // ft::memset(buf, 0, BUFFER_SIZE + 1);
     if ((bytes = read(resource_fd, buf, BUFFER_SIZE)) > 0)
     {
+        buf[bytes] = 0;
         this->_responses[client_socket].appendBody(buf, bytes);
         if (bytes < BUFFER_SIZE)
         {
