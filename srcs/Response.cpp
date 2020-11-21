@@ -1176,5 +1176,5 @@ Response::encodeChunkedBody()
 void
 Response::appendBody(char* buf, int bytes)
 {
-    this->setBody(this->getBody() + std::string(buf, bytes));
+    this->_body.append(buf, bytes);
 }
