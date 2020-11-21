@@ -375,7 +375,7 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
 
     ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
     if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
-        request.parseRequestWithoutBody(buf);
+        request.parseRequestWithoutBody(buf, bytes);
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
     else
@@ -399,6 +399,7 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& readed)
         if (bytes != crlf_size)
             throw (ReadErrorException());
     }
+    std::cout<<"\033[1;31m"<<"Infinity loof"<<"\033[0m"<<std::endl;
 }
 
 long long int readed_bytes;
@@ -418,17 +419,48 @@ Server::receiveRequestWithoutBody(int client_fd)
     Request& request = this->_requests[client_fd];
 
     ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+
+    bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
+    int tmp = bytes;
+    //TODO recv 여러번
+    for (size_t i = 0; i < 100; i++)
+    {
+        bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
+        if (tmp != bytes)
+        {
+            std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;36m"<<"old_bytes: "<<tmp<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;36m"<<"new_bytes: "<<bytes<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
+        }
+        tmp = bytes;
+    }
+    
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     {
         // buf[bytes] = 0;
         readed_bytes += bytes;
         std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
 
-        readed = std::string(buf);
+        readed = std::string(buf, bytes);
         if ((header_end_pos = readed.find("\r\n\r\n")) != std::string::npos)
         {
+            // PUT /put_test/must_exist HTTP/1.1\r\nheaders\r\n\r\nEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\r\n
+
+            // PUT /put_test/must_exist HTTP/1.1\r\nheaders\r\n\r\n
+            //                                          select거쳐서 10 usec 이후에 body recv를 하고, 아 buffer없네 하고 0 body를 put해버리면 문제 생기지 않나???
+            // 50 usec
+            // EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\r\n
+
+            // 헤더까지 읽고, uri파싱을 한다음, body가 필요한지를 확인하고,
+            // 만약 필요하다면, 일정시간동안 body recv를 select거쳐서 계속 시도하고, 그 시간이 지나면 오류상태코드 보낸다.
+            // 만약 body가 필요치않다면, body recv를 일정시간동안 select거쳐서 시도하며 다 비워진게 보장되면 작업을 시작한다???
+            // body가 필요치않은데, 얘가 body에 해당하는걸 이어서 보낼 수도 있겠다??
             if (static_cast<size_t>(bytes) == header_end_pos + 4)
             {
+                std::cout<<"\033[1;36m"<<" Wow buffer is not left..??"<<"\033[0m"<<std::endl;
+                std::cout<<"\033[1;36m"<<" bytes: "<<bytes<<"\033[0m"<<std::endl;
+                std::cout<<"\033[1;36m"<<" header_end_pos: "<<header_end_pos<<"\033[0m"<<std::endl;
                 request.setIsBufferLeft(false);
                 request.setReqInfo(ReqInfo::COMPLETE);
             }
@@ -529,12 +561,14 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    // std::cout<<"\033[1;31m"<<"index_of_crlf: "<<index_of_crlf<<"\033[0m"<<std::endl;
+    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
     {
-        readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"in receiveChunkSie readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        request.parseTargetChunkSize(buf);
+        // readed_bytes += bytes;
+        // std::cout<<"\033[1;33m"<<"in receiveChunkSize readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
+        request.parseTargetChunkSize(std::string(buf, bytes - CRLF_SIZE));
+        // std::cout<<"\033[1;34m"<<"TargetChunkSize: "<<request.getTargetChunkSize()<<"\033[0m"<<std::endl;
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -547,8 +581,9 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
 }
 
 void
-Server::receiveChunkData(int client_fd, int receive_size, int target_chunk_size)
+Server::receiveChunkData(int client_fd, int receive_size)
 {
+
     Log::trace("> receiveChunkData", 1);
     timeval from;
     gettimeofday(&from, NULL);
@@ -561,18 +596,23 @@ Server::receiveChunkData(int client_fd, int receive_size, int target_chunk_size)
     if ((bytes = recv(client_fd, buf, receive_size, 0)) > 0)
     {
         readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"in receiveChunkSie readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        request.parseChunkDataAndSetChunkSize(buf, bytes, target_chunk_size);
+        std::cout<<"\033[1;33m"<<"in receiveChunkData bytes: "<<bytes<<"\033[0m"<<std::endl;
+        std::cout<<"\033[1;33m"<<"in receiveChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
+        request.setReceivedChunkDataSize(request.getReceivedChunkDataSize() + bytes);
+        request.parseChunkData(buf, bytes);
     }
     else if (bytes == 0)
+    {
+        std::cout<<"\033[1;31m"<<"received Bytes: 0"<<"\033[0m"<<std::endl;
         this->closeClientSocket(client_fd);
+    }
     else
         throw (UnchunkedErrorException());
-
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkData", 1);
 }
+
 
 void
 Server::receiveLastChunkData(int client_fd)
@@ -587,11 +627,11 @@ Server::receiveLastChunkData(int client_fd)
     Request& request = this->_requests[client_fd];
 
     ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
-    if ((bytes = recv(client_fd, buf, CRLF_SIZE*2 + 1, 0)) > 0)
+    if ((bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0)) > 0)
     {
         readed_bytes += bytes;
         std::cout<<"\033[1;33m"<<"in receiveLastChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        if (bytes != CRLF_SIZE*2)
+        if (bytes != CRLF_SIZE)
         {
             request.setIsBufferLeft(true);
             throw (Request::RequestFormatException(request, "400"));
@@ -634,19 +674,21 @@ Server::receiveRequestChunkedBody(int client_fd)
             if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
                 this->receiveChunkSize(client_fd, index_of_crlf);
             else
-            {
-                std::cout<<"\033[1;37;41m"<<"Debug 3"<<"\033[0m"<<std::endl;
                 throw (Request::RequestFormatException(request, "400"));
-            }
         }
         else if (request.getTargetChunkSize() == 0)
             this->receiveLastChunkData(client_fd);
         else
         {
-            if (request.getTargetChunkSize() < RECEIVE_SOCKET_STREAM_SIZE)
-                this->receiveChunkData(client_fd, request.getTargetChunkSize(), DEFAULT_TARGET_CHUNK_SIZE);
-            else
-                this->receiveChunkData(client_fd, RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() - RECEIVE_SOCKET_STREAM_SIZE + CRLF_SIZE);
+            int receive_target_size = std::min(RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() + CRLF_SIZE - request.getReceivedChunkDataSize());
+
+            this->receiveChunkData(client_fd, receive_target_size);
+
+            if (request.getTargetChunkSize() + CRLF_SIZE == request.getReceivedChunkDataSize())
+            {
+                request.setReceivedChunkDataSize(0);
+                request.setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
+            }
         }
     }
     else if (bytes == 0)
@@ -775,6 +817,7 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
+    usleep(1000);
 
     int bytes = 0;
 
@@ -782,7 +825,7 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     if (bytes > 0)
     {
         sended_bytes += bytes;
-        std::cout<<response_message<<std::endl;
+        // std::cout<<response_message<<std::endl;
         std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
         std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
     }
@@ -1028,7 +1071,7 @@ Server::acceptClient()
     Log::trace("< acceptClient", 2);
 }
 
-int transfered;
+int transfered_bytes;
 
 void
 Server::sendDataToCGI(int write_fd_to_cgi)
@@ -1037,6 +1080,7 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     timeval from;
     gettimeofday(&from, NULL);
 
+    usleep(1000);
 
     int bytes;
     int client_fd;
@@ -1071,6 +1115,10 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     if (content_length < SEND_PIPE_STREAM_SIZE)
     {
         bytes = write(write_fd_to_cgi, body.c_str(), body.length());
+        
+            transfered_bytes += bytes;
+            std::cout<<"\033[1;30;43m"<<"in if: transfered_bytes: "<<transfered_bytes<<"\033[0m"<<std::endl;
+           
         if (bytes > 0)
         {
             if (bytes < SEND_PIPE_STREAM_SIZE)
@@ -1079,12 +1127,25 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     }
     else
     {
+
         if (content_length - transfered_body_size < SEND_PIPE_STREAM_SIZE)
+        {
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
+            if (bytes == -1)
+            {
+                // throw ();
+            }
+            else if (bytes != content_length - transfered_body_size)
+            {
+                // selct 거쳐서 다시한번 write해야함.
+            }
+        }
         else
             bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], SEND_PIPE_STREAM_SIZE);
-        transfered += bytes;
-        std::cout<<"\033[1;30;43m"<<transfered<<"\033[0m"<<std::endl;
+
+            transfered_bytes += bytes;
+            std::cout<<"\033[1;30;43m"<<"in else: transfered_bytes: "<<transfered_bytes<<"\033[0m"<<std::endl;
+
         if (bytes > 0)
         {
             request.setTransferedBodySize(transfered_body_size + bytes);
@@ -1160,6 +1221,21 @@ Server::putFileOnServer(int resource_fd)
     if (BUFFER_SIZE > remained)
     {
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), remained);
+        if (bytes == 0)
+        {
+            // body_size: 0
+            // transfered_body_size: 0
+            std::cout<<"\033[1;31m"<<"body_size: "<<body.length()<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;31m"<<"transfered_body_size: "<<transfered_body_size<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;31m"<<"BUFFER_SIZE: "<<BUFFER_SIZE<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;31m"<<"put byte is 0"<<"\033[0m"<<std::endl;
+            sleep(50000);
+        }
+        else if (bytes < 0)
+        {
+            std::cout<<"\033[1;31m"<<"put byte is "<<bytes<<"\033[0m"<<std::endl;
+            sleep(50000);
+        }
 
         put_bytes += bytes;
         std::cout<<"\033[1;37;41m"<<"put_bytes: "<<put_bytes<<"\033[0m"<<std::endl;
@@ -1169,6 +1245,19 @@ Server::putFileOnServer(int resource_fd)
     else
     {
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), BUFFER_SIZE);
+        if (bytes == 0)
+        {
+            std::cout<<"\033[1;31m"<<"body_size: "<<body.length()<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;31m"<<"transfered_body_size: "<<transfered_body_size<<"\033[0m"<<std::endl;
+            std::cout<<"\033[1;31m"<<"put byte is 0"<<"\033[0m"<<std::endl;
+            sleep(50000);
+        }
+        else if (bytes < 0)
+        {
+            std::cout<<"\033[1;31m"<<"put byte is "<<bytes<<"\033[0m"<<std::endl;
+            sleep(50000);
+            throw (InternalServerException(this->_responses[resource_fd]));
+        }
 
         put_bytes += bytes;
         std::cout<<"\033[1;37;41m"<<"put_bytes: "<<put_bytes<<"\033[0m"<<std::endl;
@@ -1221,9 +1310,23 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
-                int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCGI(), FdSet::WRITE, client_fd, FdSet::WRITE);
-                this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ);
+                if (this->isCGIWritePipe(fd))
+                {
+                    int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+                    this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCGI(), FdSet::WRITE, client_fd, FdSet::WRITE);
+                    this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ);
+                }
+                else if (this->isClientSocket(fd))
+                {
+                }
+                else
+                {
+                    int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+                    //TODO 
+                    this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+                    this->closeFdAndUpdateFdTable(fd, FdSet::READ);
+                }
+                
             }
             catch(const std::exception& e)
             {
