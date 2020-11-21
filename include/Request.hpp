@@ -26,6 +26,7 @@ private:
     std::string _remote_ident;
     std::string _auth_type;
     int _target_chunk_size;
+    int _received_chunk_data_size;
 
 public:
     /* Constructor */
@@ -53,6 +54,7 @@ public:
     const std::string& getRemoteUser() const;
     const std::string& getRemoteIdent() const;
     int getTargetChunkSize() const;
+    int getReceivedChunkDataSize() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -70,6 +72,7 @@ public:
     void setRemoteUser(const std::string& remote_user);
     void setRemoteIdent(const std::string& remote_ident);
     void setTargetChunkSize(const int target_size);
+    void setReceivedChunkDataSize(const int received_chunk_data_size);
 
     /* Util */
 
@@ -87,7 +90,7 @@ public:
     // void initMembers(std::string req_message);
 
     /* parser */
-    void parseRequestWithoutBody(char* buf);
+    void parseRequestWithoutBody(char* buf, int bytes);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
 
@@ -106,6 +109,7 @@ public:
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
+    void parseChunkData(char* buf, size_t bytes);
 
     /* Exception */
 public:
