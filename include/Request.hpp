@@ -8,6 +8,8 @@
 //NOTE: test용으로 ostream include함.
 #include <iostream>
 
+# define RECV_COUNT_NOT_REACHED -2
+
 class Request
 {
 private:
@@ -27,6 +29,8 @@ private:
     std::string _auth_type;
     int _target_chunk_size;
     int _received_chunk_data_size;
+
+    int _recv_counts;
 
 public:
     /* Constructor */
@@ -56,6 +60,8 @@ public:
     int getTargetChunkSize() const;
     int getReceivedChunkDataSize() const;
 
+    int getReceiveCounts() const;
+
     /* Setter */
     void setMethod(const std::string& method);
     void setUri(const std::string& uri);
@@ -74,6 +80,8 @@ public:
     void setTargetChunkSize(const int target_size);
     void setReceivedChunkDataSize(const int received_chunk_data_size);
 
+    void setReceiveCounts(const int recv_count);
+
     /* Util */
 
     void init();
@@ -86,8 +94,8 @@ public:
     bool isChunkedBody() const;
     bool isContentLeftInBuffer() const;
 
-
-    // void initMembers(std::string req_message);
+    int peekMessageFromClient(int client_fd, char* buf);
+    void raiseRecvCounts();
 
     /* parser */
     void parseRequestWithoutBody(char* buf, int bytes);

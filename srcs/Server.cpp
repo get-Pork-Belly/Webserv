@@ -440,8 +440,9 @@ Server::receiveRequestWithoutBody(int client_fd)
     //     tmp = bytes;
     // }
     
-    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
+    if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
+        buf[bytes] = 0;
         // buf[bytes] = 0;
         // readed_bytes += bytes;
         // std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
@@ -480,6 +481,8 @@ Server::receiveRequestWithoutBody(int client_fd)
             throw (Request::RequestFormatException(request, "400"));
         }
     }
+    else if (bytes == RECV_COUNT_NOT_REACHED)
+        request.raiseRecvCounts();
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else

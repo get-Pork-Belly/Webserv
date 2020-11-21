@@ -15,7 +15,7 @@ Request::Request()
 _protocol(""), _body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
-_received_chunk_data_size(0)
+_received_chunk_data_size(0), _recv_counts(0)
  {}
 
 Request::Request(const Request& other)
@@ -25,7 +25,8 @@ _protocol(other._protocol), _body(other._body),
 _status_code(other._status_code), _info(other._info),
 _is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
 _transfered_body_size(other._transfered_body_size), _target_chunk_size(other._target_chunk_size),
-_received_chunk_data_size(other._received_chunk_data_size) {}
+_received_chunk_data_size(other._received_chunk_data_size), _recv_counts(other._recv_counts)
+{}
 
 Request&
 Request::operator=(const Request& other)
@@ -43,6 +44,7 @@ Request::operator=(const Request& other)
     this->_transfered_body_size = other._transfered_body_size;
     this->_target_chunk_size = other._target_chunk_size;
     this->_received_chunk_data_size = other._received_chunk_data_size;
+    this->_recv_counts = other._recv_counts;
     return (*this);
 }
 
@@ -152,6 +154,12 @@ Request::getReceivedChunkDataSize() const
     return (this->_received_chunk_data_size);
 }
 
+int
+Request::getReceiveCounts() const
+{
+    return (this->_recv_counts);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -252,6 +260,12 @@ Request::setReceivedChunkDataSize(const int received_chunk_data_size)
     this->_received_chunk_data_size = received_chunk_data_size;
 }
 
+void
+Request::setReceiveCounts(const int recv_counts)
+{
+    this->_recv_counts = recv_counts;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -347,6 +361,21 @@ Request::isContentLeftInBuffer() const
     return (this->getIsBufferLeft());
 }
 
+int
+Request::peekMessageFromClient(int client_fd, char* buf)
+{
+    int bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
+    //TODO 50은 임의값임. 최적값 찾아서 매크로상수화할 것.
+    if (bytes <= 0 || bytes == BUFFER_SIZE || this->getReceiveCounts() == 50)
+        return (bytes);
+    return (RECV_COUNT_NOT_REACHED);
+}
+
+void
+Request::raiseRecvCounts()
+{
+    this->_recv_counts++;
+}
 
 bool
 Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& ret)
