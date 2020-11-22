@@ -642,24 +642,7 @@ Server::receiveRequestChunkedBody(int client_fd)
     Request& request = this->_requests[client_fd];
     size_t index_of_crlf;
 
-    bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
-    // int tmp = bytes;
-    usleep(250);
-    // for (size_t i = 0; i < 200; i++)
-    // {
-    //     bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
-    //     if (tmp != bytes)
-    //     {
-    //         // std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
-    //         // std::cout<<"\033[1;36m"<<"old_bytes: "<<tmp<<"\033[0m"<<std::endl;
-    //         // std::cout<<"\033[1;36m"<<"new_bytes: "<<bytes<<"\033[0m"<<std::endl;
-    //         // std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
-    //     }
-    //     tmp = bytes;
-    // }
-
-    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
-    if ((bytes = recv(client_fd, buf, RECEIVE_SOCKET_STREAM_SIZE, MSG_PEEK)) > 0)
+    if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
         if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
@@ -684,6 +667,8 @@ Server::receiveRequestChunkedBody(int client_fd)
             }
         }
     }
+    else if (bytes == RECV_COUNT_NOT_REACHED)
+        request.raiseRecvCounts();
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else

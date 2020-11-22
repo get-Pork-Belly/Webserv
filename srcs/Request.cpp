@@ -367,7 +367,10 @@ Request::peekMessageFromClient(int client_fd, char* buf)
     int bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
     //TODO 50은 임의값임. 최적값 찾아서 매크로상수화할 것.
     if (bytes <= 0 || bytes == BUFFER_SIZE || this->getReceiveCounts() == 50)
+    {
+        this->setReceiveCounts(0);
         return (bytes);
+    }
     return (RECV_COUNT_NOT_REACHED);
 }
 
