@@ -1075,75 +1075,88 @@ Server::sendDataToCGI(int write_fd_to_cgi)
 
     usleep(500);
 
-    int bytes;
-    int client_fd;
-    int content_length;
-    int transfered_body_size;
-
-    bytes = 0;
-    client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
+    int client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
 
-    const std::map<std::string, std::string>& headers = request.getHeaders();
-    std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
-    if (it != headers.end())
-        content_length = request.getContentLength();
-    else
-        content_length = request.getBody().length();
-
-    transfered_body_size = request.getTransferedBodySize();
     const std::string& body = request.getBody();
 
-    if (content_length == 0 || request.getMethod() != "POST")
+    int transfered_body_size = request.getTransferedBodySize();
+
+    int content_length;
+    const std::map<std::string, std::string>& headers = request.getHeaders();
+    if (headers.find("Content-Length") != headers.end())
+        content_length = request.getContentLength();
+    else
+        content_length = body.length();
+
+    if (content_length == 0 || content_length == transfered_body_size || request.getMethod() != "POST")
     {
         this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-
 
         Log::printTimeDiff(from, 1);
         Log::trace("< sendDataToCGI", 1);
         return ;
     }
 
-    if (content_length < SEND_PIPE_STREAM_SIZE)
+    int target_send_data_size = std::min(SEND_PIPE_STREAM_SIZE, content_length - transfered_body_size);
+
+    int bytes;
+    if ((bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], target_send_data_size)) > 0)
     {
-        bytes = write(write_fd_to_cgi, body.c_str(), body.length());
-        
-            // transfered_bytes += bytes;
-            // std::cout<<"\033[1;30;43m"<<"in if: transfered_bytes: "<<transfered_bytes<<"\033[0m"<<std::endl;
-           
-        if (bytes > 0)
-        {
-            if (bytes < SEND_PIPE_STREAM_SIZE)
-                this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-        }
-    }
-    else
-    {
-        if (content_length - transfered_body_size < SEND_PIPE_STREAM_SIZE)
-            bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
+        request.setTransferedBodySize(transfered_body_size + bytes);
+        if (content_length == transfered_body_size)
+            this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
         else
-            bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], SEND_PIPE_STREAM_SIZE);
-
-            // std::cout << "\033[34m\033[01m";
-            // std::cout << "===============================================" << std::endl;
-            // std::cout << "content_length: " << content_length << std::endl;
-            // std::cout << "transfered_body_size: " << transfered_body_size << std::endl;
-            // std::cout << "bytes: " << bytes << std::endl;
-            // std::cout << "===============================================" << std::endl;
-            // std::cout << "\033[0m";
-
-        if (bytes > 0)
         {
-            request.setTransferedBodySize(transfered_body_size + bytes);
             this->_server_manager->fdSet(response.getReadFdFromCGI(), FdSet::READ);
             this->_server_manager->fdClr(client_fd, FdSet::READ);
         }
     }
-    if (bytes == 0)
-        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-    else if (bytes < 0)
+    else if (bytes == 0)
         throw (InternalServerException(this->_responses[client_fd]));
+    else
+        throw (InternalServerException(this->_responses[client_fd]));
+
+    // if (content_length < SEND_PIPE_STREAM_SIZE)
+    // {
+    //     bytes = write(write_fd_to_cgi, body.c_str(), body.length());
+        
+    //         // transfered_bytes += bytes;
+    //         // std::cout<<"\033[1;30;43m"<<"in if: transfered_bytes: "<<transfered_bytes<<"\033[0m"<<std::endl;
+           
+    //     if (bytes > 0)
+    //     {
+    //         if (bytes < SEND_PIPE_STREAM_SIZE)
+    //             this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
+    //     }
+    // }
+    // else
+    // {
+    //     if (content_length - transfered_body_size < SEND_PIPE_STREAM_SIZE)
+    //         bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
+    //     else
+    //         bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], SEND_PIPE_STREAM_SIZE);
+
+    //         // std::cout << "\033[34m\033[01m";
+    //         // std::cout << "===============================================" << std::endl;
+    //         // std::cout << "content_length: " << content_length << std::endl;
+    //         // std::cout << "transfered_body_size: " << transfered_body_size << std::endl;
+    //         // std::cout << "bytes: " << bytes << std::endl;
+    //         // std::cout << "===============================================" << std::endl;
+    //         // std::cout << "\033[0m";
+
+    //     if (bytes > 0)
+    //     {
+    //         request.setTransferedBodySize(transfered_body_size + bytes);
+            // this->_server_manager->fdSet(response.getReadFdFromCGI(), FdSet::READ);
+            // this->_server_manager->fdClr(client_fd, FdSet::READ);
+    //     }
+    // }
+    // if (bytes == 0)
+    //     this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
+    // else if (bytes < 0)
+    //     throw (InternalServerException(this->_responses[client_fd]));
 
 
     Log::printTimeDiff(from, 1);
