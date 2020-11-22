@@ -397,8 +397,15 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_messag
     if (peeked_message == "\r\n")
     {
         bytes = read(client_fd, buf, CRLF_SIZE);
-        buf[bytes] = 0;
-        if (bytes != CRLF_SIZE)
+        if (bytes > 0)
+        {
+            buf[bytes] = 0;
+            if (bytes != CRLF_SIZE)
+                throw (ReadErrorException());
+        }
+        else if (bytes == 0)
+            throw (ReadErrorException());
+        else
             throw (ReadErrorException());
     }
 }
