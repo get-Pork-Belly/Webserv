@@ -389,20 +389,18 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
 }
 
 void
-Server::processIfHeadersNotFound(int client_fd, const std::string& readed)
+Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_message)
 {
-    const int crlf_size = 2;
     size_t bytes;
-    char buf[crlf_size + 1];
+    char buf[BUFFER_SIZE + 1];
 
-    if (readed == "\r\n")
+    if (peeked_message == "\r\n")
     {
-        ft::memset(reinterpret_cast<void *>(buf), 0, crlf_size + 1);
-        bytes = read(client_fd, buf, crlf_size);
-        if (bytes != crlf_size)
+        bytes = read(client_fd, buf, CRLF_SIZE);
+        buf[bytes] = 0;
+        if (bytes != CRLF_SIZE)
             throw (ReadErrorException());
     }
-    // std::cout<<"\033[1;31m"<<"Infinity loof"<<"\033[0m"<<std::endl;
 }
 
 long long int readed_bytes;
@@ -421,51 +419,19 @@ Server::receiveRequestWithoutBody(int client_fd)
     std::string readed;
     Request& request = this->_requests[client_fd];
 
-    ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-
-    bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
-    usleep(200);
-    // int tmp = bytes;
-    // //TODO recv 여러번
-    // for (size_t i = 0; i < 200; i++)
-    // {
-    //     bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
-    //     if (tmp != bytes)
-    //     {
-    //         // std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
-    //         // std::cout<<"\033[1;36m"<<"old_bytes: "<<tmp<<"\033[0m"<<std::endl;
-    //         // std::cout<<"\033[1;36m"<<"new_bytes: "<<bytes<<"\033[0m"<<std::endl;
-    //         // std::cout<<"\033[1;31m"<<"changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<"\033[0m"<<std::endl;
-    //     }
-    //     tmp = bytes;
-    // }
-    
+    // ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
+    // if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        // buf[bytes] = 0;
-        // readed_bytes += bytes;
-        // std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
+        readed_bytes += bytes;
+        std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody peeked_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
 
         readed = std::string(buf, bytes);
         if ((header_end_pos = readed.find("\r\n\r\n")) != std::string::npos)
         {
-            // PUT /put_test/must_exist HTTP/1.1\r\nheaders\r\n\r\nEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\r\n
-
-            // PUT /put_test/must_exist HTTP/1.1\r\nheaders\r\n\r\n
-            //                                          select거쳐서 10 usec 이후에 body recv를 하고, 아 buffer없네 하고 0 body를 put해버리면 문제 생기지 않나???
-            // 50 usec
-            // EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\r\n
-
-            // 헤더까지 읽고, uri파싱을 한다음, body가 필요한지를 확인하고,
-            // 만약 필요하다면, 일정시간동안 body recv를 select거쳐서 계속 시도하고, 그 시간이 지나면 오류상태코드 보낸다.
-            // 만약 body가 필요치않다면, body recv를 일정시간동안 select거쳐서 시도하며 다 비워진게 보장되면 작업을 시작한다???
-            // body가 필요치않은데, 얘가 body에 해당하는걸 이어서 보낼 수도 있겠다??
             if (static_cast<size_t>(bytes) == header_end_pos + 4)
             {
-                // std::cout<<"\033[1;36m"<<" Wow buffer is not left..??"<<"\033[0m"<<std::endl;
-                // std::cout<<"\033[1;36m"<<" bytes: "<<bytes<<"\033[0m"<<std::endl;
-                // std::cout<<"\033[1;36m"<<" header_end_pos: "<<header_end_pos<<"\033[0m"<<std::endl;
                 request.setIsBufferLeft(false);
                 request.setReqInfo(ReqInfo::COMPLETE);
             }
