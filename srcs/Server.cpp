@@ -801,7 +801,7 @@ Server::makeResponseMessage(int client_fd)
     return (status_line + headers + response.getTransmittingBody());
 }
 
-int sended_bytes;
+long long sended_bytes;
 
 void
 Server::sendResponse(const std::string& response_message, int client_fd)
@@ -817,10 +817,10 @@ Server::sendResponse(const std::string& response_message, int client_fd)
     bytes = write(client_fd, response_message.c_str(), response_message.length());
     if (bytes > 0)
     {
-        // sended_bytes += bytes;
+        sended_bytes += bytes;
         // std::cout<<response_message<<std::endl;
-        // std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
-        // std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
+        std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
+        std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
     }
     else if (bytes == 0)
     {
@@ -1074,7 +1074,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     gettimeofday(&from, NULL);
 
     usleep(500);
-
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
@@ -1117,47 +1116,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
         throw (InternalServerException(this->_responses[client_fd]));
     else
         throw (InternalServerException(this->_responses[client_fd]));
-
-    // if (content_length < SEND_PIPE_STREAM_SIZE)
-    // {
-    //     bytes = write(write_fd_to_cgi, body.c_str(), body.length());
-        
-    //         // transfered_bytes += bytes;
-    //         // std::cout<<"\033[1;30;43m"<<"in if: transfered_bytes: "<<transfered_bytes<<"\033[0m"<<std::endl;
-           
-    //     if (bytes > 0)
-    //     {
-    //         if (bytes < SEND_PIPE_STREAM_SIZE)
-    //             this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-    //     }
-    // }
-    // else
-    // {
-    //     if (content_length - transfered_body_size < SEND_PIPE_STREAM_SIZE)
-    //         bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], content_length - transfered_body_size);
-    //     else
-    //         bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], SEND_PIPE_STREAM_SIZE);
-
-    //         // std::cout << "\033[34m\033[01m";
-    //         // std::cout << "===============================================" << std::endl;
-    //         // std::cout << "content_length: " << content_length << std::endl;
-    //         // std::cout << "transfered_body_size: " << transfered_body_size << std::endl;
-    //         // std::cout << "bytes: " << bytes << std::endl;
-    //         // std::cout << "===============================================" << std::endl;
-    //         // std::cout << "\033[0m";
-
-    //     if (bytes > 0)
-    //     {
-    //         request.setTransferedBodySize(transfered_body_size + bytes);
-            // this->_server_manager->fdSet(response.getReadFdFromCGI(), FdSet::READ);
-            // this->_server_manager->fdClr(client_fd, FdSet::READ);
-    //     }
-    // }
-    // if (bytes == 0)
-    //     this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-    // else if (bytes < 0)
-    //     throw (InternalServerException(this->_responses[client_fd]));
-
 
     Log::printTimeDiff(from, 1);
     Log::trace("< sendDataToCGI", 1);
