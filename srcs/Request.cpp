@@ -31,7 +31,7 @@ _received_chunk_data_size(other._received_chunk_data_size), _recv_counts(other._
 Request&
 Request::operator=(const Request& other)
 {
-    this->_method= other._method;
+    this->_method = other._method;
     this->_uri = other._uri;
     this->_version = other._version;
     this->_headers = other._headers;
@@ -518,8 +518,20 @@ Request::appendBody(char* buf, int bytes)
 void
 Request::init()
 {
-    Request temp;
-    *this = temp;
+    this->_method = "";
+    this->_uri = "";
+    this->_version = "";
+    this->_headers = {};
+    this->_protocol = "";
+    this->_body = "";
+    this->_status_code = "200";
+    this->_info = ReqInfo::READY;
+    this->_is_buffer_left = false;
+    this->_ip_address = "";
+    this->_transfered_body_size = 0;
+    this->_target_chunk_size = DEFAULT_TARGET_CHUNK_SIZE;
+    this->_received_chunk_data_size = 0;
+    this->_recv_counts = 0;
 }
 
 int

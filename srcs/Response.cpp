@@ -390,7 +390,30 @@ Response::InvalidCGIMessageException::what() const throw()
 void
 Response::init()
 {
-    *this = Response();
+    this->_status_code = "200";
+    this->_headers = {};
+    this->_transfer_type = "";
+    this->_clients = "";
+    this->_location_info = {};
+    this->_resource_abs_path = "";
+    this->_route = "";
+    this->_directory_entry = "";
+    this->_resource_type = ResType::NOT_YET_CHECKED;
+    ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
+    this->_body = "";
+    this->_stdin_of_cgi = 0;
+    this->_stdout_of_cgi = 0;
+    this->_read_fd_from_cgi = 0;
+    this->_write_fd_to_cgi = 0;
+    this->_cgi_pid = 0;
+    this->_uri_path = "";
+    this->_uri_extension = "";
+    this->_transmitting_body = "";
+    this->_already_encoded_size = 0;
+    this->_send_progress = SendProgress::DEFAULT;
+    this->_receive_progress = ReceiveProgress::DEFAULT;
+    this->_resoure_fd = 0;
+    //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
 }
 
 void
