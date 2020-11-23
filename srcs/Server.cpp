@@ -1289,7 +1289,12 @@ Server::run(int fd)
                 if (this->_responses[fd].getResourceFd() != 0)
                     this->closeFdAndUpdateFdTable(this->_responses[fd].getResourceFd(), FdSet::READ);
                 else
-                    this->closeFdAndUpdateFdTable(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
+                {
+                    if (this->_server_manager->getFdType(this->_responses[fd].getWriteFdToCGI()) != FdType::CLOSED)
+                        this->closeFdAndUpdateFdTable(this->_responses[fd].getWriteFdToCGI(), FdSet::READ);
+                    if (this->_server_manager->getFdType(this->_responses[fd].getReadFdFromCGI()) != FdType::CLOSED)
+                        this->closeFdAndUpdateFdTable(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
+                }
                 this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
             }
