@@ -25,6 +25,7 @@ const int CHUNKED_LINE_LENGTH = 65536;
 const int DEFAULT_TARGET_CHUNK_SIZE = -2;
 const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
+const int DEFAULT_FD = -1;
 
 class ServerManager;
 class Request;

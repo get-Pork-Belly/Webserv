@@ -23,8 +23,8 @@ ServerManager::ServerManager(const char* config_path)
     this->_port = "default";
     // this->_fd_table.resize(1024, FdType::CLOSED);
 
-    this->_fd_table.resize(1024, std::pair<FdType, int>(FdType::CLOSED, -1));
-    this->_fd = 0;
+    this->_fd_table.resize(1024, std::pair<FdType, int>(FdType::CLOSED, DEFAULT_FD));
+    this->_fd = DEFAULT_FD;
     this->_fd_max = 2;
     this->initServers();
 }
@@ -89,7 +89,7 @@ void
 ServerManager::setServerSocketOnFdTable(int fd)
 {
     this->_fd_table[fd].first = FdType::SERVER_SOCKET;
-    this->_fd_table[fd].second = -1;
+    this->_fd_table[fd].second = DEFAULT_FD;
 }
 
 void

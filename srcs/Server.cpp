@@ -1232,7 +1232,7 @@ Server::run(int fd)
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
-                        if (this->_responses[fd].getResourceFd() != 0)
+                        if (this->_responses[fd].getResourceFd() != DEFAULT_FD)
                             this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
                         else
                             this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
@@ -1272,7 +1272,7 @@ Server::run(int fd)
             }
             catch(const std::exception& e)
             {
-                if (this->_responses[fd].getResourceFd() != 0)
+                if (this->_responses[fd].getResourceFd() != DEFAULT_FD)
                     this->closeFdAndUpdateFdTable(this->_responses[fd].getResourceFd(), FdSet::READ);
                 else
                 {
@@ -1312,8 +1312,8 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
-                if (this->_responses[fd].getWriteFdToCGI() != 0 ||
-                        this->_responses[fd].getReadFdFromCGI() != 0)
+                if (this->_responses[fd].getWriteFdToCGI() != DEFAULT_FD ||
+                        this->_responses[fd].getReadFdFromCGI() != DEFAULT_FD)
                 {
                     Response& response = this->_responses[fd];
                     this->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);

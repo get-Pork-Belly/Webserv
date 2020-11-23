@@ -19,10 +19,10 @@ Response::Response()
 : _status_code("200"), _headers(), _transfer_type(""), _clients(""),
 _location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
-_stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
-_cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
+_stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT_FD),
+_write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extension(""), _transmitting_body(""),
 _already_encoded_size(0), _send_progress(SendProgress::DEFAULT),
-_receive_progress(ReceiveProgress::DEFAULT), _resoure_fd(0)
+_receive_progress(ReceiveProgress::DEFAULT), _resoure_fd(DEFAULT_FD)
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -401,10 +401,10 @@ Response::init()
     this->_resource_type = ResType::NOT_YET_CHECKED;
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->_body = "";
-    this->_stdin_of_cgi = 0;
-    this->_stdout_of_cgi = 0;
-    this->_read_fd_from_cgi = 0;
-    this->_write_fd_to_cgi = 0;
+    this->_stdin_of_cgi = DEFAULT_FD;
+    this->_stdout_of_cgi = DEFAULT_FD;
+    this->_read_fd_from_cgi = DEFAULT_FD;
+    this->_write_fd_to_cgi = DEFAULT_FD;
     this->_cgi_pid = 0;
     this->_uri_path = "";
     this->_uri_extension = "";
@@ -412,7 +412,7 @@ Response::init()
     this->_already_encoded_size = 0;
     this->_send_progress = SendProgress::DEFAULT;
     this->_receive_progress = ReceiveProgress::DEFAULT;
-    this->_resoure_fd = 0;
+    this->_resoure_fd = DEFAULT_FD;
     //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
 }
 
