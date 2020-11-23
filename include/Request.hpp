@@ -31,6 +31,7 @@ private:
     int _received_chunk_data_size;
 
     int _recv_counts;
+    bool _carriege_return_trimmed;
 
 public:
     /* Constructor */
@@ -59,6 +60,8 @@ public:
     const std::string& getRemoteIdent() const;
     int getTargetChunkSize() const;
     int getReceivedChunkDataSize() const;
+    // bool CarriegeReturnTrimmed;
+    bool getCarriegeReturnTrimmed() const;
 
     int getReceiveCounts() const;
 
@@ -81,6 +84,7 @@ public:
     void setReceivedChunkDataSize(const int received_chunk_data_size);
 
     void setReceiveCounts(const int recv_count);
+    void setCarriegeReturnTrimmed(const bool trimmed);
 
     /* Util */
 
@@ -113,7 +117,10 @@ public:
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
 
+    bool isCarriegeReturnTrimmed();
+
     void appendBody(char* buf, int bytes);
+    void appendBody(const char* buf, int bytes);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);

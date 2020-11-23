@@ -15,7 +15,7 @@ Request::Request()
 _protocol(""), _body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
-_received_chunk_data_size(0), _recv_counts(0)
+_received_chunk_data_size(0), _recv_counts(0), _carriege_return_trimmed(false)
  {}
 
 Request::Request(const Request& other)
@@ -25,7 +25,8 @@ _protocol(other._protocol), _body(other._body),
 _status_code(other._status_code), _info(other._info),
 _is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
 _transfered_body_size(other._transfered_body_size), _target_chunk_size(other._target_chunk_size),
-_received_chunk_data_size(other._received_chunk_data_size), _recv_counts(other._recv_counts)
+_received_chunk_data_size(other._received_chunk_data_size), _recv_counts(other._recv_counts),
+_carriege_return_trimmed(other._carriege_return_trimmed)
 {}
 
 Request&
@@ -45,6 +46,7 @@ Request::operator=(const Request& other)
     this->_target_chunk_size = other._target_chunk_size;
     this->_received_chunk_data_size = other._received_chunk_data_size;
     this->_recv_counts = other._recv_counts;
+    this->_carriege_return_trimmed = other._carriege_return_trimmed;
     return (*this);
 }
 
@@ -160,6 +162,12 @@ Request::getReceiveCounts() const
     return (this->_recv_counts);
 }
 
+bool
+Request::getCarriegeReturnTrimmed() const
+{
+    return (this->_carriege_return_trimmed);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -264,6 +272,12 @@ void
 Request::setReceiveCounts(const int recv_counts)
 {
     this->_recv_counts = recv_counts;
+}
+
+void
+Request::setCarriegeReturnTrimmed(const bool carriege_return)
+{
+    this->_carriege_return_trimmed = carriege_return;
 }
 
 /*============================================================================*/
@@ -503,21 +517,35 @@ Request::parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_
 void
 Request::parseChunkData(char* buf, size_t bytes)
 {
+
     if (bytes <= CRLF_SIZE)
         return ;
+    if (this->isCarriegeReturnTrimmed())
+    {
+        this->appendBody("\r", 1);
+        this->setCarriegeReturnTrimmed(false);
+    }
     if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n')
         this->appendBody(buf, bytes - 2);
     else if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 1] == '\r')
+    {
+        this->setCarriegeReturnTrimmed(true);
         this->appendBody(buf, bytes - 1);
+    }
     else if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
         this->appendBody(buf, bytes);
     else
         this->appendBody(buf, bytes - CRLF_SIZE);
 }
 
-
 void
 Request::appendBody(char* buf, int bytes)
+{
+    this->_body.append(buf, bytes);
+}
+
+void
+Request::appendBody(const char* buf, int bytes)
 {
     this->_body.append(buf, bytes);
 }
@@ -621,4 +649,10 @@ Request::isDuplicatedHeader(std::string& key)
     if (this->_headers.find(key) == this->_headers.end())
         return (true);
     return (false);
+}
+
+bool
+Request::isCarriegeReturnTrimmed()
+{
+    return (this->getCarriegeReturnTrimmed());
 }
