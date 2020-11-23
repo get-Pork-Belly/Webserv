@@ -661,10 +661,9 @@ Server::receiveRequestChunkedBody(int client_fd)
         }
         else if (request.getTargetChunkSize() == 0)
             this->receiveLastChunkData(client_fd);
-        else
+    else
         {
             int receive_target_size = std::min(RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() + CRLF_SIZE - request.getReceivedChunkDataSize());
-
             this->receiveChunkData(client_fd, receive_target_size);
 
             if (request.getTargetChunkSize() + CRLF_SIZE == request.getReceivedChunkDataSize())
@@ -1162,8 +1161,6 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     Log::trace("< receiveDataFromCGI", 1);
 }
 
-long long put_bytes;
-
 void
 Server::putFileOnServer(int resource_fd)
 {
@@ -1175,51 +1172,40 @@ Server::putFileOnServer(int resource_fd)
     int transfered_body_size = request.getTransferedBodySize();
     int remained = body.length() - transfered_body_size;
     if (BUFFER_SIZE > remained)
-    {
+    { 
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), remained);
-        if (bytes == 0)
+        if (bytes > 0)
         {
-            // body_size: 0
-            // transfered_body_size: 0
-            // std::cout<<"\033[1;31m"<<"body_size: "<<body.length()<<"\033[0m"<<std::endl;
-            // std::cout<<"\033[1;31m"<<"transfered_body_size: "<<transfered_body_size<<"\033[0m"<<std::endl;
-            // std::cout<<"\033[1;31m"<<"BUFFER_SIZE: "<<BUFFER_SIZE<<"\033[0m"<<std::endl;
-            // std::cout<<"\033[1;31m"<<"put byte is 0"<<"\033[0m"<<std::endl;
-            sleep(50000);
+            if (bytes == remained)
+                this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+            transfered_body_size += bytes;
+            request.setTransferedBodySize(transfered_body_size);
         }
-        else if (bytes < 0)
+        else if (bytes == 0)
         {
-            // std::cout<<"\033[1;31m"<<"put byte is "<<bytes<<"\033[0m"<<std::endl;
-            sleep(50000);
+            if (remained > 0)
+                throw (InternalServerException(this->_responses[resource_fd]));
+            this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
         }
-
-        put_bytes += bytes;
-        // std::cout<<"\033[1;37;41m"<<"put_bytes: "<<put_bytes<<"\033[0m"<<std::endl;
-
-        this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+        else
+            throw (InternalServerException(this->_responses[resource_fd]));
     }
     else
     {
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), BUFFER_SIZE);
-        if (bytes == 0)
+        if (bytes > 0)
         {
-            // std::cout<<"\033[1;31m"<<"body_size: "<<body.length()<<"\033[0m"<<std::endl;
-            // std::cout<<"\033[1;31m"<<"transfered_body_size: "<<transfered_body_size<<"\033[0m"<<std::endl;
-            // std::cout<<"\033[1;31m"<<"put byte is 0"<<"\033[0m"<<std::endl;
-            sleep(50000);
+            transfered_body_size += bytes;
+            request.setTransferedBodySize(transfered_body_size);
         }
-        else if (bytes < 0)
+        else if (bytes == 0)
         {
-            // std::cout<<"\033[1;31m"<<"put byte is "<<bytes<<"\033[0m"<<std::endl;
-            sleep(50000);
+            if (remained > 0)
+                throw (InternalServerException(this->_responses[resource_fd]));
+            this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+        }
+        else
             throw (InternalServerException(this->_responses[resource_fd]));
-        }
-
-        put_bytes += bytes;
-        // std::cout<<"\033[1;37;41m"<<"put_bytes: "<<put_bytes<<"\033[0m"<<std::endl;
-
-        transfered_body_size += bytes;
-        request.setTransferedBodySize(transfered_body_size);
     }
 }
 
