@@ -505,7 +505,11 @@ Request::parseChunkData(char* buf, size_t bytes)
 {
     if (bytes <= CRLF_SIZE)
         return ;
-    if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
+    if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n')
+        this->appendBody(buf, bytes - 2);
+    else if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 1] == '\r')
+        this->appendBody(buf, bytes - 1);
+    else if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
         this->appendBody(buf, bytes);
     else
         this->appendBody(buf, bytes - CRLF_SIZE);
