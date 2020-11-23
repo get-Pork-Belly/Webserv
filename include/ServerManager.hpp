@@ -17,7 +17,11 @@
 # include "types.hpp"
 # include "ServerGenerator.hpp"
 
+const int TIME_OUT_SECOND = 1;
+
 class Server;
+
+using TimeCheck=bool;
 
 class ServerManager
 {
@@ -40,6 +44,7 @@ private:
     std::vector<std::pair<FdType, int>> _fd_table;
     int _fd;
     int _fd_max;
+    std::vector<std::pair<TimeCheck, timeval>> _last_request_time_of_client;
 
 public:
     /* Constructor */
@@ -60,9 +65,10 @@ public:
     void setResourceOnFdTable(int fd, int client_socket);
     void setCGIPipeOnFdTable(int fd, int client_socket);
     void setClosedFdOnFdTable(int fd);
+    void setLastRequestTimeOfClient(int client_fd, TimeCheck check, timeval* time);
     /* Exception */
     /* Util */
-    bool fdIsSet(int fd, FdSet type);
+    bool fdIsCopySet(int fd, FdSet type);
     bool fdIsOriginSet(int fd, FdSet type);
     void fdClr(int fd, FdSet type);
     void fdSet(int fd, FdSet type);
@@ -72,8 +78,11 @@ public:
     /* Manage Server functions */
     void initServers();
     bool runServers();
+    void closeUnresponsiveClient();
     //TODO 구현 필요
     // void exitServers();
+
+    bool isClientTimeOut(int fd);
 };
 
 #endif
