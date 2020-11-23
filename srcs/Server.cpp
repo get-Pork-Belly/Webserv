@@ -480,16 +480,16 @@ Server::receiveRequestNormalBody(int client_fd)
         throw (PayloadTooLargeException(this->_responses[client_fd]));
 
     char buf[BUFFER_SIZE + 1];
-    // ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
         buf[bytes] = 0;
-        // readed_bytes += bytes;
-        // std::cout<<"\033[1;33m"<<"in receiveRequestNormalBody readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.appendBody(buf, bytes);
         if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;
+        else if (request.getBody().length() == static_cast<size_t>(content_length))
+            request.setReqInfo(ReqInfo::COMPLETE);
+        else
+            throw (PayloadTooLargeException(this->_responses[client_fd]));
         if (bytes < BUFFER_SIZE)
             request.setReqInfo(ReqInfo::COMPLETE);
     }
