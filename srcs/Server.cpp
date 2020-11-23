@@ -87,6 +87,12 @@ Server::getPort() const
     return (this->_port);
 }
 
+Response&
+Server::getResponse(int fd)
+{
+    return (this->_responses[fd]);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -426,8 +432,6 @@ Server::receiveRequestWithoutBody(int client_fd)
     std::string readed;
     Request& request = this->_requests[client_fd];
 
-    // ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-    // if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
@@ -1045,6 +1049,8 @@ Server::acceptClient()
         fcntl(client_socket, F_SETFL, O_NONBLOCK);
         this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
         this->_server_manager->updateFdMax(client_socket);
+
+        this->monitorClientTimeOut(client_socket);
         Log::newClient(*this, client_socket);
     }
     else
@@ -1210,13 +1216,35 @@ Server::putFileOnServer(int resource_fd)
 }
 
 void
+Server::monitorClientTimeOut(int client_fd)
+{
+    timeval now;
+    gettimeofday(&now, NULL);
+    this->_server_manager->setLastRequestTimeOfClient(client_fd, true, &now);
+}
+
+void
+Server::updateClientActivityTime(int client_fd)
+{
+    timeval now;
+    gettimeofday(&now, NULL);
+    this->_server_manager->setLastRequestTimeOfClient(client_fd, true, &now);
+}
+
+void
+Server::protectClientFromTimeOut(int client_fd)
+{
+    this->_server_manager->setLastRequestTimeOfClient(client_fd, false, nullptr);
+}
+
+void
 Server::run(int fd)
 {
     if (isServerSocket(fd))
         this->acceptClient();
     else
     {
-        if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
+        if (this->_server_manager->fdIsCopySet(fd, FdSet::WRITE))
         {
             try
             {
@@ -1289,7 +1317,7 @@ Server::run(int fd)
                 std::cerr << e << '\n';
             }
         }
-        else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
+        else if (this->_server_manager->fdIsCopySet(fd, FdSet::READ))
         {
             try
             {
@@ -1300,9 +1328,13 @@ Server::run(int fd)
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
+                    // 이러면 그냥 헤더도 하면 될거 같은데?
+                    if (this->_requests[fd].isRequestBodyAppended())
+                        this->updateClientActivityTime(fd);
                     Log::getRequest(*this, fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                     {
+                        this->protectClientFromTimeOut(fd);
                         this->_server_manager->fdClr(fd, FdSet::READ);
                         this->processResponseBody(fd);
                     }

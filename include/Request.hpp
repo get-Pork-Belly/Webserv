@@ -32,6 +32,7 @@ private:
 
     int _recv_counts;
     bool _carriege_return_trimmed;
+    size_t _last_body_size;
 
 public:
     /* Constructor */
@@ -62,6 +63,7 @@ public:
     int getReceivedChunkDataSize() const;
     // bool CarriegeReturnTrimmed;
     bool getCarriegeReturnTrimmed() const;
+    size_t getLastBodySize() const;
 
     int getReceiveCounts() const;
 
@@ -85,6 +87,7 @@ public:
 
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);
+    void setLastBodySize(const size_t last_body_size);
 
     /* Util */
 
@@ -100,6 +103,7 @@ public:
 
     int peekMessageFromClient(int client_fd, char* buf);
     void raiseRecvCounts();
+    bool isRequestBodyAppended() const;
 
     /* parser */
     void parseRequestWithoutBody(char* buf, int bytes);

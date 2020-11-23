@@ -24,6 +24,7 @@ ServerManager::ServerManager(const char* config_path)
     // this->_fd_table.resize(1024, FdType::CLOSED);
 
     this->_fd_table.resize(1024, std::pair<FdType, int>(FdType::CLOSED, DEFAULT_FD));
+    this->_last_request_time_of_client.resize(1024, std::pair<TimeCheck, timeval>(true, timeval()));
     this->_fd = DEFAULT_FD;
     this->_fd_max = 2;
     this->initServers();
@@ -153,23 +154,23 @@ ServerManager::fdSet(int fd, FdSet type)
 }
 
 bool
-ServerManager::fdIsSet(int fd, FdSet type)
+ServerManager::fdIsCopySet(int fd, FdSet type)
 {
     switch (type)
     {
     case FdSet::READ:
-        return (ft::fdIsSet(fd, &this->_copy_readfds));
+        return (ft::fdIsCopySet(fd, &this->_copy_readfds));
 
     case FdSet::WRITE:
-        return (ft::fdIsSet(fd, &this->_copy_writefds));
+        return (ft::fdIsCopySet(fd, &this->_copy_writefds));
 
     case FdSet::EXCEPT:
-        return (ft::fdIsSet(fd, &this->_copy_exceptfds));
+        return (ft::fdIsCopySet(fd, &this->_copy_exceptfds));
 
     default:
-        return (ft::fdIsSet(fd, &this->_copy_readfds) ||
-        ft::fdIsSet(fd, &this->_copy_writefds) ||
-        ft::fdIsSet(fd, &this->_copy_exceptfds));
+        return (ft::fdIsCopySet(fd, &this->_copy_readfds) ||
+        ft::fdIsCopySet(fd, &this->_copy_writefds) ||
+        ft::fdIsCopySet(fd, &this->_copy_exceptfds));
     }
 }
 
@@ -180,18 +181,18 @@ ServerManager::fdIsOriginSet(int fd, FdSet type)
     switch (type)
     {
     case FdSet::READ:
-        return (ft::fdIsSet(fd, &this->_readfds));
+        return (ft::fdIsCopySet(fd, &this->_readfds));
 
     case FdSet::WRITE:
-        return (ft::fdIsSet(fd, &this->_writefds));
+        return (ft::fdIsCopySet(fd, &this->_writefds));
 
     case FdSet::EXCEPT:
-        return (ft::fdIsSet(fd, &this->_exceptfds));
+        return (ft::fdIsCopySet(fd, &this->_exceptfds));
 
     default:
-        return (ft::fdIsSet(fd, &this->_readfds) ||
-        ft::fdIsSet(fd, &this->_writefds) ||
-        ft::fdIsSet(fd, &this->_exceptfds));
+        return (ft::fdIsCopySet(fd, &this->_readfds) ||
+        ft::fdIsCopySet(fd, &this->_writefds) ||
+        ft::fdIsCopySet(fd, &this->_exceptfds));
     }
 }
 
@@ -277,6 +278,8 @@ ServerManager::runServers()
     //TODO: siganl 입력시 반복종료 구현
     while (true)
     {
+        this->closeUnresponsiveClient();
+
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
@@ -302,7 +305,7 @@ ServerManager::runServers()
         // Log::printFdSets(*this);
             for (int fd = 0; fd < this->getFdMax() + 1; fd++)
             {
-                if (this->fdIsSet(fd, FdSet::ALL))
+                if (this->fdIsCopySet(fd, FdSet::ALL))
                 {
                     for (Server *server : this->_servers)
                     {
@@ -316,8 +319,61 @@ ServerManager::runServers()
     return (true);
 }
 
+void
+ServerManager::setLastRequestTimeOfClient(int client_fd, TimeCheck check, timeval* time)
+{
+    this->_last_request_time_of_client[client_fd].first = check;
+    if (time != NULL)
+        this->_last_request_time_of_client[client_fd].second = *time;
+}
 
+bool
+ServerManager::isClientTimeOut(int fd)
+{
+    timeval now;
+    gettimeofday(&now, NULL);
+    
+    if (this->_last_request_time_of_client[fd].first == false)
+        return (false);
+    if (now.tv_sec - this->_last_request_time_of_client[fd].second.tv_sec > TIME_OUT_SECOND)
+        return (true);
+    return (false);
+}
 
+void
+ServerManager::closeUnresponsiveClient()
+{
+    for (int fd = 3; fd < this->getFdMax() + 1; fd++)
+    {
+        if (this->fdIsOriginSet(fd, FdSet::READ) &&
+            this->getFdType(fd) == FdType::CLIENT_SOCKET &&
+            this->fdIsOriginSet(fd, FdSet::READ) != this->fdIsCopySet(fd, FdSet::READ))
+        {
+            // check timeout
+            if (this->isClientTimeOut(fd))
+            {
+                this->fdSet(fd, FdSet::WRITE);
+                for (Server* server : this->_servers)
+                {
+                    if (server->getServerSocket() == this->getFdTable()[fd].second)
+                    {
+                        Response& response = server->getResponse(fd);
+                        response.setStatusCode("408");
+                        if (response.getWriteFdToCGI() != DEFAULT_FD ||
+                            response.getReadFdFromCGI() != DEFAULT_FD)
+                        {
+                            server->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);
+                            server->closeFdAndUpdateFdTable(response.getWriteFdToCGI(), FdSet::WRITE);
+                        }
+                        else if (response.getResourceFd() != DEFAULT_FD)
+                            server->closeFdAndUpdateFdTable(response.getResourceFd(), FdSet::READ);
+                        server->protectClientFromTimeOut(fd);
+                    }
+                }
+            }
+        }
+    }
+}
 
 // void
 // ServerManager::exitServers()
