@@ -18,13 +18,14 @@
 # include "Response.hpp"
 # include "Exception.hpp"
 
-const int BUFFER_SIZE = 6553600;
-const int RECEIVE_SOCKET_STREAM_SIZE = 254560;
+const int BUFFER_SIZE = 65536;
+const int RECEIVE_SOCKET_STREAM_SIZE = 65536;
 const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
-const int DEFAULT_TARGET_CHUNK_SIZE = -1;
+const int DEFAULT_TARGET_CHUNK_SIZE = -2;
 const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
+const int DEFAULT_FD = -1;
 
 class ServerManager;
 class Request;
@@ -97,7 +98,7 @@ public:
     void receiveRequestChunkedBody(int fd);
     void clearRequestBuffer(int fd);
     std::string makeResponseMessage(int fd);
-    bool sendResponse(const std::string& response_meesage, int fd);
+    void sendResponse(const std::string& response_meesage, int fd);
     bool isClientOfServer(int fd) const;
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
@@ -138,16 +139,16 @@ public:
     bool isCGIWritePipe(int fd) const;
 
     void receiveChunkSize(int fd, size_t index_of_crlf);
-    void receiveChunkData(int client_fd, int receive_size, int target_chunk_size);
+    void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
 
 public:
-    class PayloadTooLargeException : public std::exception
+    class PayloadTooLargeException : public SendErrorCodeToClientException
     {
     private:
-        Request& _request;
+        Response& _response;
     public:
-        PayloadTooLargeException(Request& request);
+        PayloadTooLargeException(Response& response);
         virtual const char* what() const throw();
     };
     class ReadErrorException : public std::exception
@@ -183,7 +184,7 @@ public:
         IndexNoExistException(Response& response);
         virtual const char* what() const throw();
     };
-    class OpenResourceErrorException : public std::exception
+    class OpenResourceErrorException : public SendErrorCodeToClientException
     {
     private:
         Response& _response;
@@ -246,6 +247,11 @@ public:
         public:
             NotAllowedMethodException(Response& response);
             virtual const char* what() const throw();
+    };
+    class CannotWriteToClientException : public std::exception
+    {
+    public:
+        virtual const char* what() const throw();
     };
 };
 

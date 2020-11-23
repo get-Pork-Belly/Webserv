@@ -105,8 +105,8 @@ Log::closeClient(Server& server, int client_fd)
 void
 Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
 {
-    if (DEBUG == 0)
-        return ;
+    // if (DEBUG == 0)
+    //     return ;
 
     int server_fd = server.getServerSocket();
     int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
@@ -124,8 +124,8 @@ Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
 void
 Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
 {
-    if (DEBUG == 0)
-        return ;
+    // if (DEBUG == 0)
+    //     return ;
 
     int server_fd = server.getServerSocket();
     int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
@@ -180,16 +180,31 @@ Log::error(const std::string& error)
     write(fd, error.c_str(), error.length());
 }
 
+
 void
-Log::trace(const std::string& trace)
+Log::printTimeDiff(timeval from, int log_level)
 {
-    if (DEBUG != 2)
+    timeval t;
+    gettimeofday(&t, NULL);
+    std::string diff = std::to_string((t.tv_sec - from.tv_sec) * 1000000 + (t.tv_usec - from.tv_usec));
+    diff.push_back(' ');
+
+    if (DEBUG < log_level)
+        return ;
+    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
+    write(fd, diff.c_str(), diff.length());
+}
+
+void
+Log::trace(const std::string& trace, int log_level)
+{
+    if (DEBUG < log_level)
         return ;
 
     std::string line;
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
-    Log::timeLog(fd);
+    // Log::timeLog(fd);
     write(fd, trace.c_str(), trace.length());
     write(fd, "\n", 1);
 }
@@ -244,6 +259,57 @@ Log::resTypeToString(const ResType& type)
         break;
     }
 }
+
+std::string
+Log::reqInfoToString(const ReqInfo& req_info)
+{
+    switch (req_info)
+    {
+    case ReqInfo::READY:
+        return ("READY");
+
+    case ReqInfo::COMPLETE:
+        return ("COMPLETE");
+
+    case ReqInfo::NORMAL_BODY:
+        return ("NORMAL_BODY");
+
+    case ReqInfo::CHUNKED_BODY:
+        return ("CHUNKED_BODY");
+
+    case ReqInfo::MUST_CLEAR:
+        return ("MUST_CLEAR");
+
+    default:
+        return ("NOT YET REGISTED IN reqInfoToString");
+        break;
+    }
+}
+
+std::string
+Log::sendProgressToString(const SendProgress& progress)
+{
+    switch (progress)
+    {
+    case SendProgress::DEFAULT:
+        return ("DEFAULT");
+
+    case SendProgress::CHUNK_START:
+        return ("CHUNK_START");
+
+    case SendProgress::CHUNK_PROGRESS:
+        return ("CHUNK_PROGRESS");
+
+    case SendProgress::FINISH:
+        return ("FINISH");
+
+    default:
+        return ("NOT YET REGISTED IN sendProgress");
+        break;
+    }
+}
+
+
 
 void
 Log::printLocationConfig(const std::map<std::string, location_info>& loc_config)

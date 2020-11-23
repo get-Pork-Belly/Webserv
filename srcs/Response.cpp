@@ -19,10 +19,10 @@ Response::Response()
 : _status_code("200"), _headers(), _transfer_type(""), _clients(""),
 _location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
-_stdin_of_cgi(0), _stdout_of_cgi(0), _read_fd_from_cgi(0), _write_fd_to_cgi(0), 
-_cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
+_stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT_FD),
+_write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extension(""), _transmitting_body(""),
 _already_encoded_size(0), _send_progress(SendProgress::DEFAULT),
-_receive_progress(ReceiveProgress::DEFAULT), _resoure_fd(0)
+_receive_progress(ReceiveProgress::DEFAULT), _resoure_fd(DEFAULT_FD)
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -390,7 +390,30 @@ Response::InvalidCGIMessageException::what() const throw()
 void
 Response::init()
 {
-    *this = Response();
+    this->_status_code = "200";
+    this->_headers = {};
+    this->_transfer_type = "";
+    this->_clients = "";
+    this->_location_info = {};
+    this->_resource_abs_path = "";
+    this->_route = "";
+    this->_directory_entry = "";
+    this->_resource_type = ResType::NOT_YET_CHECKED;
+    ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
+    this->_body = "";
+    this->_stdin_of_cgi = DEFAULT_FD;
+    this->_stdout_of_cgi = DEFAULT_FD;
+    this->_read_fd_from_cgi = DEFAULT_FD;
+    this->_write_fd_to_cgi = DEFAULT_FD;
+    this->_cgi_pid = 0;
+    this->_uri_path = "";
+    this->_uri_extension = "";
+    this->_transmitting_body = "";
+    this->_already_encoded_size = 0;
+    this->_send_progress = SendProgress::DEFAULT;
+    this->_receive_progress = ReceiveProgress::DEFAULT;
+    this->_resoure_fd = DEFAULT_FD;
+    //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
 }
 
 void
@@ -521,7 +544,10 @@ Response::initMimeTypeTable()
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
-    Log::trace("> setRouteAndLocationInfo");
+    Log::trace("> setRouteAndLocationInfo", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
 
@@ -549,19 +575,33 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
         }
         if (index == 0)
         {
-            this->_route = "/";
-            this->_location_info = location_config["/"];
-            break ;
+            if (location_config.find(uri) != location_config.end())
+            {
+                this->_route = uri;
+                this->_location_info = location_config[this->_route];
+                break ;
+            }
+            else
+            {
+                this->_route = "/";
+                this->_location_info = location_config["/"];
+                break ;
+            }
         }
     }
-    Log::trace("< setRouteAndLocationInfo");
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< setRouteAndLocationInfo", 2);
     return (false);
 }
 
 std::string
 Response::makeStatusLine()
 {
-    Log::trace("> makeStatusLine");
+    Log::trace("> makeStatusLine", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::string status_line;
 
     status_line = "HTTP/1.1 ";
@@ -569,7 +609,9 @@ Response::makeStatusLine()
     status_line += " ";
     status_line += this->getStatusMessage(this->getStatusCode());
     status_line += "\r\n";
-    Log::trace("< makeStatusLine");
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< makeStatusLine", 2);
     return (status_line);
 }
 
@@ -664,7 +706,10 @@ Response::appendContentLocationHeader(std::string& headers)
 void
 Response::appendContentTypeHeader(std::string& headers)
 {
-    Log::trace("> appendContentTypeHeader");
+    Log::trace("> appendContentTypeHeader", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     headers += "Content-Type: ";
 
     if (this->getHeaders().find("Content-Type") != this->getHeaders().end())
@@ -680,7 +725,9 @@ Response::appendContentTypeHeader(std::string& headers)
             headers += "application/octet-stream";
     }
     headers += "\r\n";
-    Log::trace("< appendContentTypeHeader");
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< appendContentTypeHeader", 2);
 }
 
 std::string
@@ -723,7 +770,10 @@ Response::appendLocationHeader(std::string& headers, const Request& request)
 void
 Response::appendRetryAfterHeader(std::string& headers, const std::string& status_code)
 {
-    Log::trace("> appendRetryAfterHeader");
+    Log::trace("> appendRetryAfterHeader", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     headers += "Retry-After: ";
     if (status_code.compare("503") == 0)
     {
@@ -736,15 +786,22 @@ Response::appendRetryAfterHeader(std::string& headers, const std::string& status
         headers += this->getLocationInfo().at("retry_after_sec");
     }
     headers += "\r\n";
-    Log::trace("< appendRetryAfterHeader");
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< appendRetryAfterHeader", 2);
 }
 
 void
 Response::appendTransferEncodingHeader(std::string& headers)
 {
-    Log::trace("> appendTransferEncodingHeader");
+    Log::trace("> appendTransferEncodingHeader", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     headers += "Transfer-Encoding: chunked\r\n";
-    Log::trace("< appendTransferEncodingHeader");
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< appendTransferEncodingHeader", 2);
 }
 
 void
@@ -764,6 +821,10 @@ Response::appendAuthenticateHeader(std::string& headers)
 std::string
 Response::makeHeaders(Request& request)
 {
+    Log::trace("> makeHeaders", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::string headers;
     const std::string& method = request.getMethod();
     
@@ -817,7 +878,17 @@ Response::makeHeaders(Request& request)
         this->appendRetryAfterHeader(headers, status_code);
     }
     
+    //NOTE: error code를 응답하는 경우를 제외하고는 keep-alive
+    //TODO: 인증헤더 관련하여서도 keep-alive인지 확인할 것.
+    //TODO: request의 헤더가 close이면 close로 처리시킬 것.
+    if (status_code != "200") // || isRequestConnectionClose())
+        headers += "Connection: close\r\n";
+    else
+        headers += "Connection: keep-alive\r\n";
     headers += "\r\n";
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< makeHeaders", 2);
     return (headers);
 }
 
@@ -856,7 +927,10 @@ Response::makeOptionBody()
 void
 Response::makeBody(Request& request)
 {
-    Log::trace("> makeBody");
+    Log::trace("> makeBody", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     const std::string& method = request.getMethod();
 
     if (method == "TRACE" && this->getStatusCode() == "200")
@@ -872,7 +946,8 @@ Response::makeBody(Request& request)
     else
         this->setTransmittingBody(this->getBody());
 
-    Log::trace("< makeBody");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< makeBody", 2);
 }
 
 bool
@@ -919,7 +994,7 @@ Response::isNeedToBeChunkedBody(const Request& request) const
         return (false);
 
     //NOTE: 아래 기준은 임의로 정한 것임.
-    if (this->_file_info.st_size > BUFFER_SIZE)
+    if (this->_file_info.st_size > BUFFER_SIZE && request.getMethod() != "PUT")
         return (true);
     if (this->getResourceType() == ResType::CGI)
         return (true);
@@ -950,7 +1025,9 @@ Response::getRedirectStatusCode() const
 std::string
 Response::getRedirectUri(const Request& request) const
 {
-    Log::trace("> getRedirectUri");
+    Log::trace("> getRedirectUri", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
     //TODO: find 실패하지 않도록 invalid 여부는 처음 서버 만들 때 잘 확인할 것.
 
     const std::string& redirection_info = this->_location_info.at("return");
@@ -959,7 +1036,8 @@ Response::getRedirectUri(const Request& request) const
     size_t offset = requested_uri.find(this->getRoute());
     requested_uri.replace(offset, this->getRoute().length(), redirect_route);
 
-    Log::trace("< getRedirectUri");
+    Log::printTimeDiff(from, 2);
+    Log::trace("< getRedirectUri", 2);
     return (requested_uri);
 }
 
@@ -990,7 +1068,9 @@ Response::getHtmlLangMetaData() const
 void
 Response::preparseCGIMessage()
 {
-    Log::trace("> preparseCGIMessage");
+    Log::trace("> preparseCGIMessage", 1);
+    timeval from;
+    gettimeofday(&from, NULL);
 
     std::string line;
     std::string cgi_message(this->getBody());
@@ -1006,13 +1086,18 @@ Response::preparseCGIMessage()
     if (this->getHeaders().find("Status") == this->getHeaders().end())
         throw (InvalidCGIMessageException(*this));
     this->setStatusCode(this->_headers.at("Status").substr(0, 3));
-    Log::trace("< preparseCGIMessage");
+
+    Log::printTimeDiff(from, 1);
+    Log::trace("< preparseCGIMessage", 1);
 }
 
 bool
 Response::parseCGIHeaders(std::string& cgi_message)
 {
-    Log::trace("> parseHeaders");
+    Log::trace("> parseHeaders", 1);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::string key;
     std::string value;
     std::string line;
@@ -1032,7 +1117,9 @@ Response::parseCGIHeaders(std::string& cgi_message)
     if (this->isValidHeaders(key, value) == false)
         return (false);
     this->setHeaders(key, value);
-    Log::trace("< parseHeaders");
+
+    Log::printTimeDiff(from, 1);
+    Log::trace("< parseHeaders", 1);
     return (true);
 }
 
@@ -1065,7 +1152,9 @@ Response::isDuplicatedHeader(std::string& key)
 void
 Response::encodeChunkedBody()
 {
-    Log::trace("> encodeChunkedBody");
+    Log::trace("> encodeChunkedBody", 1);
+    timeval from;
+    gettimeofday(&from, NULL);
 
     const std::string& raw_body = this->getBody(); // raw_body
     size_t already_encoded_size = this->getAlreadyEncodedSize(); // 지금까지 인코딩한 사이즈
@@ -1103,11 +1192,12 @@ Response::encodeChunkedBody()
     this->setAlreadyEncodedSize(already_encoded_size);
     this->setTransmittingBody(chunked_body);
 
-    Log::trace("< encodeChunkedBody");
+    Log::printTimeDiff(from, 1);
+    Log::trace("< encodeChunkedBody", 1);
 }
 
 void
 Response::appendBody(char* buf, int bytes)
 {
-    this->setBody(this->getBody() + std::string(buf, bytes));
+    this->_body.append(buf, bytes);
 }

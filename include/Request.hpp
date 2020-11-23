@@ -8,6 +8,8 @@
 //NOTE: test용으로 ostream include함.
 #include <iostream>
 
+# define RECV_COUNT_NOT_REACHED -2
+
 class Request
 {
 private:
@@ -26,6 +28,10 @@ private:
     std::string _remote_ident;
     std::string _auth_type;
     int _target_chunk_size;
+    int _received_chunk_data_size;
+
+    int _recv_counts;
+    bool _carriege_return_trimmed;
 
 public:
     /* Constructor */
@@ -53,6 +59,11 @@ public:
     const std::string& getRemoteUser() const;
     const std::string& getRemoteIdent() const;
     int getTargetChunkSize() const;
+    int getReceivedChunkDataSize() const;
+    // bool CarriegeReturnTrimmed;
+    bool getCarriegeReturnTrimmed() const;
+
+    int getReceiveCounts() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -70,6 +81,10 @@ public:
     void setRemoteUser(const std::string& remote_user);
     void setRemoteIdent(const std::string& remote_ident);
     void setTargetChunkSize(const int target_size);
+    void setReceivedChunkDataSize(const int received_chunk_data_size);
+
+    void setReceiveCounts(const int recv_count);
+    void setCarriegeReturnTrimmed(const bool trimmed);
 
     /* Util */
 
@@ -83,11 +98,11 @@ public:
     bool isChunkedBody() const;
     bool isContentLeftInBuffer() const;
 
-
-    // void initMembers(std::string req_message);
+    int peekMessageFromClient(int client_fd, char* buf);
+    void raiseRecvCounts();
 
     /* parser */
-    void parseRequestWithoutBody(char* buf);
+    void parseRequestWithoutBody(char* buf, int bytes);
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
 
@@ -102,10 +117,14 @@ public:
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
 
+    bool isCarriegeReturnTrimmed();
+
     void appendBody(char* buf, int bytes);
+    void appendBody(const char* buf, int bytes);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
+    void parseChunkData(char* buf, size_t bytes);
 
     /* Exception */
 public:
@@ -116,7 +135,6 @@ public:
         Request& _req;
     public:
         RequestFormatException(Request& req, const std::string& status_code);
-        RequestFormatException(Request& req);
         virtual const char* what() const throw();
     };
 

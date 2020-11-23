@@ -14,7 +14,9 @@ Request::Request()
 : _method(""), _uri(""), _version(""),
 _protocol(""), _body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
-_ip_address(""), _transfered_body_size(0), _target_chunk_size(-1) {}
+_ip_address(""), _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
+_received_chunk_data_size(0), _recv_counts(0), _carriege_return_trimmed(false)
+ {}
 
 Request::Request(const Request& other)
 : _method(other._method), _uri(other._uri), 
@@ -22,12 +24,15 @@ _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _body(other._body),
 _status_code(other._status_code), _info(other._info),
 _is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
-_transfered_body_size(other._transfered_body_size), _target_chunk_size(other._target_chunk_size) {}
+_transfered_body_size(other._transfered_body_size), _target_chunk_size(other._target_chunk_size),
+_received_chunk_data_size(other._received_chunk_data_size), _recv_counts(other._recv_counts),
+_carriege_return_trimmed(other._carriege_return_trimmed)
+{}
 
 Request&
 Request::operator=(const Request& other)
 {
-    this->_method= other._method;
+    this->_method = other._method;
     this->_uri = other._uri;
     this->_version = other._version;
     this->_headers = other._headers;
@@ -39,6 +44,9 @@ Request::operator=(const Request& other)
     this->_ip_address = other._ip_address;
     this->_transfered_body_size = other._transfered_body_size;
     this->_target_chunk_size = other._target_chunk_size;
+    this->_received_chunk_data_size = other._received_chunk_data_size;
+    this->_recv_counts = other._recv_counts;
+    this->_carriege_return_trimmed = other._carriege_return_trimmed;
     return (*this);
 }
 
@@ -142,6 +150,24 @@ Request::getTargetChunkSize() const
     return (this->_target_chunk_size);
 }
 
+int
+Request::getReceivedChunkDataSize() const
+{
+    return (this->_received_chunk_data_size);
+}
+
+int
+Request::getReceiveCounts() const
+{
+    return (this->_recv_counts);
+}
+
+bool
+Request::getCarriegeReturnTrimmed() const
+{
+    return (this->_carriege_return_trimmed);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -236,6 +262,24 @@ Request::setTargetChunkSize(const int target_size)
     this->_target_chunk_size = target_size;
 }
 
+void
+Request::setReceivedChunkDataSize(const int received_chunk_data_size)
+{
+    this->_received_chunk_data_size = received_chunk_data_size;
+}
+
+void
+Request::setReceiveCounts(const int recv_counts)
+{
+    this->_recv_counts = recv_counts;
+}
+
+void
+Request::setCarriegeReturnTrimmed(const bool carriege_return)
+{
+    this->_carriege_return_trimmed = carriege_return;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -245,9 +289,6 @@ Request::RequestFormatException::RequestFormatException(Request& req, const std:
 {
     this->_req.setStatusCode(status_code);
 }
-
-Request::RequestFormatException::RequestFormatException(Request& req)
-: _msg("RequestFormatException: Invalid Request Format: "), _req(req) {}
 
 const char*
 Request::RequestFormatException::what() const throw()
@@ -278,7 +319,10 @@ std::ostream& operator<< (std::ostream& out, Request& object)
 void
 Request::updateReqInfo()
 {
-    Log::trace("> updateReqInfo");
+    Log::trace("> updateReqInfo", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     if (this->getReqInfo() == ReqInfo::COMPLETE)
         return ;
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
@@ -289,7 +333,9 @@ Request::updateReqInfo()
         this->setReqInfo(ReqInfo::NORMAL_BODY);
     else if (this->isChunkedBody())
         this->setReqInfo(ReqInfo::CHUNKED_BODY);
-    Log::trace("< updateReqInfo");
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< updateReqInfo", 2);
 }
 
 bool
@@ -317,7 +363,9 @@ Request::isNormalBody() const
 bool
 Request::isChunkedBody() const
 {
-    return ((this->getReqInfo() == ReqInfo::COMPLETE) ? false : !isNormalBody());
+    if (this->getReqInfo() == ReqInfo::COMPLETE)
+        return (false);
+    return (!isNormalBody());
 }
 
 
@@ -327,6 +375,24 @@ Request::isContentLeftInBuffer() const
     return (this->getIsBufferLeft());
 }
 
+int
+Request::peekMessageFromClient(int client_fd, char* buf)
+{
+    int bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK);
+    //TODO 50은 임의값임. 최적값 찾아서 매크로상수화할 것.
+    if (bytes <= 0 || bytes == BUFFER_SIZE || this->getReceiveCounts() == 50)
+    {
+        this->setReceiveCounts(0);
+        return (bytes);
+    }
+    return (RECV_COUNT_NOT_REACHED);
+}
+
+void
+Request::raiseRecvCounts()
+{
+    this->_recv_counts++;
+}
 
 bool
 Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& ret)
@@ -336,34 +402,42 @@ Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& r
 }
 
 void
-Request::parseRequestWithoutBody(char* buf)
+Request::parseRequestWithoutBody(char* buf, int bytes)
 {
-    Log::trace("> parseRequestWithoutBody");
+    Log::trace("> parseRequestWithoutBody", 1);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::string line;
-    std::string req_message(buf);
+    std::string req_message(buf, bytes);
 
     if (ft::substr(line, req_message, "\r\n") == false)
         throw (RequestFormatException(*this, "400"));
     else
     {
         if (this->parseRequestLine(line) == false)
-            throw (RequestFormatException(*this));
+            throw (RequestFormatException(*this, "400"));
     }
     if (ft::substr(line, req_message, "\r\n\r\n") == false)
         throw (RequestFormatException(*this, "400"));
     else
     {
         if (this->parseHeaders(line) == false)
-            throw (RequestFormatException(*this));
+            throw (RequestFormatException(*this, "400"));
     }
     this->updateReqInfo();
-    Log::trace("< parseRequestWithoutBody");
+
+    Log::printTimeDiff(from, 1);
+    Log::trace("< parseRequestWithoutBody", 1);
 }
 
 bool
 Request::parseRequestLine(std::string& req_message)
 {
-    Log::trace("> parseRequestLine");
+    Log::trace("> parseRequestLine", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::vector<std::string> request_line = ft::split(req_message, " ");
     
     if (this->isValidLine(request_line) == false)
@@ -371,14 +445,19 @@ Request::parseRequestLine(std::string& req_message)
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
     this->setVersion(request_line[2]);
-    Log::trace("< parseRequestLine");
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< parseRequestLine", 2);
     return (true);
 }
 
 bool
 Request::parseHeaders(std::string& req_message)
 {
-    Log::trace("> parseHeaders");
+    Log::trace("> parseHeaders", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
     std::string key;
     std::string value;
     std::string line;
@@ -398,9 +477,14 @@ Request::parseHeaders(std::string& req_message)
     if (this->isValidHeaders(key, value) == false)
         return (this->updateStatusCodeAndReturn("400", false));
     this->setHeaders(key, value);
-    Log::trace("< parseHeaders");
+
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< parseHeaders", 2);
     return (true);
 }
+
+// int received;
 
 void
 Request::parseTargetChunkSize(const std::string& chunk_size_line)
@@ -408,8 +492,15 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
     int target_chunk_size;
 
     target_chunk_size = ft::stoiHex(chunk_size_line);
+    
+    // received += target_chunk_size;
+    // std::cout<<"\033[1;30;43m"<<"received: "<<received<<"\033[0m"<<std::endl;
     if (target_chunk_size == -1)
-        throw (RequestFormatException(*this));
+    {
+        // std::cout<<"\033[1;31m"<<"chunk_size_line: "<<chunk_size_line<<"\033[0m"<<std::endl;
+        std::cout<<"\033[1;31m"<<"In parseTargetChunkSize throw~!"<<"\033[0m"<<std::endl;
+        throw (RequestFormatException(*this, "400"));
+    }
     this->setTargetChunkSize(target_chunk_size);
 }
 
@@ -424,16 +515,58 @@ Request::parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_
 }
 
 void
+Request::parseChunkData(char* buf, size_t bytes)
+{
+
+    if (bytes <= CRLF_SIZE)
+        return ;
+    if (this->isCarriegeReturnTrimmed())
+    {
+        this->appendBody("\r", 1);
+        this->setCarriegeReturnTrimmed(false);
+    }
+    if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n')
+        this->appendBody(buf, bytes - 2);
+    else if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 1] == '\r')
+    {
+        this->setCarriegeReturnTrimmed(true);
+        this->appendBody(buf, bytes - 1);
+    }
+    else if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
+        this->appendBody(buf, bytes);
+    else
+        this->appendBody(buf, bytes - CRLF_SIZE);
+}
+
+void
 Request::appendBody(char* buf, int bytes)
 {
-    this->setBody(this->getBody() + std::string(buf, bytes));
+    this->_body.append(buf, bytes);
+}
+
+void
+Request::appendBody(const char* buf, int bytes)
+{
+    this->_body.append(buf, bytes);
 }
 
 void
 Request::init()
 {
-    Request temp;
-    *this = temp;
+    this->_method = "";
+    this->_uri = "";
+    this->_version = "";
+    this->_headers = {};
+    this->_protocol = "";
+    this->_body = "";
+    this->_status_code = "200";
+    this->_info = ReqInfo::READY;
+    this->_is_buffer_left = false;
+    this->_ip_address = "";
+    this->_transfered_body_size = 0;
+    this->_target_chunk_size = DEFAULT_TARGET_CHUNK_SIZE;
+    this->_received_chunk_data_size = 0;
+    this->_recv_counts = 0;
 }
 
 int
@@ -516,4 +649,10 @@ Request::isDuplicatedHeader(std::string& key)
     if (this->_headers.find(key) == this->_headers.end())
         return (true);
     return (false);
+}
+
+bool
+Request::isCarriegeReturnTrimmed()
+{
+    return (this->getCarriegeReturnTrimmed());
 }
