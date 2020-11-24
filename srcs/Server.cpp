@@ -380,10 +380,17 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
     Request& request = this->_requests[client_fd];
 
     // ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
+        
     if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
     {
         buf[bytes] = 0;
-        request.parseRequestWithoutBody(buf, bytes);
+        if (this->_requests[client_fd].getTempBuffer().length() != 0)
+        {
+            request.appendTempBuffer(buf, bytes);
+            request.parseRequestWithoutBody();
+        }
+        else
+            request.parseRequestWithoutBody(buf, bytes);
     }
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
@@ -399,8 +406,9 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_messag
 {
     size_t bytes;
     char buf[BUFFER_SIZE + 1];
+    Request& request = this->_requests[client_fd];
 
-    if (peeked_message == "\r\n")
+    if (peeked_message == "\r\n" && request.getTempBuffer().length() == 0)
     {
         bytes = read(client_fd, buf, CRLF_SIZE);
         if (bytes > 0)
@@ -413,6 +421,23 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_messag
             throw (ReadErrorException());
         else
             throw (ReadErrorException());
+    }
+    else
+    {
+        if (peeked_message.back() == '\n'
+            && peeked_message[peeked_message.length() - 2] == '\r')
+            bytes = recv(client_fd, buf, peeked_message.length() - 2, 0);
+        else
+            bytes = recv(client_fd, buf, peeked_message.length(), 0);
+        if (bytes == 0)
+            return ;
+        else if (bytes < 0)
+            throw (ReadErrorException());
+        else
+        {
+            buf[bytes] = 0;
+            request.appendTempBuffer(buf, bytes);
+        }
     }
 }
 
@@ -809,14 +834,14 @@ Server::sendResponse(const std::string& response_message, int client_fd)
 
     int bytes = 0;
 
-    std::cout<<"\033[1;36m"<<response_message<<"\033[0m"<<std::endl;
+    // std::cout<<"\033[1;36m"<<response_message<<"\033[0m"<<std::endl;
     bytes = write(client_fd, response_message.c_str(), response_message.length());
     if (bytes > 0)
     {
         sended_bytes += bytes;
         // std::cout<<response_message<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
     }
     else if (bytes == 0)
     {
