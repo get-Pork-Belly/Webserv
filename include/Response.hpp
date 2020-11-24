@@ -46,6 +46,7 @@ private:
     int _resoure_fd;
     int _sended_response_size;
     std::string _response_message;
+    ResInfo _res_info;
 
 public:
     /* Constructor */
@@ -90,6 +91,7 @@ public:
     const std::map<std::string, std::string>& getHeaders() const;
     int getSendedResponseSize() const;
     const std::string& getResponseMessage() const;
+    const ResInfo& getResInfo() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -115,6 +117,7 @@ public:
     void setResourceFd(const int resource_fd);
     void setSendedResponseSize(const int sended_response_size);
     void setResponseMessage(const std::string& response_message);
+    void setResInfo(const ResInfo& res_info);
 
     /* Exception */
 public:

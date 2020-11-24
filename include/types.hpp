@@ -67,6 +67,13 @@ enum class ReqInfo
     MUST_CLEAR,
 };
 
+enum class ResInfo
+{
+    READY,
+    SENDING,
+    ALL_SENDED,
+};
+
 enum class ResType
 {
     NOT_YET_CHECKED,

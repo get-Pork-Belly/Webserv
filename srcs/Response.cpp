@@ -241,6 +241,12 @@ Response::getResponseMessage() const
     return (this->_response_message);
 }
 
+const
+Response::ResInfo& getResInfo() const
+{
+    return (this->_res_info);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -377,6 +383,12 @@ void
 Response::setResponseMessage(const std::string& response_message)
 {
     this->_response_message = response_message;
+}
+
+void
+Response::setResInfo(const ResInfo& res_info)
+{
+    this->_res_info = res_info;
 }
 
 /*============================================================================*/
