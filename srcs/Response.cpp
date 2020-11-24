@@ -247,8 +247,8 @@ Response::getResponseMessage() const
     return (this->_response_message);
 }
 
-const
-Response::ResInfo& getResInfo() const
+const ResInfo&
+Response::getResInfo() const
 {
     return (this->_res_info);
 }
