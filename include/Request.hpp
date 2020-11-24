@@ -61,7 +61,6 @@ public:
     const std::string& getRemoteIdent() const;
     int getTargetChunkSize() const;
     int getReceivedChunkDataSize() const;
-    // bool CarriegeReturnTrimmed;
     bool getCarriegeReturnTrimmed() const;
 
     int getReceiveCounts() const;

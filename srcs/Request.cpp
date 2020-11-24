@@ -13,8 +13,8 @@
 Request::Request()
 : _method(""), _uri(""), _version(""),
 _protocol(""), _body(""), _status_code("200"),
-_info(ReqInfo::READY), _is_buffer_left(false), _transfered_body_size(0),
-_ip_address(""), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
+_info(ReqInfo::READY), _is_buffer_left(false),
+_transfered_body_size(0), _ip_address(""), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
 _received_chunk_data_size(0), _recv_counts(0), _carriege_return_trimmed(false), _temp_buffer("")
  {}
 
