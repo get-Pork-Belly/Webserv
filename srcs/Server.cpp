@@ -796,24 +796,40 @@ Server::makeResponseMessage(int client_fd)
 long long sended_bytes;
 
 void
-Server::sendResponse(const std::string& response_message, int client_fd)
+Server::sendResponse(int client_fd)
 {
     Log::trace("> sendResponse", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
-    // usleep(1000);
-
     int bytes = 0;
 
+    Response& response = this->_responses[client_fd];
+    int sended_response_size = response.getSendedResponseSize();
+    const std::string& response_message = response.getResponseMessage();
+    int response_message_size = response_message.length();
+    int remained = response_message_size - sended_response_size;
+
     std::cout<<"\033[1;36m"<<response_message<<"\033[0m"<<std::endl;
-    bytes = write(client_fd, response_message.c_str(), response_message.length());
+    bytes = write(client_fd, &response_message.c_str()[sended_response_size], remained);
     if (bytes > 0)
     {
         sended_bytes += bytes;
         // std::cout<<response_message<<std::endl;
+        std::cout<<"\033[1;44;37m"<<"bytes: "<<bytes<<"\033[0m"<<std::endl;
         std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
         std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
+
+        sended_response_size += bytes;
+        response.setSendedResponseSize(sended_response_size);
+        if (sended_response_size == response_message_size)
+        {
+            response.setResInfo(ResInfo::ALL_SENDED);
+            response.setSendedResponseSize(0);
+            response.setResponseMessage("");
+        }
+        else
+            response.setResInfo(ResInfo::SENDING);
     }
     else if (bytes == 0)
     {
