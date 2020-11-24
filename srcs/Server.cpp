@@ -726,13 +726,12 @@ Server::receiveRequest(int client_fd)
     Log::trace("< receiveRequest", 1);
 }
 
-std::string
+void
 Server::makeResponseMessage(int client_fd)
 {
     Log::trace("> makeResponseMessage", 1);
     timeval from;
     gettimeofday(&from, NULL);
-    
 
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
@@ -756,44 +755,42 @@ Server::makeResponseMessage(int client_fd)
     {
     case SendProgress::FINISH:
         if (method == "HEAD")
-            return ("");
+            response.setResponseMessage("");
 
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
-        return (response.getTransmittingBody());
+        response.setResponseMessage(response.getTransmittingBody());
         break;
     case SendProgress::DEFAULT:
         response.setSendProgress(SendProgress::FINISH);
         if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
-            return (status_line + headers);
+            response.setResponseMessage(status_line + headers);
 
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
-        return (status_line + headers + response.getTransmittingBody());
+        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
         break;
     case SendProgress::CHUNK_START:
         if (request.getMethod() == "HEAD")
-            return (status_line + headers);
+            response.setResponseMessage(status_line + headers);
             
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
-        return (status_line + headers + response.getTransmittingBody());
+        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
         break;
     case SendProgress::CHUNK_PROGRESS:
         if (request.getMethod() == "HEAD")
-            return ("");
+            response.setResponseMessage("");
 
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
-        return (response.getTransmittingBody());
+        response.setResponseMessage(response.getTransmittingBody());
         break;
     default:
-
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
         break;
     }
-    return (status_line + headers + response.getTransmittingBody());
 }
 
 long long sended_bytes;
