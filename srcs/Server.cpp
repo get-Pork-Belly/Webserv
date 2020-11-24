@@ -1233,8 +1233,8 @@ Server::run(int fd)
                     this->sendDataToCGI(fd);
                 else if (this->isClientSocket(fd))
                 {
-                    std::string response_message = this->makeResponseMessage(fd);
-                    this->sendResponse(response_message, fd);
+                    this->makeResponseMessage(fd);
+                    this->sendResponse(fd);
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
