@@ -1246,7 +1246,8 @@ Server::run(int fd)
                     this->sendDataToCGI(fd);
                 else if (this->isClientSocket(fd))
                 {
-                    this->makeResponseMessage(fd);
+                    if (this->_responses[fd].getResInfo() != ResInfo::SENDING)
+                        this->makeResponseMessage(fd);
                     this->sendResponse(fd);
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
                     {
@@ -1967,7 +1968,8 @@ Server::makeCGIArgv(int client_fd)
 bool
 Server::isResponseAllSended(int fd) const
 {
-    return (this->_responses[fd].getSendProgress() == SendProgress::FINISH);
+    return (this->_responses[fd].getSendProgress() == SendProgress::FINISH &&
+            this->_responses[fd].getResInfo() == ResInfo::ALL_SENDED);
 }
 
 void
