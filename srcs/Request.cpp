@@ -13,9 +13,9 @@
 Request::Request()
 : _method(""), _uri(""), _version(""),
 _protocol(""), _body(""), _status_code("200"),
-_info(ReqInfo::READY), _is_buffer_left(false),
-_ip_address(""), _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
-_received_chunk_data_size(0), _recv_counts(0), _carriege_return_trimmed(false), _last_body_size(0)
+_info(ReqInfo::READY), _is_buffer_left(false), _transfered_body_size(0),
+_ip_address(""), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
+_received_chunk_data_size(0), _recv_counts(0), _carriege_return_trimmed(false), _temp_buffer("")
  {}
 
 Request::Request(const Request& other)
@@ -23,10 +23,10 @@ Request::Request(const Request& other)
 _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _body(other._body),
 _status_code(other._status_code), _info(other._info),
-_is_buffer_left(other._is_buffer_left), _ip_address(other._ip_address),
-_transfered_body_size(other._transfered_body_size), _target_chunk_size(other._target_chunk_size),
+_is_buffer_left(other._is_buffer_left), _transfered_body_size(other._transfered_body_size),
+_ip_address(other._ip_address), _target_chunk_size(other._target_chunk_size),
 _received_chunk_data_size(other._received_chunk_data_size), _recv_counts(other._recv_counts),
-_carriege_return_trimmed(other._carriege_return_trimmed)
+_carriege_return_trimmed(other._carriege_return_trimmed), _temp_buffer(other._temp_buffer)
 {}
 
 Request&
@@ -47,6 +47,7 @@ Request::operator=(const Request& other)
     this->_received_chunk_data_size = other._received_chunk_data_size;
     this->_recv_counts = other._recv_counts;
     this->_carriege_return_trimmed = other._carriege_return_trimmed;
+    this->_temp_buffer = other._temp_buffer;
     return (*this);
 }
 
@@ -168,15 +169,21 @@ Request::getCarriegeReturnTrimmed() const
     return (this->_carriege_return_trimmed);
 }
 
-size_t
-Request::getLastBodySize() const
+const std::string&
+Request::getTempBuffer() const
 {
-    return (this->_last_body_size);
+    return (this->_temp_buffer);
 }
 
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
+
+void
+Request::setTempBuffer(const std::string& temp_body)
+{
+    this->_temp_buffer = temp_body;
+}
 
 void
 Request::setMethod(const std::string& method)
@@ -284,12 +291,6 @@ void
 Request::setCarriegeReturnTrimmed(const bool carriege_return)
 {
     this->_carriege_return_trimmed = carriege_return;
-}
-
-void
-Request::setLastBodySize(const size_t last_body_size)
-{
-    this->_last_body_size = last_body_size;
 }
 
 /*============================================================================*/
@@ -407,16 +408,40 @@ Request::raiseRecvCounts()
 }
 
 bool
-Request::isRequestBodyAppended() const
-{
-    return (this->_body.length() == this->_last_body_size);
-}
-
-bool
 Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& ret)
 {
     this->setStatusCode(status_code);
     return (ret);
+}
+
+void
+Request::parseRequestWithoutBody()
+{
+    Log::trace("> parseRequestWithoutBody", 1);
+    timeval from;
+    gettimeofday(&from, NULL);
+
+    std::string line;
+    std::string& req_message = this->_temp_buffer;
+
+    if (ft::substr(line, req_message, "\r\n") == false)
+        throw (RequestFormatException(*this, "400"));
+    else
+    {
+        if (this->parseRequestLine(line) == false)
+            throw (RequestFormatException(*this, "400"));
+    }
+    if (ft::substr(line, req_message, "\r\n\r\n") == false)
+        throw (RequestFormatException(*this, "400"));
+    else
+    {
+        if (this->parseHeaders(line) == false)
+            throw (RequestFormatException(*this, "400"));
+    }
+    this->updateReqInfo();
+
+    Log::printTimeDiff(from, 1);
+    Log::trace("< parseRequestWithoutBody", 1);
 }
 
 void
@@ -575,6 +600,12 @@ Request::appendBody(const char* buf, int bytes)
 }
 
 void
+Request::appendTempBuffer(char* buf, size_t bytes)
+{
+    this->_temp_buffer.append(buf, bytes);
+}
+
+void
 Request::init()
 {
     this->_method = "";
@@ -592,7 +623,6 @@ Request::init()
     this->_received_chunk_data_size = 0;
     this->_carriege_return_trimmed = false;
     this->_recv_counts = 0;
-    this->_last_body_size = 0;
 }
 
 int

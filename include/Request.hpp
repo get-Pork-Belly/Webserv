@@ -22,8 +22,8 @@ private:
     std::string _status_code;
     ReqInfo _info;
     bool _is_buffer_left;
-    std::string _ip_address;
     int _transfered_body_size;
+    std::string _ip_address;
     std::string _remote_user;
     std::string _remote_ident;
     std::string _auth_type;
@@ -32,6 +32,7 @@ private:
 
     int _recv_counts;
     bool _carriege_return_trimmed;
+    std::string _temp_buffer;
 
 public:
     /* Constructor */
@@ -64,6 +65,11 @@ public:
     bool getCarriegeReturnTrimmed() const;
 
     int getReceiveCounts() const;
+    const std::string& getTempBuffer() const;
+
+/*============================================================================*/
+/********************************  Setter  ************************************/
+/*============================================================================*/
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -85,6 +91,7 @@ public:
 
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);
+    void setTempBuffer(const std::string& temp_body);
 
     /* Util */
 
@@ -103,6 +110,7 @@ public:
 
     /* parser */
     void parseRequestWithoutBody(char* buf, int bytes);
+    void parseRequestWithoutBody();
     bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
 
@@ -125,6 +133,7 @@ public:
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
     void parseChunkData(char* buf, size_t bytes);
+    void appendTempBuffer(char* buf, size_t bytes);
 
     /* Exception */
 public:
