@@ -53,5 +53,15 @@ int main()
 		write(fd, "C", 1);
 	write(fd, "\r\n", 2);
 
+	fd = open("65535_crlf", O_RDWR | O_CREAT, 0666);
+
+	for (int i = 0; i < 65534; i++)
+	{
+		write(fd, "a", 1);
+	}
+		write(fd, "A", 1);
+	write(fd, "\r", 1);
+	write(fd, "\n", 1);
+
 	return (0);
 }

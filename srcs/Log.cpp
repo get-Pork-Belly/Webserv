@@ -344,7 +344,7 @@ Log::printFdCopySets(ServerManager& server_manager)
         std::cout<<"| "<<i<<" |";
     std::cout<<std::endl;
     for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<server_manager.fdIsSet(i, FdSet::READ)<<" |";
+        std::cout<<"| "<<server_manager.fdIsCopySet(i, FdSet::READ)<<" |";
     std::cout<<std::endl;
 
     std::cout<<"WRITE FD COPY SET"<<std::endl;
@@ -352,7 +352,7 @@ Log::printFdCopySets(ServerManager& server_manager)
         std::cout<<"| "<<i<<" |";
     std::cout<<std::endl;
     for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<server_manager.fdIsSet(i, FdSet::WRITE)<<" |";
+        std::cout<<"| "<<server_manager.fdIsCopySet(i, FdSet::WRITE)<<" |";
     std::cout<<std::endl;
 }
 

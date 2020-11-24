@@ -517,9 +517,15 @@ Request::parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_
 void
 Request::parseChunkData(char* buf, size_t bytes)
 {
-
     if (bytes <= CRLF_SIZE)
+    {
+        if (!(bytes == 1 && buf[0] == '\n') && this->isCarriegeReturnTrimmed())
+        {
+            this->appendBody("\r", 1);
+            this->setCarriegeReturnTrimmed(false);
+        }
         return ;
+    }
     if (this->isCarriegeReturnTrimmed())
     {
         this->appendBody("\r", 1);
@@ -566,6 +572,7 @@ Request::init()
     this->_transfered_body_size = 0;
     this->_target_chunk_size = DEFAULT_TARGET_CHUNK_SIZE;
     this->_received_chunk_data_size = 0;
+    this->_carriege_return_trimmed = false;
     this->_recv_counts = 0;
 }
 

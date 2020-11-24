@@ -68,6 +68,7 @@ public:
     const std::map<std::string, location_info>& getLocationConfig();
     int getServerSocket() const;
     Request& getRequest(int fd);
+    Response& getResponse(int fd);
     const std::string& getHost() const;
     const std::string& getPort() const;
     /* Setter */

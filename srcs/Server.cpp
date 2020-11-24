@@ -87,6 +87,12 @@ Server::getPort() const
     return (this->_port);
 }
 
+Response&
+Server::getResponse(int fd)
+{
+    return (this->_responses[fd]);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -426,8 +432,6 @@ Server::receiveRequestWithoutBody(int client_fd)
     std::string readed;
     Request& request = this->_requests[client_fd];
 
-    // ft::memset(reinterpret_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-    // if ((bytes = recv(client_fd, buf, BUFFER_SIZE, MSG_PEEK)) > 0)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
@@ -805,6 +809,7 @@ Server::sendResponse(const std::string& response_message, int client_fd)
 
     int bytes = 0;
 
+    std::cout<<"\033[1;36m"<<response_message<<"\033[0m"<<std::endl;
     bytes = write(client_fd, response_message.c_str(), response_message.length());
     if (bytes > 0)
     {
@@ -1045,6 +1050,7 @@ Server::acceptClient()
         fcntl(client_socket, F_SETFL, O_NONBLOCK);
         this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
         this->_server_manager->updateFdMax(client_socket);
+
         Log::newClient(*this, client_socket);
     }
     else
@@ -1216,7 +1222,7 @@ Server::run(int fd)
         this->acceptClient();
     else
     {
-        if (this->_server_manager->fdIsSet(fd, FdSet::WRITE))
+        if (this->_server_manager->fdIsCopySet(fd, FdSet::WRITE))
         {
             try
             {
@@ -1289,7 +1295,7 @@ Server::run(int fd)
                 std::cerr << e << '\n';
             }
         }
-        else if (this->_server_manager->fdIsSet(fd, FdSet::READ))
+        else if (this->_server_manager->fdIsCopySet(fd, FdSet::READ))
         {
             try
             {

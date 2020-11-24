@@ -61,7 +61,7 @@ fdSet(int fd, fd_set *fds)
 }
 
 bool
-fdIsSet(int fd, fd_set *fds)
+fdIsCopySet(int fd, fd_set *fds)
 {
     if (fd < 0 || fd >= 1024)
         return false;
