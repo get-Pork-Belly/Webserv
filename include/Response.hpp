@@ -44,6 +44,8 @@ private:
     ReceiveProgress _receive_progress;
 
     int _resoure_fd;
+    int _sended_response_size;
+    std::string _response_message;
 
 public:
     /* Constructor */
@@ -86,6 +88,8 @@ public:
 
     int getResourceFd() const;
     const std::map<std::string, std::string>& getHeaders() const;
+    int getSendedResponseSize() const;
+    const std::string& getResponseMessage() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -109,6 +113,8 @@ public:
     void setSendProgress(const SendProgress send_progress);
     void setReceiveProgress(const ReceiveProgress rececive_progress);
     void setResourceFd(const int resource_fd);
+    void setSendedResponseSize(const int sended_response_size);
+    void setResponseMessage(const std::string& response_message);
 
     /* Exception */
 public:

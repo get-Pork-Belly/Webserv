@@ -229,6 +229,18 @@ Response::getHeaders() const
     return (this->_headers);
 }
 
+int
+Response::getSendedResponseSize() const
+{
+    return (this->_sended_response_size);
+}
+
+const std::string&
+Response::getResponseMessage() const
+{
+    return (this->_response_message);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -353,6 +365,18 @@ void
 Response::setHeaders(const std::string& key, const std::string& value)
 {
     this->_headers[key] = value;
+}
+
+void
+Response::setSendedResponseSize(const int sended_response_size)
+{
+    this->_sended_response_size = sended_response_size;
+}
+
+void
+Response::setResponseMessage(const std::string& response_message)
+{
+    this->_response_message = response_message;
 }
 
 /*============================================================================*/
