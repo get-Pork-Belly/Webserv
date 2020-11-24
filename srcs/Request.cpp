@@ -15,7 +15,7 @@ Request::Request()
 _protocol(""), _body(""), _status_code("200"),
 _info(ReqInfo::READY), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
-_received_chunk_data_size(0), _recv_counts(0), _carriege_return_trimmed(false), _last_body_size(0)
+_received_chunk_data_size(0), _recv_counts(0), _carriege_return_trimmed(false)
  {}
 
 Request::Request(const Request& other)
@@ -168,12 +168,6 @@ Request::getCarriegeReturnTrimmed() const
     return (this->_carriege_return_trimmed);
 }
 
-size_t
-Request::getLastBodySize() const
-{
-    return (this->_last_body_size);
-}
-
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -284,12 +278,6 @@ void
 Request::setCarriegeReturnTrimmed(const bool carriege_return)
 {
     this->_carriege_return_trimmed = carriege_return;
-}
-
-void
-Request::setLastBodySize(const size_t last_body_size)
-{
-    this->_last_body_size = last_body_size;
 }
 
 /*============================================================================*/
@@ -404,12 +392,6 @@ void
 Request::raiseRecvCounts()
 {
     this->_recv_counts++;
-}
-
-bool
-Request::isRequestBodyAppended() const
-{
-    return (this->_body.length() == this->_last_body_size);
 }
 
 bool
@@ -592,7 +574,6 @@ Request::init()
     this->_received_chunk_data_size = 0;
     this->_carriege_return_trimmed = false;
     this->_recv_counts = 0;
-    this->_last_body_size = 0;
 }
 
 int
