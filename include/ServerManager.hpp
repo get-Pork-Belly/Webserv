@@ -17,11 +17,11 @@
 # include "types.hpp"
 # include "ServerGenerator.hpp"
 
-const int TIME_OUT_SECOND = 1;
+const int TIME_OUT_SECOND = 10;
 
 class Server;
 
-using TimeCheck=bool;
+using MonitorStatus=bool;
 
 class ServerManager
 {
@@ -44,7 +44,7 @@ private:
     std::vector<std::pair<FdType, int>> _fd_table;
     int _fd;
     int _fd_max;
-    std::vector<std::pair<TimeCheck, timeval>> _last_request_time_of_client;
+    std::vector<std::pair<MonitorStatus, timeval>> _last_request_time_of_client;
 
 public:
     /* Constructor */
@@ -65,7 +65,7 @@ public:
     void setResourceOnFdTable(int fd, int client_socket);
     void setCGIPipeOnFdTable(int fd, int client_socket);
     void setClosedFdOnFdTable(int fd);
-    void setLastRequestTimeOfClient(int client_fd, TimeCheck check, timeval* time);
+    void setLastRequestTimeOfClient(int client_fd, MonitorStatus check, timeval* time);
     /* Exception */
     /* Util */
     bool fdIsCopySet(int fd, FdSet type);
@@ -83,6 +83,9 @@ public:
     // void exitServers();
 
     bool isClientTimeOut(int fd);
+    void monitorTimeOutOff(int fd);
+    void monitorTimeOutOn(int fd);
+    bool isMonitorTimeOutOn(int fd);
 };
 
 #endif

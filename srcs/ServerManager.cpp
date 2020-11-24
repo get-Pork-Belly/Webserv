@@ -24,7 +24,7 @@ ServerManager::ServerManager(const char* config_path)
     // this->_fd_table.resize(1024, FdType::CLOSED);
 
     this->_fd_table.resize(1024, std::pair<FdType, int>(FdType::CLOSED, DEFAULT_FD));
-    this->_last_request_time_of_client.resize(1024, std::pair<TimeCheck, timeval>(true, timeval()));
+    this->_last_request_time_of_client.resize(1024, std::pair<MonitorStatus, timeval>(false, timeval()));
     this->_fd = DEFAULT_FD;
     this->_fd_max = 2;
     this->initServers();
@@ -320,7 +320,7 @@ ServerManager::runServers()
 }
 
 void
-ServerManager::setLastRequestTimeOfClient(int client_fd, TimeCheck check, timeval* time)
+ServerManager::setLastRequestTimeOfClient(int client_fd, MonitorStatus check, timeval* time)
 {
     this->_last_request_time_of_client[client_fd].first = check;
     if (time != NULL)
@@ -333,11 +333,39 @@ ServerManager::isClientTimeOut(int fd)
     timeval now;
     gettimeofday(&now, NULL);
     
+    std::cout<<"\033[1;36m"<<"> in isClientTimeOut"<<"\033[0m"<<std::endl;
     if (this->_last_request_time_of_client[fd].first == false)
+    {
+        std::cout<<"\033[1;36m"<<"> in isClientTimeOut false 1"<<"\033[0m"<<std::endl;
         return (false);
+    }
     if (now.tv_sec - this->_last_request_time_of_client[fd].second.tv_sec > TIME_OUT_SECOND)
+    {
+        std::cout<<"\033[1;36m"<<"> in isClientTimeOut true"<<"\033[0m"<<std::endl;
         return (true);
+    }
+
+        std::cout<<"\033[1;36m"<<"> in isClientTimeOut false 2"<<"\033[0m"<<std::endl;
     return (false);
+}
+
+void
+ServerManager::monitorTimeOutOff(int fd)
+{
+    this->_last_request_time_of_client[fd].first = false;
+}
+
+void
+ServerManager::monitorTimeOutOn(int fd)
+{
+    this->_last_request_time_of_client[fd].first = true;
+    gettimeofday(&(this->_last_request_time_of_client[fd].second), NULL);
+}
+
+bool
+ServerManager::isMonitorTimeOutOn(int fd)
+{
+    return (this->_last_request_time_of_client[fd].first);
 }
 
 void
@@ -349,29 +377,35 @@ ServerManager::closeUnresponsiveClient()
             this->getFdType(fd) == FdType::CLIENT_SOCKET &&
             this->fdIsOriginSet(fd, FdSet::READ) != this->fdIsCopySet(fd, FdSet::READ))
         {
-            // check timeout
-            if (this->isClientTimeOut(fd))
+            if (this->isMonitorTimeOutOn(fd))
             {
-                this->fdSet(fd, FdSet::WRITE);
-                for (Server* server : this->_servers)
+                if (this->isClientTimeOut(fd))
                 {
-                    if (server->getServerSocket() == this->getFdTable()[fd].second)
+                    this->fdSet(fd, FdSet::WRITE);
+                    for (Server* server : this->_servers)
                     {
-                        Response& response = server->getResponse(fd);
-                        response.setStatusCode("408");
-                        if (response.getWriteFdToCGI() != DEFAULT_FD ||
-                            response.getReadFdFromCGI() != DEFAULT_FD)
+                        if (server->getServerSocket() == this->getFdTable()[fd].second)
                         {
-                            server->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);
-                            server->closeFdAndUpdateFdTable(response.getWriteFdToCGI(), FdSet::WRITE);
+                            Response& response = server->getResponse(fd);
+                            response.setStatusCode("408");
+                            if (response.getWriteFdToCGI() != DEFAULT_FD ||
+                                response.getReadFdFromCGI() != DEFAULT_FD)
+                            {
+                                server->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);
+                                server->closeFdAndUpdateFdTable(response.getWriteFdToCGI(), FdSet::WRITE);
+                            }
+                            else if (response.getResourceFd() != DEFAULT_FD)
+                                server->closeFdAndUpdateFdTable(response.getResourceFd(), FdSet::READ);
+                            this->monitorTimeOutOff(fd);
                         }
-                        else if (response.getResourceFd() != DEFAULT_FD)
-                            server->closeFdAndUpdateFdTable(response.getResourceFd(), FdSet::READ);
-                        server->protectClientFromTimeOut(fd);
                     }
                 }
             }
+            else
+                this->monitorTimeOutOn(fd);
         }
+        else
+            this->monitorTimeOutOff(fd);
     }
 }
 

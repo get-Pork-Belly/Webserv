@@ -89,10 +89,6 @@ public:
     bool isStaticResource(int fd) const;
     bool isCGIPipe(int fd) const;
 
-    void monitorClientTimeOut(int fd);
-    void updateClientActivityTime(int fd);
-    void protectClientFromTimeOut(int fd);
-
     /* Server function */
     void init();
     void run(int fd);

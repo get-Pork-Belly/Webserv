@@ -809,6 +809,7 @@ Server::sendResponse(const std::string& response_message, int client_fd)
 
     int bytes = 0;
 
+    std::cout<<"\033[1;36m"<<response_message<<"\033[0m"<<std::endl;
     bytes = write(client_fd, response_message.c_str(), response_message.length());
     if (bytes > 0)
     {
@@ -1050,7 +1051,6 @@ Server::acceptClient()
         this->_server_manager->setClientSocketOnFdTable(client_socket, this->getServerSocket());
         this->_server_manager->updateFdMax(client_socket);
 
-        this->monitorClientTimeOut(client_socket);
         Log::newClient(*this, client_socket);
     }
     else
@@ -1216,28 +1216,6 @@ Server::putFileOnServer(int resource_fd)
 }
 
 void
-Server::monitorClientTimeOut(int client_fd)
-{
-    timeval now;
-    gettimeofday(&now, NULL);
-    this->_server_manager->setLastRequestTimeOfClient(client_fd, true, &now);
-}
-
-void
-Server::updateClientActivityTime(int client_fd)
-{
-    timeval now;
-    gettimeofday(&now, NULL);
-    this->_server_manager->setLastRequestTimeOfClient(client_fd, true, &now);
-}
-
-void
-Server::protectClientFromTimeOut(int client_fd)
-{
-    this->_server_manager->setLastRequestTimeOfClient(client_fd, false, nullptr);
-}
-
-void
 Server::run(int fd)
 {
     if (isServerSocket(fd))
@@ -1328,13 +1306,9 @@ Server::run(int fd)
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
-                    // 이러면 그냥 헤더도 하면 될거 같은데?
-                    if (this->_requests[fd].isRequestBodyAppended())
-                        this->updateClientActivityTime(fd);
                     Log::getRequest(*this, fd);
                     if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
                     {
-                        this->protectClientFromTimeOut(fd);
                         this->_server_manager->fdClr(fd, FdSet::READ);
                         this->processResponseBody(fd);
                     }
