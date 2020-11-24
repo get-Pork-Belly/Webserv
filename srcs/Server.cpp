@@ -810,13 +810,11 @@ Server::sendResponse(int client_fd)
     int response_message_size = response_message.length();
     int remained = response_message_size - sended_response_size;
 
-    std::cout<<"\033[1;36m"<<response_message<<"\033[0m"<<std::endl;
     bytes = write(client_fd, &response_message.c_str()[sended_response_size], remained);
     if (bytes > 0)
     {
         sended_bytes += bytes;
         // std::cout<<response_message<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"bytes: "<<bytes<<"\033[0m"<<std::endl;
         std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
         std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
 
@@ -832,18 +830,9 @@ Server::sendResponse(int client_fd)
             response.setResInfo(ResInfo::SENDING);
     }
     else if (bytes == 0)
-    {
-        // std::cout<<"\033[1;44;37m"<<"Debug 1"<<"\033[0m"<<std::endl;
-        // std::cout<<"\033[1;44;37m"<<"SendProgress: "<<(int)this->_responses[client_fd].getSendProgress()<<"\033[0m"<<std::endl;
-        // std::cout<<response_message<<std::endl;
-        // this->_responses[client_fd].setSendProgress(SendProgress::FINISH);
         throw (CannotWriteToClientException());
-    }
     else
-    {
-        // std::cout<<"\033[1;44;37m"<<"Debug 2"<<"\033[0m"<<std::endl;
         throw (CannotWriteToClientException());
-    }
 
     Log::printTimeDiff(from, 1);
     Log::trace("< sendResponse", 1);
