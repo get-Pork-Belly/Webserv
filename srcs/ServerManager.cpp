@@ -381,15 +381,12 @@ ServerManager::closeUnresponsiveClient()
             this->getFdType(fd) == FdType::CLIENT_SOCKET &&
             this->fdIsOriginSet(fd, FdSet::READ) != this->fdIsCopySet(fd, FdSet::READ))
         {
-            std::cout<<"\033[1;37;41m"<<"Debug 1"<<"\033[0m"<<std::endl;
             // Log::printFdSets(*this);
             // Log::printFdCopySets(*this);
             if (this->isMonitorTimeOutOn(fd))
             {
-                std::cout<<"\033[1;44;37m"<<"DeBug 2"<<"\033[0m"<<std::endl;
                 if (this->isClientTimeOut(fd))
                 {
-                    std::cout<<"\033[1;44;37m"<<"DeBug 3"<<"\033[0m"<<std::endl;
                     this->fdSet(fd, FdSet::WRITE);
                     for (Server* server : this->_servers)
                     {
@@ -411,10 +408,7 @@ ServerManager::closeUnresponsiveClient()
                 }
             }
             else
-            {
-                std::cout<<"\033[1;44;37m"<<"DeBug 4 Monitor on!"<<"\033[0m"<<std::endl;
                 this->monitorTimeOutOn(fd);
-            }
         }
         else
             this->monitorTimeOutOff(fd);
