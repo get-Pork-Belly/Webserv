@@ -569,14 +569,11 @@ Request::calculateReadTargetSize(char* buf, int peeked_bytes)
     int temp_buffer_size = this->_temp_buffer.length();
     std::string peeked_request(buf, peeked_bytes);
 
-    // ABC\r             \n\r\n
-    // ABC\r\n           \r\n
-    // ABC\r\n\r          \n
     if (temp_buffer_size > 0)
     {
         if (temp_buffer_size >= 3)
         {
-            if (std::string(this->_temp_buffer.end() - 4, this->_temp_buffer.end()) == "\r\n\r")
+            if (std::string(this->_temp_buffer.end() - 3, this->_temp_buffer.end()) == "\r\n\r")
             {
                 if (peeked_request[0] == '\n')
                     return (1);
@@ -584,7 +581,7 @@ Request::calculateReadTargetSize(char* buf, int peeked_bytes)
         }
         if (temp_buffer_size >= 2)
         {
-            if (std::string(this->_temp_buffer.end() - 3, this->_temp_buffer.end()) == "\r\n")
+            if (std::string(this->_temp_buffer.end() - 2, this->_temp_buffer.end()) == "\r\n")
             {
                 if (peeked_bytes >= 2 &&
                     peeked_request[0] == '\r' &&
