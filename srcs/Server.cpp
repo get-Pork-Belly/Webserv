@@ -458,8 +458,8 @@ Server::receiveRequestLine(int client_fd)
         std::string readed(buf, bytes);
         if ((line_end_pos = readed.find("\r\n")) != std::string::npos)
         {
-            // if (line_end_pos > BUFFER_SIZE - 2)
-                // throw (Request::UriTooLongException(request));
+            if (line_end_pos >= BUFFER_SIZE - 2)
+                throw (Request::UriTooLongException(request));
             bytes = this->readBufferUntilRequestLine(client_fd, buf, line_end_pos);
             request.parseRequestLine(buf, bytes);
             request.setRecvRequest(RecvRequest::HEADERS);
@@ -1307,7 +1307,7 @@ Server::run(int fd)
                     this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
                     this->closeFdAndUpdateFdTable(fd, FdSet::READ);
                 }
-                
+                std::cerr << e.what() << '\n';
             }
             catch(const std::exception& e)
             {
@@ -1362,6 +1362,12 @@ Server::run(int fd)
                 // else if (this->_)
             }
             catch(const Request::RequestFormatException& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
+            }
+            catch(const Request::UriTooLongException& e)
             {
                 std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);

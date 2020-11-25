@@ -4,6 +4,7 @@
 # include "utils.hpp"
 # include "types.hpp"
 # include <map>
+# include "Exception.hpp"
 
 //NOTE: test용으로 ostream include함.
 #include <iostream>
@@ -141,6 +142,15 @@ public:
         Request& _req;
     public:
         RequestFormatException(Request& req, const std::string& status_code);
+        virtual const char* what() const throw();
+    };
+
+    class UriTooLongException : public std::exception
+    {
+    private:
+        Request& _req;
+    public:
+        UriTooLongException(Request& req);
         virtual const char* what() const throw();
     };
 

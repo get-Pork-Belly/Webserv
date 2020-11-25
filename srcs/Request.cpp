@@ -309,6 +309,18 @@ Request::RequestFormatException::what() const throw()
     return (this->_msg.c_str());
 }
 
+Request::UriTooLongException::UriTooLongException(Request& req)
+: _req(req)
+{
+    this->_req.setStatusCode("414");
+}
+
+const char*
+Request::UriTooLongException::what() const throw()
+{
+    return ("[CODE 414] Request uri is too long");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/
 /*============================================================================*/
