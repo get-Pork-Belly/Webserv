@@ -19,6 +19,7 @@
 # include "Exception.hpp"
 
 const int BUFFER_SIZE = 65536;
+const int SHOULD_RECEIVE_MORE = -3;
 const int RECEIVE_SOCKET_STREAM_SIZE = 65536;
 const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
@@ -97,7 +98,7 @@ public:
     void receiveRequestHeaders(int fd);
     void receiveRequestWithoutBody(int fd);
     int  readBufferUntilRequestLine(int fd, char* buf, size_t line_end_pos);
-    bool readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos);
+    bool readBufferUntilHeaders(int fd, char* buf, size_t read_target);
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
     void clearRequestBuffer(int fd);

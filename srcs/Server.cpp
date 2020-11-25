@@ -397,43 +397,25 @@ Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos
 }
 
 bool
-Server::readBufferUntilHeaders(int client_fd, char* buf, size_t peeked)
+Server::readBufferUntilHeaders(int client_fd, char* buf, size_t read_target_size)
 {
     Log::trace("> readBufferUntilHeaders", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
     int bytes;
-    size_t header_end_pos;
     Request& request = this->_requests[client_fd];
-    std::string temp(buf, peeked);
 
-    // temp_buffer -> 무조건 담는다
-    header_end_pos = temp.find("\r\n\r\n");
-    if (header_end_pos != std::string::npos) // 헤더의 끝
+    if ((bytes = read(client_fd, buf, read_target_size)) > 0)
     {
-        if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
-            request.appendTempBuffer(buf, bytes); // bytes 가 headers + 4 가 아닐 수도 있다!
-        else if (bytes == 0)
-            throw (Request::RequestFormatException(request, "400"));
-        else
-            throw (ReadErrorException());
-        if (bytes < header_end_pos + 4)
-        {
-            return (false);
-        }
-        return (true);
+        request.appendTempBuffer(buf, bytes); // bytes 가 peeked보다 작을 수 있다.
+        return (static_cast<size_t>(bytes) == read_target_size);
     }
+    else if (bytes == 0)
+        throw (Request::RequestFormatException(request, "400"));
     else
-    {
-        if ((bytes = read(client_fd, buf, peeked)) > 0)
-            request.appendTempBuffer(buf, bytes); // bytes 가 peeked보다 작을 수 있다.
-        else if (bytes == 0)
-            throw (Request::RequestFormatException(request, "400"));
-        else
-            throw (ReadErrorException());
-        return (false);
-    }
+        throw (ReadErrorException());
+    return (true);
 
     Log::printTimeDiff(from, 1);
     Log::trace("< readBufferUntilHeaders", 1);
@@ -565,24 +547,30 @@ Server::receiveRequestHeaders(int client_fd)
 
     char buf[BUFFER_SIZE + 1];
     // int peeked_bytes;
-    int bytes;
+    int peeked_bytes;
     Request& request = this->_requests[client_fd];
-    size_t header_end_pos;
-
-    // if ((peeked_bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
-    if (bytes = recv(client_fd, buf, BUFFER_SIZE, 0) > 0)
+    if ((peeked_bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
-        buf[bytes] = 0;
-        request.appendTempBuffer(buf, bytes);
-        if ((header_end_pos = request.getTempBuffer().find("\r\n\r\n")) != std::string::npos)
+        buf[peeked_bytes] = 0;
+        int read_target_size = request.calculateReadTargetSize(buf, peeked_bytes);
+        if (read_target_size == SHOULD_RECEIVE_MORE)
+            this->readBufferUntilHeaders(client_fd, buf, BUFFER_SIZE);
+        else
         {
-            request.parseRequestHeaders(request.substrHeadersFromTempBuffer(header_end_pos + 4));
-            request.updateReqInfo();
+            if (this->readBufferUntilHeaders(client_fd, buf, read_target_size))
+            {
+                request.parseRequestHeaders();
+                request.updateReqInfo();
+
+                // if (request.isNormalBody())
+                    // request.setReqInfo(ReqInfo::NORMAL_BODY);
+                request.setReqInfo(ReqInfo::COMPLETE);
+            }
         }
     }
-    // else if (bytes == RECV_COUNT_NOT_REACHED)
-    //     request.raiseRecvCounts();
-    else if (bytes == 0)
+    else if (peeked_bytes == RECV_COUNT_NOT_REACHED)
+        request.raiseRecvCounts();
+    else if (peeked_bytes == 0)
         this->closeClientSocket(client_fd);
     else
         throw (ReadErrorException());
