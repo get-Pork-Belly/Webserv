@@ -790,12 +790,12 @@ Server::sendResponse(int client_fd)
         response.setSendedResponseSize(sended_response_size);
         if (sended_response_size == response_message_size)
         {
-            response.setResInfo(ResInfo::ALL_SENDED);
+            response.setSendProgress(SendProgress::ALL_SENDED);
             response.setSendedResponseSize(0);
             response.setResponseMessage("");
         }
         else
-            response.setResInfo(ResInfo::SENDING);
+            response.setSendProgress(SendProgress::SENDING);
     }
     else if (bytes == 0)
         throw (CannotWriteToClientException());
@@ -1189,7 +1189,7 @@ Server::run(int fd)
                     this->sendDataToCGI(fd);
                 else if (this->isClientSocket(fd))
                 {
-                    if (this->_responses[fd].getResInfo() != ResInfo::SENDING)
+                    if (this->_responses[fd].getSendProgress() != SendProgress::SENDING)
                         this->makeResponseMessage(fd);
                     this->sendResponse(fd);
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
@@ -1920,7 +1920,7 @@ bool
 Server::isResponseAllSended(int fd) const
 {
     return (this->_responses[fd].getParseProgress() == ParseProgress::FINISH &&
-            this->_responses[fd].getResInfo() == ResInfo::ALL_SENDED);
+            this->_responses[fd].getSendProgress() == SendProgress::ALL_SENDED);
 }
 
 void

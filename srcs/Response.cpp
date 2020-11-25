@@ -23,7 +23,7 @@ _stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT
 _write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extension(""), _transmitting_body(""),
 _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resoure_fd(DEFAULT_FD),
-_sended_response_size(0), _response_message(""), _res_info(ResInfo::READY)
+_sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY)
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -44,7 +44,7 @@ _uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_
 _already_encoded_size(other._already_encoded_size), _parse_progress(other._parse_progress),
 _receive_progress(other._receive_progress), _resoure_fd(other._resoure_fd),
 _sended_response_size(other._sended_response_size), _response_message(other._response_message),
-_res_info(other._res_info)
+_send_progress(other._send_progress)
 {}
 
 /*============================================================================*/
@@ -89,7 +89,7 @@ Response::operator=(const Response& rhs)
     this->_resoure_fd = rhs._resoure_fd;
     this->_sended_response_size = rhs._sended_response_size;
     this->_response_message = rhs._response_message;
-    this->_res_info = rhs._res_info;
+    this->_send_progress = rhs._send_progress;
     return (*this);
 }
 
@@ -247,10 +247,10 @@ Response::getResponseMessage() const
     return (this->_response_message);
 }
 
-const ResInfo&
-Response::getResInfo() const
+const SendProgress&
+Response::getSendProgress() const
 {
-    return (this->_res_info);
+    return (this->_send_progress);
 }
 
 /*============================================================================*/
@@ -392,9 +392,9 @@ Response::setResponseMessage(const std::string& response_message)
 }
 
 void
-Response::setResInfo(const ResInfo& res_info)
+Response::setSendProgress(const SendProgress& send_progress)
 {
-    this->_res_info = res_info;
+    this->_send_progress = send_progress;
 }
 
 /*============================================================================*/
@@ -457,7 +457,7 @@ Response::init()
     this->_resoure_fd = DEFAULT_FD;
     this->_sended_response_size = 0;
     this->_response_message = "";
-    this->_res_info = ResInfo::READY;
+    this->_send_progress = SendProgress::READY;
     //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
 }
 

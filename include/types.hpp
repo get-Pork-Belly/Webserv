@@ -76,7 +76,7 @@ enum class ResType
     ERROR_HTML,
 };
 
-enum class ResInfo
+enum class SendProgress
 {
     READY,
     SENDING,
