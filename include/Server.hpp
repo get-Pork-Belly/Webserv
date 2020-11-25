@@ -97,9 +97,8 @@ public:
     void readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos);
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
-    void clearRequestBuffer(int fd);
-    std::string makeResponseMessage(int fd);
-    void sendResponse(const std::string& response_meesage, int fd);
+    void makeResponseMessage(int fd);
+    void sendResponse(int fd);
     bool isClientOfServer(int fd) const;
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);

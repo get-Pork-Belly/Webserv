@@ -507,34 +507,6 @@ Server::receiveRequestNormalBody(int client_fd)
 }
 
 void
-Server::clearRequestBuffer(int client_fd)
-{
-    Log::trace("> clearRequestBuffer", 1);
-    timeval from;
-    gettimeofday(&from, NULL);
-
-
-    int bytes;
-    char buf[BUFFER_SIZE + 1];
-    Request& request = this->_requests[client_fd];
-
-    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
-    {
-        if (bytes == BUFFER_SIZE)
-            return ;
-        request.setReqInfo(ReqInfo::COMPLETE);
-    }
-    else if (bytes == 0)
-        this->closeClientSocket(client_fd);
-    else
-        throw (ReadErrorException());
-
-
-    Log::printTimeDiff(from, 1);
-    Log::trace("< clearRequestBuffer", 1);
-}
-
-void
 Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
 {
     Log::trace("> receiveChunkSize", 1);
@@ -713,10 +685,6 @@ Server::receiveRequest(int client_fd)
         this->receiveRequestChunkedBody(client_fd);
         break ;
 
-    case ReqInfo::MUST_CLEAR:
-        this->clearRequestBuffer(client_fd);
-        break ;
-
     default:
         break ;
     }
@@ -726,13 +694,12 @@ Server::receiveRequest(int client_fd)
     Log::trace("< receiveRequest", 1);
 }
 
-std::string
+void
 Server::makeResponseMessage(int client_fd)
 {
     Log::trace("> makeResponseMessage", 1);
     timeval from;
     gettimeofday(&from, NULL);
-    
 
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
@@ -751,86 +718,89 @@ Server::makeResponseMessage(int client_fd)
     status_line = response.makeStatusLine();
 
     //TODO: refactoring
-    const SendProgress& send_progress = response.getSendProgress();
-    switch (send_progress)
+    const ParseProgress& parse_progress = response.getParseProgress();
+    switch (parse_progress)
     {
-    case SendProgress::FINISH:
+    case ParseProgress::FINISH:
         if (method == "HEAD")
-            return ("");
+            response.setResponseMessage("");
 
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
-        return (response.getTransmittingBody());
+        response.setResponseMessage(response.getTransmittingBody());
         break;
-    case SendProgress::DEFAULT:
-        response.setSendProgress(SendProgress::FINISH);
+    case ParseProgress::DEFAULT:
+        response.setParseProgress(ParseProgress::FINISH);
         if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
-            return (status_line + headers);
+            response.setResponseMessage(status_line + headers);
 
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
-        return (status_line + headers + response.getTransmittingBody());
+        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
         break;
-    case SendProgress::CHUNK_START:
+    case ParseProgress::CHUNK_START:
         if (request.getMethod() == "HEAD")
-            return (status_line + headers);
+            response.setResponseMessage(status_line + headers);
             
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
-        return (status_line + headers + response.getTransmittingBody());
+        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
         break;
-    case SendProgress::CHUNK_PROGRESS:
+    case ParseProgress::CHUNK_PROGRESS:
         if (request.getMethod() == "HEAD")
-            return ("");
+            response.setResponseMessage("");
 
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
-        return (response.getTransmittingBody());
+        response.setResponseMessage(response.getTransmittingBody());
         break;
     default:
-
         Log::printTimeDiff(from, 1);
         Log::trace("< makeResponseMessage", 1);
         break;
     }
-    return (status_line + headers + response.getTransmittingBody());
 }
 
 long long sended_bytes;
 
 void
-Server::sendResponse(const std::string& response_message, int client_fd)
+Server::sendResponse(int client_fd)
 {
     Log::trace("> sendResponse", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
-    // usleep(1000);
-
     int bytes = 0;
 
-    std::cout<<"\033[1;36m"<<response_message<<"\033[0m"<<std::endl;
-    bytes = write(client_fd, response_message.c_str(), response_message.length());
+    Response& response = this->_responses[client_fd];
+    int sended_response_size = response.getSendedResponseSize();
+    const std::string& response_message = response.getResponseMessage();
+    int response_message_size = response_message.length();
+    int remained = response_message_size - sended_response_size;
+
+    bytes = write(client_fd, &response_message.c_str()[sended_response_size], remained);
     if (bytes > 0)
     {
         sended_bytes += bytes;
         // std::cout<<response_message<<std::endl;
         std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
+        std::cout<<"\033[1;44;37m"<<"ParseProgress: "<<Log::parseProgressToString(this->_responses[client_fd].getParseProgress())<<"\033[0m"<<std::endl;
+
+        sended_response_size += bytes;
+        response.setSendedResponseSize(sended_response_size);
+        if (sended_response_size == response_message_size)
+        {
+            response.setSendProgress(SendProgress::ALL_SENDED);
+            response.setSendedResponseSize(0);
+            response.setResponseMessage("");
+        }
+        else
+            response.setSendProgress(SendProgress::SENDING);
     }
     else if (bytes == 0)
-    {
-        // std::cout<<"\033[1;44;37m"<<"Debug 1"<<"\033[0m"<<std::endl;
-        // std::cout<<"\033[1;44;37m"<<"SendProgress: "<<(int)this->_responses[client_fd].getSendProgress()<<"\033[0m"<<std::endl;
-        // std::cout<<response_message<<std::endl;
-        // this->_responses[client_fd].setSendProgress(SendProgress::FINISH);
         throw (CannotWriteToClientException());
-    }
     else
-    {
-        // std::cout<<"\033[1;44;37m"<<"Debug 2"<<"\033[0m"<<std::endl;
         throw (CannotWriteToClientException());
-    }
 
     Log::printTimeDiff(from, 1);
     Log::trace("< sendResponse", 1);
@@ -1070,7 +1040,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     timeval from;
     gettimeofday(&from, NULL);
 
-    usleep(500);
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
@@ -1086,15 +1055,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     else
         content_length = body.length();
 
-    if (content_length == 0 || content_length == transfered_body_size || request.getMethod() != "POST")
-    {
-        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-
-        Log::printTimeDiff(from, 1);
-        Log::trace("< sendDataToCGI", 1);
-        return ;
-    }
-
     int target_send_data_size = std::min(SEND_PIPE_STREAM_SIZE, content_length - transfered_body_size);
 
     int bytes;
@@ -1106,11 +1066,12 @@ Server::sendDataToCGI(int write_fd_to_cgi)
         else
         {
             this->_server_manager->fdSet(response.getReadFdFromCGI(), FdSet::READ);
+            this->_server_manager->fdClr(write_fd_to_cgi, FdSet::WRITE);
             this->_server_manager->fdClr(client_fd, FdSet::READ);
         }
     }
     else if (bytes == 0)
-        throw (InternalServerException(this->_responses[client_fd]));
+        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
     else
         throw (InternalServerException(this->_responses[client_fd]));
 
@@ -1150,11 +1111,6 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     }
     else if (bytes == 0)
     {
-        // std::cout << "\033[34m\033[01m";
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "read bytes 0" << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "\033[0m";
         waitpid(response.getCGIPid(), &status, 0);
         this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
         response.setReceiveProgress(ReceiveProgress::FINISH);
@@ -1233,22 +1189,37 @@ Server::run(int fd)
                     this->sendDataToCGI(fd);
                 else if (this->isClientSocket(fd))
                 {
-                    std::string response_message = this->makeResponseMessage(fd);
-                    this->sendResponse(response_message, fd);
+                    if (this->_responses[fd].getSendProgress() != SendProgress::SENDING)
+                        this->makeResponseMessage(fd);
+                    this->sendResponse(fd);
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
                     {
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
                         if (this->_responses[fd].getResourceFd() != DEFAULT_FD)
                             this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
                         else
-                            this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
+                        {
+                            if (this->_server_manager->getFdType(this->_responses[fd].getWriteFdToCGI()) != FdType::CLOSED)
+                                this->_server_manager->fdSet(this->_responses[fd].getWriteFdToCGI(), FdSet::WRITE);
+                            else
+                                this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
+                        }
                     }
                     if (this->isResponseAllSended(fd))
                     {
-                        this->_server_manager->fdClr(fd, FdSet::WRITE);
-                        this->_server_manager->fdSet(fd, FdSet::READ);
-                        this->_requests[fd].init();
-                        this->_responses[fd].init();
+                        if (this->_responses[fd].getStatusCode()[0] != '2')
+                        {
+                            this->_server_manager->fdClr(fd, FdSet::WRITE);
+                            this->_responses[fd].init();
+                            this->closeClientSocket(fd);
+                        }
+                        else
+                        {
+                            this->_server_manager->fdClr(fd, FdSet::WRITE);
+                            this->_server_manager->fdSet(fd, FdSet::READ);
+                            this->_requests[fd].init();
+                            this->_responses[fd].init();
+                        }
                     }
                 }
                 else
@@ -1331,13 +1302,7 @@ Server::run(int fd)
             catch(const Request::RequestFormatException& e)
             {
                 std::cerr << e.what() << '\n';
-                if (this->_requests[fd].isContentLeftInBuffer())
-                    this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
-                else
-                {
-                    this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
-                    this->_server_manager->fdSet(fd, FdSet::WRITE);
-                }
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
                 this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
             }
             catch(const std::exception& e)
@@ -1954,7 +1919,8 @@ Server::makeCGIArgv(int client_fd)
 bool
 Server::isResponseAllSended(int fd) const
 {
-    return (this->_responses[fd].getSendProgress() == SendProgress::FINISH);
+    return (this->_responses[fd].getParseProgress() == ParseProgress::FINISH &&
+            this->_responses[fd].getSendProgress() == SendProgress::ALL_SENDED);
 }
 
 void

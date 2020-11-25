@@ -64,7 +64,6 @@ enum class ReqInfo
     COMPLETE,
     NORMAL_BODY,
     CHUNKED_BODY,
-    MUST_CLEAR,
 };
 
 enum class ResType
@@ -78,6 +77,13 @@ enum class ResType
 };
 
 enum class SendProgress
+{
+    READY,
+    SENDING,
+    ALL_SENDED,
+};
+
+enum class ParseProgress
 {
     DEFAULT,
     CHUNK_START,
