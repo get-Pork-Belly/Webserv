@@ -478,10 +478,6 @@ Server::receiveRequestLine(int client_fd)
     Log::trace("< receiveRequestLine", 1);
 }
 
-// temp_buffer을 언제 추가할 것인가에 댛ㄴ 
-// 먼저 peek 한 다음에 \r\n\r\n 을 찾고 거기까지 읽을 것인가?
-// 아니면그냥 다 읽은 다음에 temp_buffer에서 바디를 나눌 것인가?
-
 void
 Server::receiveRequestHeaders(int client_fd)
 {
@@ -490,7 +486,6 @@ Server::receiveRequestHeaders(int client_fd)
     gettimeofday(&from, NULL);
 
     char buf[BUFFER_SIZE + 1];
-    // int peeked_bytes;
     int peeked_bytes;
     Request& request = this->_requests[client_fd];
     if ((peeked_bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
@@ -727,15 +722,7 @@ Server::receiveRequest(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-    // RecvRequest REQUEST_LINE_SEQUENCE       <-- ready
-    // RecvRequest HEADER           
-    // RecvRequest NORMAL_BODY_SEQUENCE <-- NORMAL_BODY
-    // RecvRequest CHUNKED_BODY <-- CHUNKED_BODY
-    // RecvRequest MUST_CLEAR..??? <--MUST_CLEAR
-    // RecvRequest RECV_COMPLETE
-
     const RecvRequest& req_info = this->_requests[client_fd].getRecvRequest();
-
     switch (req_info)
     {
     case RecvRequest::REQUEST_LINE:
