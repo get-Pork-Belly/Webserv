@@ -1072,7 +1072,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     timeval from;
     gettimeofday(&from, NULL);
 
-    usleep(500);
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
@@ -1088,15 +1087,6 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     else
         content_length = body.length();
 
-    if (content_length == 0 || content_length == transfered_body_size || request.getMethod() != "POST")
-    {
-        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-
-        Log::printTimeDiff(from, 1);
-        Log::trace("< sendDataToCGI", 1);
-        return ;
-    }
-
     int target_send_data_size = std::min(SEND_PIPE_STREAM_SIZE, content_length - transfered_body_size);
 
     int bytes;
@@ -1108,11 +1098,12 @@ Server::sendDataToCGI(int write_fd_to_cgi)
         else
         {
             this->_server_manager->fdSet(response.getReadFdFromCGI(), FdSet::READ);
+            this->_server_manager->fdClr(write_fd_to_cgi, FdSet::WRITE);
             this->_server_manager->fdClr(client_fd, FdSet::READ);
         }
     }
     else if (bytes == 0)
-        throw (InternalServerException(this->_responses[client_fd]));
+        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
     else
         throw (InternalServerException(this->_responses[client_fd]));
 
@@ -1152,11 +1143,6 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
     }
     else if (bytes == 0)
     {
-        // std::cout << "\033[34m\033[01m";
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "read bytes 0" << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "\033[0m";
         waitpid(response.getCGIPid(), &status, 0);
         this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
         response.setReceiveProgress(ReceiveProgress::FINISH);
@@ -1244,7 +1230,12 @@ Server::run(int fd)
                         if (this->_responses[fd].getResourceFd() != DEFAULT_FD)
                             this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
                         else
-                            this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
+                        {
+                            if (this->_server_manager->getFdType(this->_responses[fd].getWriteFdToCGI()) != FdType::CLOSED)
+                                this->_server_manager->fdSet(this->_responses[fd].getWriteFdToCGI(), FdSet::WRITE);
+                            else
+                                this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
+                        }
                     }
                     if (this->isResponseAllSended(fd))
                     {
