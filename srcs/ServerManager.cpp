@@ -278,7 +278,7 @@ ServerManager::runServers()
     //TODO: siganl 입력시 반복종료 구현
     while (true)
     {
-        // this->closeUnresponsiveClient();
+        this->closeUnresponsiveClient();
 
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
@@ -365,6 +365,10 @@ ServerManager::monitorTimeOutOn(int fd)
 bool
 ServerManager::isMonitorTimeOutOn(int fd)
 {
+    if (this->_last_request_time_of_client[fd].first == true)
+        std::cout<<"\033[1;30;43m"<<"in isMoniotrTimeOutOn: ";
+        Log::printTimeSec(this->_last_request_time_of_client[fd].second);
+        std::cout<<"\033[0m"<<std::endl;
     return (this->_last_request_time_of_client[fd].first);
 }
 
@@ -378,6 +382,8 @@ ServerManager::closeUnresponsiveClient()
             this->fdIsOriginSet(fd, FdSet::READ) != this->fdIsCopySet(fd, FdSet::READ))
         {
             std::cout<<"\033[1;37;41m"<<"Debug 1"<<"\033[0m"<<std::endl;
+            // Log::printFdSets(*this);
+            // Log::printFdCopySets(*this);
             if (this->isMonitorTimeOutOn(fd))
             {
                 std::cout<<"\033[1;44;37m"<<"DeBug 2"<<"\033[0m"<<std::endl;
@@ -399,13 +405,16 @@ ServerManager::closeUnresponsiveClient()
                             }
                             else if (response.getResourceFd() != DEFAULT_FD)
                                 server->closeFdAndUpdateFdTable(response.getResourceFd(), FdSet::READ);
-                            this->monitorTimeOutOff(fd);
                         }
                     }
+                    this->monitorTimeOutOff(fd);
                 }
             }
             else
+            {
+                std::cout<<"\033[1;44;37m"<<"DeBug 4 Monitor on!"<<"\033[0m"<<std::endl;
                 this->monitorTimeOutOn(fd);
+            }
         }
         else
             this->monitorTimeOutOff(fd);

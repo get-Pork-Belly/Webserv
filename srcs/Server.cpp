@@ -379,8 +379,6 @@ Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos
     int bytes;
     Request& request = this->_requests[client_fd];
 
-    std::cout<<"\033[1;44;37m"<<"in readBufferUntilRequestLine"<<"\033[0m"<<std::endl;
-    std::cout<<"\033[1;44;37m"<<"line_end_pos: "<<line_end_pos<<"\033[0m"<<std::endl;
     if ((bytes = read(client_fd, buf, line_end_pos + CRLF_SIZE)) > 0)
         buf[bytes] = 0;
     else if (bytes == 0)
@@ -847,7 +845,6 @@ Server::makeResponseMessage(int client_fd)
     // {
         headers = response.makeHeaders(request);
         status_line = response.makeStatusLine();
-        std::cout << "status line: " << status_line << std::endl;
     // }
 
     //TODO: refactoring
@@ -915,8 +912,8 @@ Server::sendResponse(int client_fd)
     {
         sended_bytes += bytes;
         // std::cout<<response_message<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"ParseProgress: "<<Log::parseProgressToString(this->_responses[client_fd].getParseProgress())<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
+        // std::cout<<"\033[1;44;37m"<<"ParseProgress: "<<Log::parseProgressToString(this->_responses[client_fd].getParseProgress())<<"\033[0m"<<std::endl;
 
         sended_response_size += bytes;
         response.setSendedResponseSize(sended_response_size);
@@ -1352,7 +1349,16 @@ Server::run(int fd)
                             this->_requests[fd].init();
                             this->_responses[fd].init();
                         }
+                        if (this->_server_manager->isMonitorTimeOutOn(fd))
+                            std::cout << "Before: timeout is turned on now!!" << std::endl;
+                        else
+                            std::cout << "Before: timeout turned off!!" << std::endl;
+
                         this->_server_manager->monitorTimeOutOff(fd);
+                        if (this->_server_manager->isMonitorTimeOutOn(fd))
+                            std::cout << "After: timeout turned on!!" << std::endl;
+                        else
+                            std::cout << "After: timeout turned off!!" << std::endl;
                     }
                 }
                 else

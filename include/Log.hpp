@@ -46,6 +46,7 @@ public:
 
     static void printFdCopySets(ServerManager& server_manager);
     static void printFdSets(ServerManager& server_manager);
+    static void printTimeSec(timeval& tv);
 };
 
 #endif

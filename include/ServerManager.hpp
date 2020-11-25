@@ -17,7 +17,7 @@
 # include "types.hpp"
 # include "ServerGenerator.hpp"
 
-const int TIME_OUT_SECOND = 20;
+const int TIME_OUT_SECOND = 5;
 
 class Server;
 
