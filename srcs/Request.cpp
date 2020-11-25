@@ -328,7 +328,7 @@ Request::updateReqInfo()
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
         this->setReqInfo(ReqInfo::READY);
     else if (this->isBodyUnnecessary())
-        this->setReqInfo(ReqInfo::MUST_CLEAR);
+        throw (RequestFormatException(*this, "400"));
     else if (this->isNormalBody())
         this->setReqInfo(ReqInfo::NORMAL_BODY);
     else if (this->isChunkedBody())
