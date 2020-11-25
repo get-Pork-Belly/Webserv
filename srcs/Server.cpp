@@ -369,7 +369,34 @@ Server::init()
     this->_server_manager->updateFdMax(this->_server_socket);
 }
 
-void
+int
+Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
+{
+    Log::trace("> readBufferUntilRequestLine", 1);
+    timeval from;
+    gettimeofday(&from, NULL);
+
+    int bytes;
+    Request& request = this->_requests[client_fd];
+
+    std::cout<<"\033[1;44;37m"<<"in readBufferUntilRequestLine"<<"\033[0m"<<std::endl;
+    std::cout<<"\033[1;44;37m"<<"line_end_pos: "<<line_end_pos<<"\033[0m"<<std::endl;
+    if ((bytes = read(client_fd, buf, line_end_pos + CRLF_SIZE)) > 0)
+        buf[bytes] = 0;
+    else if (bytes == 0)
+    {
+    std::cout<<"\033[1;44;37m"<<"Debug 8"<<"\033[0m"<<std::endl;
+        throw (Request::RequestFormatException(request, "400"));
+    }
+    else
+        throw (ReadErrorException());
+    return (bytes);
+
+    Log::printTimeDiff(from, 1);
+    Log::trace("< readBufferUntilRequestLine", 1);
+}
+
+int
 Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
 {
     Log::trace("> readBufferUntilHeaders", 1);
@@ -383,7 +410,9 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
     if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
     {
         buf[bytes] = 0;
-        request.parseRequestWithoutBody(buf, bytes);
+        // request.parseRequestWithoutBody(buf, bytes);
+        // if 헤더 입력 끝나면
+            request.updateReqInfo();
     }
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
@@ -467,6 +496,86 @@ Server::receiveRequestWithoutBody(int client_fd)
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveRequestWithoutBody", 1);
+}
+
+void
+Server::receiveRequestLine(int client_fd)
+{
+    Log::trace("> receiveRequestLine", 1);
+    timeval from;
+    gettimeofday(&from, NULL);
+
+    int bytes;
+    char buf[BUFFER_SIZE + 1];
+    size_t line_end_pos = 0;
+    Request& request = this->_requests[client_fd];
+
+    if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
+    {
+        buf[bytes] = 0;
+        std::string readed(buf, bytes);
+        if ((line_end_pos = readed.find("\r\n")) != std::string::npos)
+        {
+            // if (line_end_pos > BUFFER_SIZE - 2)
+                // throw (Request::UriTooLongException(request));
+            bytes = this->readBufferUntilRequestLine(client_fd, buf, line_end_pos);
+            request.parseRequestLine(buf, bytes);
+            request.setReqInfo(ReqInfo::HEADER_SEQUENCE);
+        }
+        else
+            throw (Request::RequestFormatException(request, "400"));
+    }
+    else if (bytes == RECV_COUNT_NOT_REACHED)
+        request.raiseRecvCounts();
+    else if (bytes == 0)
+        this->closeClientSocket(client_fd);
+    else
+        throw (ReadErrorException());
+
+    Log::printTimeDiff(from, 1);
+    Log::trace("< receiveRequestLine", 1);
+}
+
+void
+Server::receiveRequestHeaders(int client_fd)
+{
+    Log::trace("> receiveRequestHeaders", 1);
+    timeval from;
+    gettimeofday(&from, NULL);
+
+    char buf[BUFFER_SIZE + 1];
+    int bytes;
+    Request& request = this->_requests[client_fd];
+    size_t header_end_pos;
+
+    if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
+    {
+        buf[bytes] = 0;
+        std::string readed(buf, bytes);
+        // buffer 비우면서 read하고 temp buffer에 추가
+        //           BUFFER_SIZE 파일의 끝이 \r\n일 때, 버퍼에 안남도록 처리를해야 timeout걸림
+        if ((header_end_pos = request.getTempBuffer().find("\r\n\r\n")) != std::string::npos)
+        {
+            // if (header_end_pos > BUFFER_SIZE - 2)
+                // throw (Request::UriTooLongException(request));
+            bytes = this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
+            request.parseRequestHeaders(buf, bytes);
+            // if 헤더 끝나면 update
+                // request.updateReqInfo();
+        }
+        else
+            throw (Request::RequestFormatException(request, "400"));
+    }
+    else if (bytes == RECV_COUNT_NOT_REACHED)
+        request.raiseRecvCounts();
+    else if (bytes == 0)
+        this->closeClientSocket(client_fd);
+    else
+        throw (ReadErrorException());
+
+    
+    Log::printTimeDiff(from, 1);
+    Log::trace("< receiveRequestHeaders", 1);
 }
 
 void
@@ -696,13 +805,24 @@ Server::receiveRequest(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
+    // ReqInfo REQUEST_LINE_SEQUENCE       <-- ready
+    // ReqInfo HEADER_SEQUENCE           
+    // ReqInfo NORMAL_BODY_SEQUENCE <-- NORMAL_BODY
+    // ReqInfo CHUNKED_BODY_SEQUENCE <-- CHUNKED_BODY
+    // ReqInfo MUST_CLEAR..??? <--MUST_CLEAR
+    // ReqInfo RECV_COMPLETE
 
     const ReqInfo& req_info = this->_requests[client_fd].getReqInfo();
 
     switch (req_info)
     {
     case ReqInfo::READY:
-        this->receiveRequestWithoutBody(client_fd);
+        this->receiveRequestLine(client_fd);
+        // this->receiveRequestWithoutBody(client_fd);
+        break ;
+
+    case ReqInfo::HEADER_SEQUENCE:
+        this->receiveRequestHeaders(client_fd);
         break ;
 
     case ReqInfo::NORMAL_BODY:
