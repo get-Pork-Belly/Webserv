@@ -507,34 +507,6 @@ Server::receiveRequestNormalBody(int client_fd)
 }
 
 void
-Server::clearRequestBuffer(int client_fd)
-{
-    Log::trace("> clearRequestBuffer", 1);
-    timeval from;
-    gettimeofday(&from, NULL);
-
-
-    int bytes;
-    char buf[BUFFER_SIZE + 1];
-    Request& request = this->_requests[client_fd];
-
-    if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
-    {
-        if (bytes == BUFFER_SIZE)
-            return ;
-        request.setReqInfo(ReqInfo::COMPLETE);
-    }
-    else if (bytes == 0)
-        this->closeClientSocket(client_fd);
-    else
-        throw (ReadErrorException());
-
-
-    Log::printTimeDiff(from, 1);
-    Log::trace("< clearRequestBuffer", 1);
-}
-
-void
 Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
 {
     Log::trace("> receiveChunkSize", 1);
@@ -711,10 +683,6 @@ Server::receiveRequest(int client_fd)
 
     case ReqInfo::CHUNKED_BODY:
         this->receiveRequestChunkedBody(client_fd);
-        break ;
-
-    case ReqInfo::MUST_CLEAR:
-        this->clearRequestBuffer(client_fd);
         break ;
 
     default:
@@ -1239,10 +1207,19 @@ Server::run(int fd)
                     }
                     if (this->isResponseAllSended(fd))
                     {
-                        this->_server_manager->fdClr(fd, FdSet::WRITE);
-                        this->_server_manager->fdSet(fd, FdSet::READ);
-                        this->_requests[fd].init();
-                        this->_responses[fd].init();
+                        if (this->_responses[fd].getStatusCode()[0] != '2')
+                        {
+                            this->_server_manager->fdClr(fd, FdSet::WRITE);
+                            this->_responses[fd].init();
+                            this->closeClientSocket(fd);
+                        }
+                        else
+                        {
+                            this->_server_manager->fdClr(fd, FdSet::WRITE);
+                            this->_server_manager->fdSet(fd, FdSet::READ);
+                            this->_requests[fd].init();
+                            this->_responses[fd].init();
+                        }
                     }
                 }
                 else
@@ -1325,13 +1302,7 @@ Server::run(int fd)
             catch(const Request::RequestFormatException& e)
             {
                 std::cerr << e.what() << '\n';
-                if (this->_requests[fd].isContentLeftInBuffer())
-                    this->_requests[fd].setReqInfo(ReqInfo::MUST_CLEAR);
-                else
-                {
-                    this->_requests[fd].setReqInfo(ReqInfo::COMPLETE);
-                    this->_server_manager->fdSet(fd, FdSet::WRITE);
-                }
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
                 this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
             }
             catch(const std::exception& e)
