@@ -396,28 +396,44 @@ Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos
     Log::trace("< readBufferUntilRequestLine", 1);
 }
 
-int
-Server::readBufferUntilHeaders(int client_fd, char* buf, size_t header_end_pos)
+bool
+Server::readBufferUntilHeaders(int client_fd, char* buf, size_t peeked)
 {
     Log::trace("> readBufferUntilHeaders", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
     int bytes;
+    size_t header_end_pos;
     Request& request = this->_requests[client_fd];
+    std::string temp(buf, peeked);
 
-    // ft::memset((void*)buf, 0, BUFFER_SIZE + 1);
-    if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
+    // temp_buffer -> 무조건 담는다
+    header_end_pos = temp.find("\r\n\r\n");
+    if (header_end_pos != std::string::npos) // 헤더의 끝
     {
-        buf[bytes] = 0;
-        // request.parseRequestWithoutBody(buf, bytes);
-        // if 헤더 입력 끝나면
-            request.updateReqInfo();
+        if ((bytes = read(client_fd, buf, header_end_pos + 4)) > 0)
+            request.appendTempBuffer(buf, bytes); // bytes 가 headers + 4 가 아닐 수도 있다!
+        else if (bytes == 0)
+            throw (Request::RequestFormatException(request, "400"));
+        else
+            throw (ReadErrorException());
+        if (bytes < header_end_pos + 4)
+        {
+            return (false);
+        }
+        return (true);
     }
-    else if (bytes == 0)
-        throw (Request::RequestFormatException(request, "400"));
     else
-        throw (ReadErrorException());
+    {
+        if ((bytes = read(client_fd, buf, peeked)) > 0)
+            request.appendTempBuffer(buf, bytes); // bytes 가 peeked보다 작을 수 있다.
+        else if (bytes == 0)
+            throw (Request::RequestFormatException(request, "400"));
+        else
+            throw (ReadErrorException());
+        return (false);
+    }
 
     Log::printTimeDiff(from, 1);
     Log::trace("< readBufferUntilHeaders", 1);
@@ -536,6 +552,10 @@ Server::receiveRequestLine(int client_fd)
     Log::trace("< receiveRequestLine", 1);
 }
 
+// temp_buffer을 언제 추가할 것인가에 댛ㄴ 
+// 먼저 peek 한 다음에 \r\n\r\n 을 찾고 거기까지 읽을 것인가?
+// 아니면그냥 다 읽은 다음에 temp_buffer에서 바디를 나눌 것인가?
+
 void
 Server::receiveRequestHeaders(int client_fd)
 {
@@ -544,30 +564,24 @@ Server::receiveRequestHeaders(int client_fd)
     gettimeofday(&from, NULL);
 
     char buf[BUFFER_SIZE + 1];
+    // int peeked_bytes;
     int bytes;
     Request& request = this->_requests[client_fd];
     size_t header_end_pos;
 
-    if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
+    // if ((peeked_bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
+    if (bytes = recv(client_fd, buf, BUFFER_SIZE, 0) > 0)
     {
         buf[bytes] = 0;
-        std::string readed(buf, bytes);
-        // buffer 비우면서 read하고 temp buffer에 추가
-        //           BUFFER_SIZE 파일의 끝이 \r\n일 때, 버퍼에 안남도록 처리를해야 timeout걸림
+        request.appendTempBuffer(buf, bytes);
         if ((header_end_pos = request.getTempBuffer().find("\r\n\r\n")) != std::string::npos)
         {
-            // if (header_end_pos > BUFFER_SIZE - 2)
-                // throw (Request::UriTooLongException(request));
-            bytes = this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
-            request.parseRequestHeaders(buf, bytes);
-            // if 헤더 끝나면 update
-                // request.updateReqInfo();
+            request.parseRequestHeaders(request.substrHeadersFromTempBuffer(header_end_pos + 4));
+            request.updateReqInfo();
         }
-        else
-            throw (Request::RequestFormatException(request, "400"));
     }
-    else if (bytes == RECV_COUNT_NOT_REACHED)
-        request.raiseRecvCounts();
+    // else if (bytes == RECV_COUNT_NOT_REACHED)
+    //     request.raiseRecvCounts();
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
@@ -596,6 +610,8 @@ Server::receiveRequestNormalBody(int client_fd)
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
         buf[bytes] = 0;
+        // if (request.getTempBuffer().length() > 0)
+        //     request.appendBody(_temp_buffer);
         request.appendBody(buf, bytes);
         if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;

@@ -97,7 +97,7 @@ public:
     void receiveRequestHeaders(int fd);
     void receiveRequestWithoutBody(int fd);
     int  readBufferUntilRequestLine(int fd, char* buf, size_t line_end_pos);
-    int  readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos);
+    bool readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos);
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
     void clearRequestBuffer(int fd);
