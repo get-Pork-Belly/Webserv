@@ -13,7 +13,7 @@
 Request::Request()
 : _method(""), _uri(""), _version(""),
 _protocol(""), _body(""), _status_code("200"),
-_info(ReqInfo::READY), _is_buffer_left(false),
+_info(RecvRequest::REQUEST_LINE), _is_buffer_left(false),
 _ip_address(""), _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
 _received_chunk_data_size(0), _recv_counts(0), _carriege_return_trimmed(false), _temp_buffer("")
  {}
@@ -103,8 +103,8 @@ Request::getStatusCode() const
     return (this->_status_code);
 }
 
-const ReqInfo&
-Request::getReqInfo() const
+const RecvRequest&
+Request::getRecvRequest() const
 {
     return (this->_info);
 }
@@ -222,7 +222,7 @@ Request::setStatusCode(const std::string& status_code)
 }
 
 void
-Request::setReqInfo(const ReqInfo& info)
+Request::setRecvRequest(const RecvRequest& info)
 {
     this->_info = info;
 }
@@ -330,25 +330,25 @@ std::ostream& operator<< (std::ostream& out, Request& object)
 }
 
 void
-Request::updateReqInfo()
+Request::updateRecvRequest()
 {
-    Log::trace("> updateReqInfo", 2);
+    Log::trace("> updateRecvRequest", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
-    if (this->getReqInfo() == ReqInfo::COMPLETE)
+    if (this->getRecvRequest() == RecvRequest::COMPLETE)
         return ;
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
-        this->setReqInfo(ReqInfo::READY);
+        this->setRecvRequest(RecvRequest::REQUEST_LINE);
     else if (this->isBodyUnnecessary())
         throw (RequestFormatException(*this, "400"));
     else if (this->isNormalBody())
-        this->setReqInfo(ReqInfo::NORMAL_BODY);
+        this->setRecvRequest(RecvRequest::NORMAL_BODY);
     else if (this->isChunkedBody())
-        this->setReqInfo(ReqInfo::CHUNKED_BODY);
+        this->setRecvRequest(RecvRequest::CHUNKED_BODY);
 
     Log::printTimeDiff(from, 2);
-    Log::trace("< updateReqInfo", 2);
+    Log::trace("< updateRecvRequest", 2);
 }
 
 bool
@@ -363,7 +363,7 @@ Request::isBodyUnnecessary() const
 bool
 Request::isNormalBody() const
 {
-    if (this->getReqInfo() == ReqInfo::COMPLETE)
+    if (this->getRecvRequest() == RecvRequest::COMPLETE)
         return (false);
 
     const std::map<std::string, std::string>& headers = this->getHeaders();
@@ -376,7 +376,7 @@ Request::isNormalBody() const
 bool
 Request::isChunkedBody() const
 {
-    if (this->getReqInfo() == ReqInfo::COMPLETE)
+    if (this->getRecvRequest() == RecvRequest::COMPLETE)
         return (false);
     return (!isNormalBody());
 }
@@ -440,7 +440,7 @@ Request::parseRequestWithoutBody(char* buf, int bytes)
     //     if (this->parseHeaders(line) == false)
     //         throw (RequestFormatException(*this, "400"));
     // }
-    // this->updateReqInfo();
+    // this->updateRecvRequest();
 
     // Log::printTimeDiff(from, 1);
     // Log::trace("< parseRequestWithoutBody", 1);
@@ -623,7 +623,7 @@ Request::init()
     this->_protocol = "";
     this->_body = "";
     this->_status_code = "200";
-    this->_info = ReqInfo::READY;
+    this->_info = RecvRequest::REQUEST_LINE;
     this->_is_buffer_left = false;
     this->_ip_address = "";
     this->_transfered_body_size = 0;

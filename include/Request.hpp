@@ -20,7 +20,7 @@ private:
     std::string _protocol;
     std::string _body;
     std::string _status_code;
-    ReqInfo _info;
+    RecvRequest _info;
     bool _is_buffer_left;
     std::string _ip_address;
     int _transfered_body_size;
@@ -51,7 +51,7 @@ public:
     const std::string& getProtocol() const;
     const std::string& getBody() const;
     const std::string& getStatusCode() const;
-    const ReqInfo& getReqInfo() const;
+    const RecvRequest& getRecvRequest() const;
     bool getIsBufferLeft() const;
     const std::string& getIpAddress() const;
     int getContentLength() const;
@@ -74,7 +74,7 @@ public:
     void setProtocol(const std::string& protocol);
     void setBody(const std::string& body);
     void setStatusCode(const std::string& code);
-    void setReqInfo(const ReqInfo& info);
+    void setRecvRequest(const RecvRequest& info);
     void setIsBufferLeft(const bool& is_left_buffer);
     void setIpAddress(const std::string& ip_address);
     void setTransferedBodySize(const int transfered_body_size);
@@ -92,7 +92,7 @@ public:
 
     void init();
 
-    void updateReqInfo();
+    void updateRecvRequest();
     bool updateStatusCodeAndReturn(const std::string& status_code, const bool& ret);
 
     bool isBodyUnnecessary() const;

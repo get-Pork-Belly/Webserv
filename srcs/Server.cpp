@@ -462,7 +462,7 @@ Server::receiveRequestLine(int client_fd)
                 // throw (Request::UriTooLongException(request));
             bytes = this->readBufferUntilRequestLine(client_fd, buf, line_end_pos);
             request.parseRequestLine(buf, bytes);
-            request.setReqInfo(ReqInfo::HEADER_SEQUENCE);
+            request.setRecvRequest(RecvRequest::HEADERS);
         }
         else
             throw (Request::RequestFormatException(request, "400"));
@@ -508,9 +508,9 @@ Server::receiveRequestHeaders(int client_fd)
                 {
                     if (request.isBodyUnnecessary() ||
                         (request.isNormalBody() && request.getHeaders().at("Content-Length") == "0"))
-                        request.setReqInfo(ReqInfo::COMPLETE);
+                        request.setRecvRequest(RecvRequest::COMPLETE);
                 }
-                request.updateReqInfo();
+                request.updateRecvRequest();
             }
         }
     }
@@ -550,11 +550,11 @@ Server::receiveRequestNormalBody(int client_fd)
         if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;
         else if (request.getBody().length() == static_cast<size_t>(content_length))
-            request.setReqInfo(ReqInfo::COMPLETE);
+            request.setRecvRequest(RecvRequest::COMPLETE);
         else
             throw (PayloadTooLargeException(this->_responses[client_fd]));
         if (bytes < BUFFER_SIZE)
-            request.setReqInfo(ReqInfo::COMPLETE);
+            request.setRecvRequest(RecvRequest::COMPLETE);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -655,7 +655,7 @@ Server::receiveLastChunkData(int client_fd)
             throw (Request::RequestFormatException(request, "400"));
         }
         if (std::string(buf).compare("\r\n") == 0)
-            request.setReqInfo(ReqInfo::COMPLETE);
+            request.setRecvRequest(RecvRequest::COMPLETE);
         else
         {
             throw (Request::RequestFormatException(request, "400"));
@@ -727,31 +727,31 @@ Server::receiveRequest(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-    // ReqInfo REQUEST_LINE_SEQUENCE       <-- ready
-    // ReqInfo HEADER_SEQUENCE           
-    // ReqInfo NORMAL_BODY_SEQUENCE <-- NORMAL_BODY
-    // ReqInfo CHUNKED_BODY_SEQUENCE <-- CHUNKED_BODY
-    // ReqInfo MUST_CLEAR..??? <--MUST_CLEAR
-    // ReqInfo RECV_COMPLETE
+    // RecvRequest REQUEST_LINE_SEQUENCE       <-- ready
+    // RecvRequest HEADER           
+    // RecvRequest NORMAL_BODY_SEQUENCE <-- NORMAL_BODY
+    // RecvRequest CHUNKED_BODY <-- CHUNKED_BODY
+    // RecvRequest MUST_CLEAR..??? <--MUST_CLEAR
+    // RecvRequest RECV_COMPLETE
 
-    const ReqInfo& req_info = this->_requests[client_fd].getReqInfo();
+    const RecvRequest& req_info = this->_requests[client_fd].getRecvRequest();
 
     switch (req_info)
     {
-    case ReqInfo::READY:
+    case RecvRequest::REQUEST_LINE:
         this->receiveRequestLine(client_fd);
         break ;
 
-    case ReqInfo::HEADER_SEQUENCE:
+    case RecvRequest::HEADERS:
         this->receiveRequestHeaders(client_fd);
         // this->processResponseBody()
         break ;
 
-    case ReqInfo::NORMAL_BODY:
+    case RecvRequest::NORMAL_BODY:
         this->receiveRequestNormalBody(client_fd);
         break ;
 
-    case ReqInfo::CHUNKED_BODY:
+    case RecvRequest::CHUNKED_BODY:
         this->receiveRequestChunkedBody(client_fd);
         break ;
 
@@ -1353,7 +1353,7 @@ Server::run(int fd)
                 {
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
-                    if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
+                    if (this->_requests[fd].getRecvRequest() == RecvRequest::COMPLETE)
                     {
                         this->_server_manager->fdClr(fd, FdSet::READ);
                         this->processResponseBody(fd);
