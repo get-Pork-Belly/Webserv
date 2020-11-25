@@ -1349,16 +1349,7 @@ Server::run(int fd)
                             this->_requests[fd].init();
                             this->_responses[fd].init();
                         }
-                        if (this->_server_manager->isMonitorTimeOutOn(fd))
-                            std::cout << "Before: timeout is turned on now!!" << std::endl;
-                        else
-                            std::cout << "Before: timeout turned off!!" << std::endl;
-
                         this->_server_manager->monitorTimeOutOff(fd);
-                        if (this->_server_manager->isMonitorTimeOutOn(fd))
-                            std::cout << "After: timeout turned on!!" << std::endl;
-                        else
-                            std::cout << "After: timeout turned off!!" << std::endl;
                     }
                 }
                 else
@@ -1460,8 +1451,9 @@ Server::closeClientSocket(int client_fd)
     this->_server_manager->setClosedFdOnFdTable(client_fd);
     this->_server_manager->updateFdMax(client_fd);
     this->_requests[client_fd].init();
-    Log::closeClient(*this, client_fd);
+    this->_server_manager->monitorTimeOutOff(client_fd);
     close(client_fd);
+    Log::closeClient(*this, client_fd);
 }
 
 void
