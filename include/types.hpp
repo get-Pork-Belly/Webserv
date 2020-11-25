@@ -61,10 +61,11 @@ enum class FdType
 enum class ReqInfo
 {
     READY,
-    COMPLETE,
+    HEADER_SEQUENCE,
     NORMAL_BODY,
     CHUNKED_BODY,
     MUST_CLEAR,
+    COMPLETE,
 };
 
 enum class ResType
