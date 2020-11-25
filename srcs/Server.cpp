@@ -718,10 +718,10 @@ Server::makeResponseMessage(int client_fd)
     status_line = response.makeStatusLine();
 
     //TODO: refactoring
-    const SendProgress& send_progress = response.getSendProgress();
-    switch (send_progress)
+    const ParseProgress& parse_progress = response.getParseProgress();
+    switch (parse_progress)
     {
-    case SendProgress::FINISH:
+    case ParseProgress::FINISH:
         if (method == "HEAD")
             response.setResponseMessage("");
 
@@ -729,8 +729,8 @@ Server::makeResponseMessage(int client_fd)
         Log::trace("< makeResponseMessage", 1);
         response.setResponseMessage(response.getTransmittingBody());
         break;
-    case SendProgress::DEFAULT:
-        response.setSendProgress(SendProgress::FINISH);
+    case ParseProgress::DEFAULT:
+        response.setParseProgress(ParseProgress::FINISH);
         if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
             response.setResponseMessage(status_line + headers);
 
@@ -738,7 +738,7 @@ Server::makeResponseMessage(int client_fd)
         Log::trace("< makeResponseMessage", 1);
         response.setResponseMessage(status_line + headers + response.getTransmittingBody());
         break;
-    case SendProgress::CHUNK_START:
+    case ParseProgress::CHUNK_START:
         if (request.getMethod() == "HEAD")
             response.setResponseMessage(status_line + headers);
             
@@ -746,7 +746,7 @@ Server::makeResponseMessage(int client_fd)
         Log::trace("< makeResponseMessage", 1);
         response.setResponseMessage(status_line + headers + response.getTransmittingBody());
         break;
-    case SendProgress::CHUNK_PROGRESS:
+    case ParseProgress::CHUNK_PROGRESS:
         if (request.getMethod() == "HEAD")
             response.setResponseMessage("");
 
@@ -784,7 +784,7 @@ Server::sendResponse(int client_fd)
         sended_bytes += bytes;
         // std::cout<<response_message<<std::endl;
         std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
-        std::cout<<"\033[1;44;37m"<<"SendProgress: "<<Log::sendProgressToString(this->_responses[client_fd].getSendProgress())<<"\033[0m"<<std::endl;
+        std::cout<<"\033[1;44;37m"<<"ParseProgress: "<<Log::parseProgressToString(this->_responses[client_fd].getParseProgress())<<"\033[0m"<<std::endl;
 
         sended_response_size += bytes;
         response.setSendedResponseSize(sended_response_size);
@@ -1919,7 +1919,7 @@ Server::makeCGIArgv(int client_fd)
 bool
 Server::isResponseAllSended(int fd) const
 {
-    return (this->_responses[fd].getSendProgress() == SendProgress::FINISH &&
+    return (this->_responses[fd].getParseProgress() == ParseProgress::FINISH &&
             this->_responses[fd].getResInfo() == ResInfo::ALL_SENDED);
 }
 

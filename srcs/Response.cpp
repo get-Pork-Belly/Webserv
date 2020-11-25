@@ -21,7 +21,7 @@ _location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT_FD),
 _write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extension(""), _transmitting_body(""),
-_already_encoded_size(0), _send_progress(SendProgress::DEFAULT),
+_already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resoure_fd(DEFAULT_FD),
 _sended_response_size(0), _response_message(""), _res_info(ResInfo::READY)
 {
@@ -41,7 +41,7 @@ _body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
 _stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
 _write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
 _uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body),
-_already_encoded_size(other._already_encoded_size), _send_progress(other._send_progress),
+_already_encoded_size(other._already_encoded_size), _parse_progress(other._parse_progress),
 _receive_progress(other._receive_progress), _resoure_fd(other._resoure_fd),
 _sended_response_size(other._sended_response_size), _response_message(other._response_message),
 _res_info(other._res_info)
@@ -84,7 +84,7 @@ Response::operator=(const Response& rhs)
     this->_uri_extension = rhs._uri_extension;
     this->_transmitting_body = rhs._transmitting_body;
     this->_already_encoded_size = rhs._already_encoded_size;
-    this->_send_progress = rhs._send_progress;
+    this->_parse_progress = rhs._parse_progress;
     this->_receive_progress = rhs._receive_progress;
     this->_resoure_fd = rhs._resoure_fd;
     this->_sended_response_size = rhs._sended_response_size;
@@ -211,10 +211,10 @@ Response::getTransmittingBody() const
     return (this->_transmitting_body);
 }
 
-const SendProgress&
-Response::getSendProgress() const
+const ParseProgress&
+Response::getParseProgress() const
 {
-    return (this->_send_progress);
+    return (this->_parse_progress);
 }
 
 const ReceiveProgress&
@@ -356,9 +356,9 @@ Response::setAlreadyEncodedSize(const size_t already_encoded_size)
 }
 
 void
-Response::setSendProgress(const SendProgress send_progress)
+Response::setParseProgress(const ParseProgress parse_progress)
 {
-    this->_send_progress = send_progress;
+    this->_parse_progress = parse_progress;
 }
 
 void
@@ -452,7 +452,7 @@ Response::init()
     this->_uri_extension = "";
     this->_transmitting_body = "";
     this->_already_encoded_size = 0;
-    this->_send_progress = SendProgress::DEFAULT;
+    this->_parse_progress = ParseProgress::DEFAULT;
     this->_receive_progress = ReceiveProgress::DEFAULT;
     this->_resoure_fd = DEFAULT_FD;
     this->_sended_response_size = 0;
@@ -1223,15 +1223,15 @@ Response::encodeChunkedBody()
         chunked_body += "\r\n";
         already_encoded_size += substring_size;
     }
-    if (this->getSendProgress() == SendProgress::DEFAULT)
-        this->setSendProgress(SendProgress::CHUNK_START);
-    else if (this->getSendProgress() == SendProgress::CHUNK_START)
-        this->setSendProgress(SendProgress::CHUNK_PROGRESS);
+    if (this->getParseProgress() == ParseProgress::DEFAULT)
+        this->setParseProgress(ParseProgress::CHUNK_START);
+    else if (this->getParseProgress() == ParseProgress::CHUNK_START)
+        this->setParseProgress(ParseProgress::CHUNK_PROGRESS);
     if (already_encoded_size == raw_body_size && 
                 this->getReceiveProgress() == ReceiveProgress::FINISH)
     {
         chunked_body += "0\r\n\r\n";
-        this->setSendProgress(SendProgress::FINISH);
+        this->setParseProgress(ParseProgress::FINISH);
     }
 
     this->setAlreadyEncodedSize(already_encoded_size);

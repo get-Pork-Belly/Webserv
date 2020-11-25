@@ -284,20 +284,20 @@ Log::reqInfoToString(const ReqInfo& req_info)
 }
 
 std::string
-Log::sendProgressToString(const SendProgress& progress)
+Log::parseProgressToString(const ParseProgress& progress)
 {
     switch (progress)
     {
-    case SendProgress::DEFAULT:
+    case ParseProgress::DEFAULT:
         return ("DEFAULT");
 
-    case SendProgress::CHUNK_START:
+    case ParseProgress::CHUNK_START:
         return ("CHUNK_START");
 
-    case SendProgress::CHUNK_PROGRESS:
+    case ParseProgress::CHUNK_PROGRESS:
         return ("CHUNK_PROGRESS");
 
-    case SendProgress::FINISH:
+    case ParseProgress::FINISH:
         return ("FINISH");
 
     default:

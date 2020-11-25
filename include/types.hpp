@@ -66,13 +66,6 @@ enum class ReqInfo
     CHUNKED_BODY,
 };
 
-enum class ResInfo
-{
-    READY,
-    SENDING,
-    ALL_SENDED,
-};
-
 enum class ResType
 {
     NOT_YET_CHECKED,
@@ -83,7 +76,14 @@ enum class ResType
     ERROR_HTML,
 };
 
-enum class SendProgress
+enum class ResInfo
+{
+    READY,
+    SENDING,
+    ALL_SENDED,
+};
+
+enum class ParseProgress
 {
     DEFAULT,
     CHUNK_START,
