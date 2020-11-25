@@ -338,10 +338,9 @@ Request::updateReqInfo()
 
     if (this->getReqInfo() == ReqInfo::COMPLETE)
         return ;
-    // if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
-    //     this->setReqInfo(ReqInfo::HEADER_SEQUENCE);
-    if (this->isBodyUnnecessary())
-        // this->setReqInfo(ReqInfo::MUST_CLEAR);
+    if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
+        this->setReqInfo(ReqInfo::READY);
+    else if (this->isBodyUnnecessary())
         throw (RequestFormatException(*this, "400"));
     else if (this->isNormalBody())
         this->setReqInfo(ReqInfo::NORMAL_BODY);

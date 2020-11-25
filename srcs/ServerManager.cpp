@@ -278,7 +278,7 @@ ServerManager::runServers()
     //TODO: siganl 입력시 반복종료 구현
     while (true)
     {
-        this->closeUnresponsiveClient();
+        // this->closeUnresponsiveClient();
 
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
@@ -377,10 +377,13 @@ ServerManager::closeUnresponsiveClient()
             this->getFdType(fd) == FdType::CLIENT_SOCKET &&
             this->fdIsOriginSet(fd, FdSet::READ) != this->fdIsCopySet(fd, FdSet::READ))
         {
+            std::cout<<"\033[1;37;41m"<<"Debug 1"<<"\033[0m"<<std::endl;
             if (this->isMonitorTimeOutOn(fd))
             {
+                std::cout<<"\033[1;44;37m"<<"DeBug 2"<<"\033[0m"<<std::endl;
                 if (this->isClientTimeOut(fd))
                 {
+                    std::cout<<"\033[1;44;37m"<<"DeBug 3"<<"\033[0m"<<std::endl;
                     this->fdSet(fd, FdSet::WRITE);
                     for (Server* server : this->_servers)
                     {

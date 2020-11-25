@@ -40,10 +40,13 @@ private:
     //TODO: 생성자에 추가하기.
     size_t _already_encoded_size;
 
-    SendProgress _send_progress;
+    ParseProgress _parse_progress;
     ReceiveProgress _receive_progress;
 
     int _resoure_fd;
+    int _sended_response_size;
+    std::string _response_message;
+    SendProgress _send_progress;
 
 public:
     /* Constructor */
@@ -81,11 +84,14 @@ public:
     const std::string& getTransmittingBody() const;
 
     size_t getAlreadyEncodedSize() const;
-    const SendProgress& getSendProgress() const;
+    const ParseProgress& getParseProgress() const;
     const ReceiveProgress& getReceiveProgress() const;
 
     int getResourceFd() const;
     const std::map<std::string, std::string>& getHeaders() const;
+    int getSendedResponseSize() const;
+    const std::string& getResponseMessage() const;
+    const SendProgress& getSendProgress() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -106,9 +112,12 @@ public:
     void setCGIPid(const int pid);
 
     void setAlreadyEncodedSize(const size_t already_encoded_size);
-    void setSendProgress(const SendProgress send_progress);
+    void setParseProgress(const ParseProgress sparseprogress);
     void setReceiveProgress(const ReceiveProgress rececive_progress);
     void setResourceFd(const int resource_fd);
+    void setSendedResponseSize(const int sended_response_size);
+    void setResponseMessage(const std::string& response_message);
+    void setSendProgress(const SendProgress& send_progress);
 
     /* Exception */
 public:
