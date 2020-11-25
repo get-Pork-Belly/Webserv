@@ -277,9 +277,6 @@ Log::reqInfoToString(const ReqInfo& req_info)
     case ReqInfo::CHUNKED_BODY:
         return ("CHUNKED_BODY");
 
-    case ReqInfo::MUST_CLEAR:
-        return ("MUST_CLEAR");
-
     default:
         return ("NOT YET REGISTED IN reqInfoToString");
         break;

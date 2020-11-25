@@ -64,7 +64,6 @@ enum class ReqInfo
     COMPLETE,
     NORMAL_BODY,
     CHUNKED_BODY,
-    MUST_CLEAR,
 };
 
 enum class ResInfo
