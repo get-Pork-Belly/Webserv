@@ -404,51 +404,54 @@ Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& r
 void
 Request::parseRequestWithoutBody(char* buf, int bytes)
 {
-    Log::trace("> parseRequestWithoutBody", 1);
-    timeval from;
-    gettimeofday(&from, NULL);
+    (void)buf;
+    (void)bytes;
+    // Log::trace("> parseRequestWithoutBody", 1);
+    // timeval from;
+    // gettimeofday(&from, NULL);
 
-    std::string line;
-    std::string req_message(buf, bytes);
+    // std::string line;
+    // std::string req_message(buf, bytes);
 
-    if (ft::substr(line, req_message, "\r\n") == false)
-        throw (RequestFormatException(*this, "400"));
-    else
-    {
-        if (this->parseRequestLine(line) == false)
-            throw (RequestFormatException(*this, "400"));
-    }
-    if (ft::substr(line, req_message, "\r\n\r\n") == false)
-        throw (RequestFormatException(*this, "400"));
-    else
-    {
-        if (this->parseHeaders(line) == false)
-            throw (RequestFormatException(*this, "400"));
-    }
-    this->updateReqInfo();
+    // if (ft::substr(line, req_message, "\r\n") == false)
+    //     throw (RequestFormatException(*this, "400"));
+    // else
+    // {
+    //     if (this->parseRequestLine(buf, bytes) == false)
+    //         throw (RequestFormatException(*this, "400"));
+    // }
+    // if (ft::substr(line, req_message, "\r\n\r\n") == false)
+    //     throw (RequestFormatException(*this, "400"));
+    // else
+    // {
+    //     if (this->parseHeaders(line) == false)
+    //         throw (RequestFormatException(*this, "400"));
+    // }
+    // this->updateReqInfo();
 
-    Log::printTimeDiff(from, 1);
-    Log::trace("< parseRequestWithoutBody", 1);
+    // Log::printTimeDiff(from, 1);
+    // Log::trace("< parseRequestWithoutBody", 1);
 }
 
-bool
-Request::parseRequestLine(std::string& req_message)
+void
+Request::parseRequestLine(char* buf, int bytes)
 {
     Log::trace("> parseRequestLine", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
+    std::string req_message(buf, bytes - 2);
     std::vector<std::string> request_line = ft::split(req_message, " ");
-    
+
     if (this->isValidLine(request_line) == false)
-        return (false);
+        throw (RequestFormatException(*this, "400"));
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
     this->setVersion(request_line[2]);
 
     Log::printTimeDiff(from, 2);
     Log::trace("< parseRequestLine", 2);
-    return (true);
+
 }
 
 bool

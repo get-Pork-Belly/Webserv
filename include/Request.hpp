@@ -101,8 +101,8 @@ public:
     void raiseRecvCounts();
 
     /* parser */
+    void parseRequestLine(char* buf, int bytes);
     void parseRequestWithoutBody(char* buf, int bytes);
-    bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
 
     /* valid check */
