@@ -105,7 +105,8 @@ public:
 
     /* parser */
     void parseRequestLine(char* buf, int bytes);
-    void parseRequestHeaders(std::string& temp_buffer);
+    // void parseRequestHeaders(std::string& temp_buffer);
+    void parseRequestHeaders();
     void parseRequestWithoutBody(char* buf, int bytes);
     bool parseHeaders(std::string& req_message);
 
@@ -126,11 +127,12 @@ public:
     void appendBody(const char* buf, int bytes);
     void appendTempBuffer(char* buf, int bytes);
     void appendTempBuffer(const std::string& temp);
-    std::string substrHeadersFromTempBuffer(int size);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
     void parseChunkData(char* buf, size_t bytes);
+
+    int calculateReadTargetSize(char* buf, int peeked_bytes);
 
     /* Exception */
 public:

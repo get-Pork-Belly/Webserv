@@ -169,7 +169,8 @@ Request::getCarriegeReturnTrimmed() const
     return (this->_carriege_return_trimmed);
 }
 
-const std::string& getTempBuffer() const
+const std::string&
+Request::getTempBuffer() const
 {
     return (this->_temp_buffer);
 }
@@ -337,10 +338,11 @@ Request::updateReqInfo()
 
     if (this->getReqInfo() == ReqInfo::COMPLETE)
         return ;
-    if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
-        this->setReqInfo(ReqInfo::READY);
-    else if (this->isBodyUnnecessary())
-        this->setReqInfo(ReqInfo::MUST_CLEAR);
+    // if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
+    //     this->setReqInfo(ReqInfo::HEADER_SEQUENCE);
+    if (this->isBodyUnnecessary())
+        // this->setReqInfo(ReqInfo::MUST_CLEAR);
+        throw (RequestFormatException(*this, "400"));
     else if (this->isNormalBody())
         this->setReqInfo(ReqInfo::NORMAL_BODY);
     else if (this->isChunkedBody())
@@ -463,13 +465,37 @@ Request::parseRequestLine(char* buf, int bytes)
 
     Log::printTimeDiff(from, 2);
     Log::trace("< parseRequestLine", 2);
-
 }
 
-// void
-// Request::parseRequestHeaders()
+void
+Request::parseRequestHeaders()
+{
+    Log::trace("> parseHeaders", 2);
+    timeval from;
+    gettimeofday(&from, NULL);
+
+    std::string key;
+    std::string value;
+    std::string line;
+
+    while (ft::substr(line, this->_temp_buffer, "\r\n") && !this->_temp_buffer.empty())
+    {
+        if (ft::substr(key, line, ":") == false)
+            throw (RequestFormatException(*this, "400"));
+        value = ft::ltrim(line, " ");
+        if (this->isValidHeaders(key, value) == false)
+            throw (RequestFormatException(*this, "400"));
+        this->setHeaders(key, value);
+    }
+
+    Log::printTimeDiff(from, 2);
+    Log::trace("< parseHeaders", 2);
+}
+
+// bool
+// Request::parseRequestHeaders(std::string& req_message)
 // {
-//     Log::trace("> parseHeaders", 2);
+//     Log::trace("> parseRequestHeaders", 2);
 //     timeval from;
 //     gettimeofday(&from, NULL);
 
@@ -495,41 +521,9 @@ Request::parseRequestLine(char* buf, int bytes)
 
 
 //     Log::printTimeDiff(from, 2);
-//     Log::trace("< parseHeaders", 2);
+//     Log::trace("< parseRequestHeaders", 2);
 //     return (true);
 // }
-bool
-Request::parseRequestHeaders(std::string& req_message)
-{
-    Log::trace("> parseRequestHeaders", 2);
-    timeval from;
-    gettimeofday(&from, NULL);
-
-    std::string key;
-    std::string value;
-    std::string line;
-
-    while (ft::substr(line, req_message, "\r\n") && !req_message.empty())
-    {
-        if (ft::substr(key, line, ":") == false)
-            return (this->updateStatusCodeAndReturn("400", false));
-        value = ft::ltrim(line, " ");
-        if (this->isValidHeaders(key, value) == false)
-            return (this->updateStatusCodeAndReturn("400", false));
-        this->setHeaders(key, value);
-    }
-    if (ft::substr(key, line, ":") == false)
-        return (this->updateStatusCodeAndReturn("400", false));
-    value = ft::ltrim(line, " ");
-    if (this->isValidHeaders(key, value) == false)
-        return (this->updateStatusCodeAndReturn("400", false));
-    this->setHeaders(key, value);
-
-
-    Log::printTimeDiff(from, 2);
-    Log::trace("< parseRequestHeaders", 2);
-    return (true);
-}
 
 // int received;
 
@@ -591,6 +585,50 @@ Request::parseChunkData(char* buf, size_t bytes)
         this->appendBody(buf, bytes - CRLF_SIZE);
 }
 
+int
+Request::calculateReadTargetSize(char* buf, int peeked_bytes)
+{
+    int temp_buffer_size = this->_temp_buffer.length();
+    std::string peeked_request(buf, peeked_bytes);
+
+    // ABC\r             \n\r\n
+    // ABC\r\n           \r\n
+    // ABC\r\n\r          \n
+    if (temp_buffer_size > 0)
+    {
+        if (temp_buffer_size >= 3)
+        {
+            if (std::string(this->_temp_buffer.end() - 4, this->_temp_buffer.end()) == "\r\n\r")
+            {
+                if (peeked_request[0] == '\n')
+                    return (1);
+            }
+        }
+        if (temp_buffer_size >= 2)
+        {
+            if (std::string(this->_temp_buffer.end() - 3, this->_temp_buffer.end()) == "\r\n")
+            {
+                if (peeked_bytes >= 2 &&
+                    peeked_request[0] == '\r' &&
+                    peeked_request[1] == '\n')
+                    return (2);
+            }
+        }
+        if (this->_temp_buffer.back() == '\r')
+        {
+            if (peeked_bytes >= 3 &&
+                peeked_request[0] == '\n' &&
+                peeked_request[1] == '\r' &&
+                peeked_request[2] == '\n')
+                return (3);
+        }
+    }
+    size_t read_target_size;
+    if ((read_target_size = peeked_request.find("\r\n\r\n")) != std::string::npos)
+        return (read_target_size + CRLF_SIZE + CRLF_SIZE);
+    return (SHOULD_RECEIVE_MORE);
+}
+
 void
 Request::appendBody(char* buf, int bytes)
 {
@@ -613,14 +651,6 @@ void
 Request::appendTempBuffer(const std::string& temp)
 {
     this->_temp_buffer.append(temp);
-}
-
-std::string
-Request::substrHeadersFromTempBuffer(int size)
-{
-    std::string ret;
-    ft::substr(ret, this->_temp_buffer, "\r\n\r\n");
-    return (ret);
 }
 
 void
