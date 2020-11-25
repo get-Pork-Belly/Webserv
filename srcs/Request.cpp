@@ -491,39 +491,6 @@ Request::parseRequestHeaders()
     Log::trace("< parseHeaders", 2);
 }
 
-// bool
-// Request::parseRequestHeaders(std::string& req_message)
-// {
-//     Log::trace("> parseRequestHeaders", 2);
-//     timeval from;
-//     gettimeofday(&from, NULL);
-
-//     std::string key;
-//     std::string value;
-//     std::string line;
-
-//     while (ft::substr(line, req_message, "\r\n") && !req_message.empty())
-//     {
-//         if (ft::substr(key, line, ":") == false)
-//             return (this->updateStatusCodeAndReturn("400", false));
-//         value = ft::ltrim(line, " ");
-//         if (this->isValidHeaders(key, value) == false)
-//             return (this->updateStatusCodeAndReturn("400", false));
-//         this->setHeaders(key, value);
-//     }
-//     if (ft::substr(key, line, ":") == false)
-//         return (this->updateStatusCodeAndReturn("400", false));
-//     value = ft::ltrim(line, " ");
-//     if (this->isValidHeaders(key, value) == false)
-//         return (this->updateStatusCodeAndReturn("400", false));
-//     this->setHeaders(key, value);
-
-
-//     Log::printTimeDiff(from, 2);
-//     Log::trace("< parseRequestHeaders", 2);
-//     return (true);
-// }
-
 // int received;
 
 void
@@ -644,12 +611,6 @@ void
 Request::appendTempBuffer(char* buf, int bytes)
 {
     this->_temp_buffer.append(buf, bytes);
-}
-
-void
-Request::appendTempBuffer(const std::string& temp)
-{
-    this->_temp_buffer.append(temp);
 }
 
 void

@@ -21,8 +21,7 @@ Server::Server(ServerManager* server_manager, server_info& server_config, std::m
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
 _request_uri_limit_size(0), _request_header_limit_size(0), 
-_limit_client_body_size(150000000), _default_error_page(""), 
-_location_config(location_config)
+_limit_client_body_size(150000000), _location_config(location_config)
 {
     try
     {
@@ -441,59 +440,6 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_messag
     }
 }
 
-long long int readed_bytes;
-
-void
-Server::receiveRequestWithoutBody(int client_fd)
-{
-    Log::trace("> receiveRequestWithoutBody", 1);
-    timeval from;
-    gettimeofday(&from, NULL);
-
-
-    int bytes;
-    char buf[BUFFER_SIZE + 1];
-    size_t header_end_pos = 0;
-    std::string readed;
-    Request& request = this->_requests[client_fd];
-
-    if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
-    {
-        buf[bytes] = 0;
-        readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody peeked_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-
-        readed = std::string(buf, bytes);
-        if ((header_end_pos = readed.find("\r\n\r\n")) != std::string::npos)
-        {
-            if (static_cast<size_t>(bytes) == header_end_pos + 4)
-            {
-                request.setIsBufferLeft(false);
-                request.setReqInfo(ReqInfo::COMPLETE);
-            }
-            else
-                request.setIsBufferLeft(true);
-            this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
-        }
-        else if ((header_end_pos = readed.find("\r\n")) != std::string::npos)
-            this->processIfHeadersNotFound(client_fd, readed);
-        else
-        {
-            request.setIsBufferLeft(true);
-            throw (Request::RequestFormatException(request, "400"));
-        }
-    }
-    else if (bytes == RECV_COUNT_NOT_REACHED)
-        request.raiseRecvCounts();
-    else if (bytes == 0)
-        this->closeClientSocket(client_fd);
-    else
-        throw (ReadErrorException());
-
-    Log::printTimeDiff(from, 1);
-    Log::trace("< receiveRequestWithoutBody", 1);
-}
-
 void
 Server::receiveRequestLine(int client_fd)
 {
@@ -794,7 +740,6 @@ Server::receiveRequest(int client_fd)
     {
     case ReqInfo::READY:
         this->receiveRequestLine(client_fd);
-        // this->receiveRequestWithoutBody(client_fd);
         break ;
 
     case ReqInfo::HEADER_SEQUENCE:
