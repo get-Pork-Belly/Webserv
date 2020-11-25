@@ -539,8 +539,6 @@ Server::receiveRequestNormalBody(int client_fd)
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
         buf[bytes] = 0;
-        // if (request.getTempBuffer().length() > 0)
-        //     request.appendBody(_temp_buffer);
         request.appendBody(buf, bytes);
         if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;
