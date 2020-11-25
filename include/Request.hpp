@@ -32,6 +32,7 @@ private:
 
     int _recv_counts;
     bool _carriege_return_trimmed;
+    std::string _temp_buffer;
 
 public:
     /* Constructor */
@@ -63,6 +64,7 @@ public:
     bool getCarriegeReturnTrimmed() const;
 
     int getReceiveCounts() const;
+    const std::string& getTempBuffer() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -84,6 +86,7 @@ public:
 
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);
+    void setTempBuffer(const std::string& temp_buffer);
 
     /* Util */
 
@@ -102,6 +105,7 @@ public:
 
     /* parser */
     void parseRequestLine(char* buf, int bytes);
+    void parseRequestHeaders(std::string& temp_buffer);
     void parseRequestWithoutBody(char* buf, int bytes);
     bool parseHeaders(std::string& req_message);
 
@@ -120,6 +124,9 @@ public:
 
     void appendBody(char* buf, int bytes);
     void appendBody(const char* buf, int bytes);
+    void appendTempBuffer(char* buf, int bytes);
+    void appendTempBuffer(const std::string& temp);
+    std::string substrHeadersFromTempBuffer(int size);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
