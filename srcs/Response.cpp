@@ -762,10 +762,10 @@ Response::appendContentTypeHeader(std::string& headers)
     else
     {
         std::string extension = this->getUriExtension();
-        if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
-            headers += this->getMimeTypeTable().at(extension);
-        else if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::INDEX_HTML || this->getResourceType() == ResType::ERROR_HTML)
+        if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::ERROR_HTML)
             headers += "text/html";
+        else if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
+            headers += this->getMimeTypeTable().at(extension);
         else
             headers += "application/octet-stream";
     }
@@ -899,8 +899,7 @@ Response::makeHeaders(Request& request)
     if (status_code.compare("200") == 0)
     {
         this->appendContentLocationHeader(headers);
-        if (this->getResourceType() == ResType::STATIC_RESOURCE || 
-            this->getResourceType() == ResType::INDEX_HTML)
+        if (this->getResourceType() == ResType::STATIC_RESOURCE)
             this->appendLastModifiedHeader(headers);
         if (method == "OPTIONS")
             this->appendAllowHeader(headers);
@@ -1017,7 +1016,6 @@ bool
 Response::isExtensionInMimeTypeTable(const std::string& extension) const
 {
     const std::map<std::string, std::string>& mime_type_table = this->getMimeTypeTable();
-    // std::cout<<"in isExtensionInMimeTypeTable extension:"<<extension<<std::endl;
     return (mime_type_table.find(extension) != mime_type_table.end());
 }
 
@@ -1029,6 +1027,8 @@ Response::findAndSetUriExtension()
     if (dot == std::string::npos)
         return ;
     std::string extension = this->getResourceAbsPath().substr(dot);
+    if (extension == ".")
+        return ;
     this->setUriExtension(extension);
 }
 

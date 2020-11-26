@@ -381,10 +381,7 @@ Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos
     if ((bytes = read(client_fd, buf, line_end_pos + CRLF_SIZE)) > 0)
         buf[bytes] = 0;
     else if (bytes == 0)
-    {
-    std::cout<<"\033[1;44;37m"<<"Debug 8"<<"\033[0m"<<std::endl;
         throw (Request::RequestFormatException(request, "400"));
-    }
     else
         throw (ReadErrorException());
     return (bytes);
@@ -1629,7 +1626,10 @@ Server::checkAndSetResourceType(int client_fd)
         if (method.compare("PUT") == 0)
             throw (CannotPutOnDirectoryException(response));
         if (this->isIndexFileExist(client_fd))
-            response.setResourceType(ResType::INDEX_HTML);
+        {
+            this->setResourceAbsPathAsIndex(client_fd);
+            response.findAndSetUriExtension();
+        }
         else
         {
             if (this->isAutoIndexOn(client_fd))
@@ -1769,14 +1769,9 @@ Server::processResponseBody(int client_fd)
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
         return ;
     }
-    if (this->_responses[client_fd].getResourceType() == ResType::INDEX_HTML)
-    {
-        this->setResourceAbsPathAsIndex(client_fd);
-    }
     ResType res_type = this->_responses[client_fd].getResourceType();
 
     this->preprocessResponseBody(client_fd, res_type);
-
 
     Log::printTimeDiff(from, 1);
     Log::trace("< processResopnseBody", 1);
