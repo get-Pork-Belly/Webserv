@@ -9,7 +9,7 @@ http {
             limit_except GET;
             cgi .bin .cgi .bla;
             cgi_path /Users/iwoo/Documents/Webserv/cgi_tester;
-            autoindex on;
+			index index.jpg;
             root /Users/iwoo/Documents/Webserv/;
         }
         location /put_test {
