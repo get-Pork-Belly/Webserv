@@ -1114,9 +1114,12 @@ Server::sendDataToCGI(int write_fd_to_cgi)
     int target_send_data_size = std::min(SEND_PIPE_STREAM_SIZE, content_length - transfered_body_size);
 
     int bytes;
+
+
     if ((bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], target_send_data_size)) > 0)
     {
-        request.setTransferedBodySize(transfered_body_size + bytes);
+        transfered_body_size += bytes;
+        request.setTransferedBodySize(transfered_body_size);
         if (content_length == transfered_body_size)
             this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
         else
