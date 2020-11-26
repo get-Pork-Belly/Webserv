@@ -259,9 +259,6 @@ Log::resTypeToString(const ResType& type)
     case ResType::AUTO_INDEX:
         return ("AUTO_INDEX");
 
-    case ResType::INDEX_HTML:
-        return ("INDEX_HTML");
-
     case ResType::ERROR_HTML:
         return ("ERROR_HTML");
 
