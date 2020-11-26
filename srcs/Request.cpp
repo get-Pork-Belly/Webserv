@@ -526,146 +526,31 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
 void
 Request::parseChunkData(char* buf, size_t bytes)
 {
-    // size_t index;
-    if (bytes <= CRLF_SIZE)
+    // \r
+    // \n
+    // C
+    // \r\n
+    // C\r
+    // C\r\n
+    // CC\r
+    // CCC
+    if (this->isCarriegeReturnTrimmed())
     {
-        if (bytes == CRLF_SIZE && buf[0] == '\r' && buf[1] == '\n')
-        {
-            // if (this->isCarriegeReturnTrimmed())
-            // {
-            //     this->appendBody("\r", 1);
-            //     this->setCarriegeReturnTrimmed(false);
-            // }
+        this->setCarriegeReturnTrimmed(false);
+        if (bytes == 1 && buf[0] == '\n')
             return ;
-        }
-        else if (bytes == 1 && buf[0] == '\n' && this->isCarriegeReturnTrimmed())
-        {
-            this->setCarriegeReturnTrimmed(false);
-            return ;
-        }
-        else if (bytes == 1 && buf[0] == '\r')
-        {
-            if (this->isCarriegeReturnTrimmed())
-            {
-                // if ((index = std::string(buf, bytes).find("\r")) != std::string::npos)
-                // {
-                //     std::cout << "\033[31m\033[01m";
-                //     std::cout << "===============================================" << std::endl;
-                //     std::cout << "Debug -1" << std::endl;
-                //     std::cout << "bytes: " << bytes << std::endl;
-                //     std::cout << "index: " << index << std::endl;
-                //     std::cout << "===============================================" << std::endl;
-                //     std::cout << "\033[0m";
-                //     sleep(10);
-                // }
-                this->appendBody("\r", 1);
-            }
-            this->setCarriegeReturnTrimmed(true);
-            return ;
-        }
-        else if (bytes == 2 && buf[1] == '\r')
-        {
-            if (this->isCarriegeReturnTrimmed())
-            {
-                // if ((index = std::string(buf, bytes).find("\r")) != std::string::npos)
-                // {
-                //     std::cout << "\033[31m\033[01m";
-                //     std::cout << "===============================================" << std::endl;
-                //     std::cout << "Debug 0" << std::endl;
-                //     std::cout << "bytes: " << bytes << std::endl;
-                //     std::cout << "index: " << index << std::endl;
-                //     std::cout << "===============================================" << std::endl;
-                //     std::cout << "\033[0m";
-                //     sleep(10);
-                // }
-                this->appendBody("\r", 1);
-                this->appendBody(buf, bytes - 1);
-                this->setCarriegeReturnTrimmed(true);
-            }
-            else
-            {
-                this->appendBody(buf, bytes - 1);
-                this->setCarriegeReturnTrimmed(true);
-            }
-            return ;
-        }
-        else
-        {
-            // if ((index = std::string(buf, bytes).find("\r")) != std::string::npos)
-            // {
-            //     std::cout << "\033[31m\033[01m";
-            //     std::cout << "===============================================" << std::endl;
-            //     std::cout << "Debug 1" << std::endl;
-            //     std::cout << "bytes: " << bytes << std::endl;
-            //     std::cout << "index: " << index << std::endl;
-            //     std::cout << "===============================================" << std::endl;
-            //     std::cout << "\033[0m";
-            //     sleep(10);
-            // }
-            this->appendBody(buf, bytes);
-        }
-        return ;
+        this->appendBody("\r", 1);
     }
-    // if (this->isCarriegeReturnTrimmed())
-    // {
-    //     this->appendBody("\r", 1);
-    //     this->setCarriegeReturnTrimmed(false);
-    // }
-    // if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n')
-    //     this->appendBody(buf, bytes - 2);
-    // else if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 1] == '\r')
-    // {
-    //     this->setCarriegeReturnTrimmed(true);
-    //     this->appendBody(buf, bytes - 1);
-    // }
-    // else if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
-    //     this->appendBody(buf, bytes);
-    if (buf[bytes - 1] == '\n' && buf[bytes - 2] == '\r')
+
+    if (buf[bytes - 1] == '\r')
     {
-        // if ((index = std::string(buf, bytes - CRLF_SIZE).find("\r")) != std::string::npos)
-        // {
-        //     std::cout << "\033[31m\033[01m";
-        //     std::cout << "===============================================" << std::endl;
-        //     std::cout << "Debug 2" << std::endl;
-        //     std::cout << "bytes: " << bytes << std::endl;
-        //     std::cout << "index: "  << index<< std::endl;
-        //     std::cout << "===============================================" << std::endl;
-        //     std::cout << "\033[0m";
-        //     sleep(10);
-        // }
-        this->appendBody(buf, bytes - CRLF_SIZE);
-    }
-    else if (buf[bytes - 1] == '\r')
-    {
-        // if ((index = std::string(buf, bytes - 1).find("\r")) != std::string::npos)
-        // {
-        //     std::cout << "\033[31m\033[01m";
-        //     std::cout << "===============================================" << std::endl;
-        //     std::cout << "Debug 3" << std::endl;
-        //     std::cout << "bytes: " << bytes << std::endl;
-        //     std::cout << "index: " << index << std::endl;
-        //     std::cout << "===============================================" << std::endl;
-        //     std::cout << "\033[0m";
-        //     sleep(10);
-        // }
         this->setCarriegeReturnTrimmed(true);
         this->appendBody(buf, bytes - 1);
     }
+    else if (bytes >= 2 && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n')
+        this->appendBody(buf, bytes - CRLF_SIZE);
     else
-    {
-        // if ((index = std::string(buf, bytes).find("\r")) != std::string::npos)
-        // {
-        //     std::cout << "\033[31m\033[01m";
-        //     std::cout << "===============================================" << std::endl;
-        //     std::cout << "Debug 4" << std::endl;
-        //     std::cout << "bytes: " << bytes << std::endl;
-        //     std::cout << "index: " << index << std::endl;
-        //     std::cout << "===============================================" << std::endl;
-        //     std::cout << "\033[0m";
-        //     sleep(10);
-        // }
         this->appendBody(buf, bytes);
-    }
 }
 
 int
