@@ -333,19 +333,10 @@ ServerManager::isClientTimeOut(int fd)
     timeval now;
     gettimeofday(&now, NULL);
     
-    std::cout<<"\033[1;36m"<<"> in isClientTimeOut"<<"\033[0m"<<std::endl;
     if (this->_last_request_time_of_client[fd].first == false)
-    {
-        std::cout<<"\033[1;36m"<<"> in isClientTimeOut false 1"<<"\033[0m"<<std::endl;
         return (false);
-    }
     if (now.tv_sec - this->_last_request_time_of_client[fd].second.tv_sec > TIME_OUT_SECOND)
-    {
-        std::cout<<"\033[1;36m"<<"> in isClientTimeOut true"<<"\033[0m"<<std::endl;
         return (true);
-    }
-
-        std::cout<<"\033[1;36m"<<"> in isClientTimeOut false 2"<<"\033[0m"<<std::endl;
     return (false);
 }
 
@@ -396,9 +387,9 @@ ServerManager::closeUnresponsiveClient()
                             }
                             else if (response.getResourceFd() != DEFAULT_FD)
                                 server->closeFdAndUpdateFdTable(response.getResourceFd(), FdSet::READ);
-                            this->monitorTimeOutOff(fd);
                         }
                     }
+                    this->monitorTimeOutOff(fd);
                 }
             }
             else

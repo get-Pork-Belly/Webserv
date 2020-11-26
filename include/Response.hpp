@@ -37,7 +37,6 @@ private:
     std::string _uri_extension;
     std::string _transmitting_body;
 
-    //TODO: 생성자에 추가하기.
     size_t _already_encoded_size;
 
     ParseProgress _parse_progress;
@@ -52,7 +51,6 @@ public:
     /* Constructor */
     Response();
     Response(const Response& other);
-    // Response(Request& request, Server* server); //TODO 인자를 const로.
 
     /* Destructor */
     virtual ~Response();

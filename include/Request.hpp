@@ -4,6 +4,7 @@
 # include "utils.hpp"
 # include "types.hpp"
 # include <map>
+# include "Exception.hpp"
 
 //NOTE: test용으로 ostream include함.
 #include <iostream>
@@ -20,7 +21,7 @@ private:
     std::string _protocol;
     std::string _body;
     std::string _status_code;
-    ReqInfo _info;
+    RecvRequest _info;
     bool _is_buffer_left;
     std::string _ip_address;
     int _transfered_body_size;
@@ -32,6 +33,7 @@ private:
 
     int _recv_counts;
     bool _carriege_return_trimmed;
+    std::string _temp_buffer;
 
 public:
     /* Constructor */
@@ -50,7 +52,7 @@ public:
     const std::string& getProtocol() const;
     const std::string& getBody() const;
     const std::string& getStatusCode() const;
-    const ReqInfo& getReqInfo() const;
+    const RecvRequest& getRecvRequest() const;
     bool getIsBufferLeft() const;
     const std::string& getIpAddress() const;
     int getContentLength() const;
@@ -63,6 +65,7 @@ public:
     bool getCarriegeReturnTrimmed() const;
 
     int getReceiveCounts() const;
+    const std::string& getTempBuffer() const;
 
     /* Setter */
     void setMethod(const std::string& method);
@@ -72,7 +75,7 @@ public:
     void setProtocol(const std::string& protocol);
     void setBody(const std::string& body);
     void setStatusCode(const std::string& code);
-    void setReqInfo(const ReqInfo& info);
+    void setRecvRequest(const RecvRequest& info);
     void setIsBufferLeft(const bool& is_left_buffer);
     void setIpAddress(const std::string& ip_address);
     void setTransferedBodySize(const int transfered_body_size);
@@ -84,12 +87,13 @@ public:
 
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);
+    void setTempBuffer(const std::string& temp_buffer);
 
     /* Util */
 
     void init();
 
-    void updateReqInfo();
+    void updateRecvRequest();
     bool updateStatusCodeAndReturn(const std::string& status_code, const bool& ret);
 
     bool isBodyUnnecessary() const;
@@ -101,8 +105,9 @@ public:
     void raiseRecvCounts();
 
     /* parser */
+    void parseRequestLine(char* buf, int bytes);
+    void parseRequestHeaders();
     void parseRequestWithoutBody(char* buf, int bytes);
-    bool parseRequestLine(std::string& req_message);
     bool parseHeaders(std::string& req_message);
 
     /* valid check */
@@ -120,10 +125,13 @@ public:
 
     void appendBody(char* buf, int bytes);
     void appendBody(const char* buf, int bytes);
+    void appendTempBuffer(char* buf, int bytes);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
     void parseChunkData(char* buf, size_t bytes);
+
+    int calculateReadTargetSize(char* buf, int peeked_bytes);
 
     /* Exception */
 public:
@@ -134,6 +142,15 @@ public:
         Request& _req;
     public:
         RequestFormatException(Request& req, const std::string& status_code);
+        virtual const char* what() const throw();
+    };
+
+    class UriTooLongException : public std::exception
+    {
+    private:
+        Request& _req;
+    public:
+        UriTooLongException(Request& req);
         virtual const char* what() const throw();
     };
 

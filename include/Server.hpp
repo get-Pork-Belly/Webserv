@@ -19,6 +19,7 @@
 # include "Exception.hpp"
 
 const int BUFFER_SIZE = 65536;
+const int SHOULD_RECEIVE_MORE = -3;
 const int RECEIVE_SOCKET_STREAM_SIZE = 65536;
 const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
@@ -47,7 +48,6 @@ private:
     int _request_uri_limit_size;
     int _request_header_limit_size;
     int _limit_client_body_size;
-    std::string _default_error_page; //TODO: delete 고려
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
@@ -62,8 +62,6 @@ public:
 
     /* Overload */
     /* Getter */
-    //TODO: 구현
-    // Request getRequest();
     const std::map<std::string, std::string> getServerConfig();
     const std::map<std::string, location_info>& getLocationConfig();
     int getServerSocket() const;
@@ -93,8 +91,10 @@ public:
     void init();
     void run(int fd);
     void receiveRequest(int fd);
-    void receiveRequestWithoutBody(int fd);
-    void readBufferUntilHeaders(int fd, char* buf, size_t header_end_pos);
+    void receiveRequestLine(int fd);
+    void receiveRequestHeaders(int fd);
+    int  readBufferUntilRequestLine(int fd, char* buf, size_t line_end_pos);
+    bool readBufferUntilHeaders(int fd, char* buf, size_t read_target);
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
     void makeResponseMessage(int fd);

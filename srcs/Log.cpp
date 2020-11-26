@@ -53,6 +53,17 @@ Log::timeLog(int fd)
 }
 
 void
+Log::printTimeSec(timeval& tv)
+{
+    struct tm time;
+    char buf[64];
+    ft::memset(buf, 0, sizeof(buf));
+    strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
+    strftime(buf, sizeof(buf), "[%d/%b/%Y/%X %Z] ", &time);
+    write(1, static_cast<void *>(buf), ft::strlen(buf));
+}
+
+void
 Log::serverIsCreated(Server& server)
 {
     if (DEBUG == 0)
@@ -105,8 +116,8 @@ Log::closeClient(Server& server, int client_fd)
 void
 Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
 {
-    // if (DEBUG == 0)
-    //     return ;
+    if (DEBUG == 0)
+        return ;
 
     int server_fd = server.getServerSocket();
     int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
@@ -124,8 +135,8 @@ Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
 void
 Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
 {
-    // if (DEBUG == 0)
-    //     return ;
+    if (DEBUG == 0)
+        return ;
 
     int server_fd = server.getServerSocket();
     int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
@@ -261,24 +272,24 @@ Log::resTypeToString(const ResType& type)
 }
 
 std::string
-Log::reqInfoToString(const ReqInfo& req_info)
+Log::recvRequestToString(const RecvRequest& req_request_progress)
 {
-    switch (req_info)
+    switch (req_request_progress)
     {
-    case ReqInfo::READY:
-        return ("READY");
+    case RecvRequest::REQUEST_LINE:
+        return ("REQUEST_LINE");
 
-    case ReqInfo::COMPLETE:
+    case RecvRequest::COMPLETE:
         return ("COMPLETE");
 
-    case ReqInfo::NORMAL_BODY:
+    case RecvRequest::NORMAL_BODY:
         return ("NORMAL_BODY");
 
-    case ReqInfo::CHUNKED_BODY:
+    case RecvRequest::CHUNKED_BODY:
         return ("CHUNKED_BODY");
 
     default:
-        return ("NOT YET REGISTED IN reqInfoToString");
+        return ("NOT YET REGISTED IN recvRequestToString");
         break;
     }
 }

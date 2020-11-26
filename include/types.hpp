@@ -58,12 +58,13 @@ enum class FdType
     CLOSED,
 };
 
-enum class ReqInfo
+enum class RecvRequest
 {
-    READY,
-    COMPLETE,
+    REQUEST_LINE,
+    HEADERS,
     NORMAL_BODY,
     CHUNKED_BODY,
+    COMPLETE,
 };
 
 enum class ResType
