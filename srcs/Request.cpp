@@ -526,7 +526,7 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
 void
 Request::parseChunkData(char* buf, size_t bytes)
 {
-    size_t index;
+    // size_t index;
     if (bytes <= CRLF_SIZE)
     {
         if (bytes == CRLF_SIZE && buf[0] == '\r' && buf[1] == '\n')
