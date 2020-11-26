@@ -333,19 +333,10 @@ ServerManager::isClientTimeOut(int fd)
     timeval now;
     gettimeofday(&now, NULL);
     
-    std::cout<<"\033[1;36m"<<"> in isClientTimeOut"<<"\033[0m"<<std::endl;
     if (this->_last_request_time_of_client[fd].first == false)
-    {
-        std::cout<<"\033[1;36m"<<"> in isClientTimeOut false 1"<<"\033[0m"<<std::endl;
         return (false);
-    }
     if (now.tv_sec - this->_last_request_time_of_client[fd].second.tv_sec > TIME_OUT_SECOND)
-    {
-        std::cout<<"\033[1;36m"<<"> in isClientTimeOut true"<<"\033[0m"<<std::endl;
         return (true);
-    }
-
-        std::cout<<"\033[1;36m"<<"> in isClientTimeOut false 2"<<"\033[0m"<<std::endl;
     return (false);
 }
 
@@ -365,10 +356,6 @@ ServerManager::monitorTimeOutOn(int fd)
 bool
 ServerManager::isMonitorTimeOutOn(int fd)
 {
-    if (this->_last_request_time_of_client[fd].first == true)
-        std::cout<<"\033[1;30;43m"<<"in isMoniotrTimeOutOn: ";
-        Log::printTimeSec(this->_last_request_time_of_client[fd].second);
-        std::cout<<"\033[0m"<<std::endl;
     return (this->_last_request_time_of_client[fd].first);
 }
 
@@ -381,15 +368,10 @@ ServerManager::closeUnresponsiveClient()
             this->getFdType(fd) == FdType::CLIENT_SOCKET &&
             this->fdIsOriginSet(fd, FdSet::READ) != this->fdIsCopySet(fd, FdSet::READ))
         {
-            std::cout<<"\033[1;37;41m"<<"Debug 1"<<"\033[0m"<<std::endl;
-            // Log::printFdSets(*this);
-            // Log::printFdCopySets(*this);
             if (this->isMonitorTimeOutOn(fd))
             {
-                std::cout<<"\033[1;44;37m"<<"DeBug 2"<<"\033[0m"<<std::endl;
                 if (this->isClientTimeOut(fd))
                 {
-                    std::cout<<"\033[1;44;37m"<<"DeBug 3"<<"\033[0m"<<std::endl;
                     this->fdSet(fd, FdSet::WRITE);
                     for (Server* server : this->_servers)
                     {
@@ -411,10 +393,7 @@ ServerManager::closeUnresponsiveClient()
                 }
             }
             else
-            {
-                std::cout<<"\033[1;44;37m"<<"DeBug 4 Monitor on!"<<"\033[0m"<<std::endl;
                 this->monitorTimeOutOn(fd);
-            }
         }
         else
             this->monitorTimeOutOff(fd);

@@ -21,8 +21,7 @@ Server::Server(ServerManager* server_manager, server_info& server_config, std::m
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
 _request_uri_limit_size(0), _request_header_limit_size(0), 
-_limit_client_body_size(150000000), _default_error_page(""), 
-_location_config(location_config)
+_limit_client_body_size(150000000), _location_config(location_config)
 {
     try
     {
@@ -441,59 +440,6 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_messag
     }
 }
 
-long long int readed_bytes;
-
-void
-Server::receiveRequestWithoutBody(int client_fd)
-{
-    Log::trace("> receiveRequestWithoutBody", 1);
-    timeval from;
-    gettimeofday(&from, NULL);
-
-
-    int bytes;
-    char buf[BUFFER_SIZE + 1];
-    size_t header_end_pos = 0;
-    std::string readed;
-    Request& request = this->_requests[client_fd];
-
-    if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
-    {
-        buf[bytes] = 0;
-        readed_bytes += bytes;
-        std::cout<<"\033[1;33m"<<"in receiveRequestWithouBody peeked_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-
-        readed = std::string(buf, bytes);
-        if ((header_end_pos = readed.find("\r\n\r\n")) != std::string::npos)
-        {
-            if (static_cast<size_t>(bytes) == header_end_pos + 4)
-            {
-                request.setIsBufferLeft(false);
-                request.setReqInfo(ReqInfo::COMPLETE);
-            }
-            else
-                request.setIsBufferLeft(true);
-            this->readBufferUntilHeaders(client_fd, buf, header_end_pos);
-        }
-        else if ((header_end_pos = readed.find("\r\n")) != std::string::npos)
-            this->processIfHeadersNotFound(client_fd, readed);
-        else
-        {
-            request.setIsBufferLeft(true);
-            throw (Request::RequestFormatException(request, "400"));
-        }
-    }
-    else if (bytes == RECV_COUNT_NOT_REACHED)
-        request.raiseRecvCounts();
-    else if (bytes == 0)
-        this->closeClientSocket(client_fd);
-    else
-        throw (ReadErrorException());
-
-    Log::printTimeDiff(from, 1);
-    Log::trace("< receiveRequestWithoutBody", 1);
-}
-
 void
 Server::receiveRequestLine(int client_fd)
 {
@@ -512,11 +458,11 @@ Server::receiveRequestLine(int client_fd)
         std::string readed(buf, bytes);
         if ((line_end_pos = readed.find("\r\n")) != std::string::npos)
         {
-            // if (line_end_pos > BUFFER_SIZE - 2)
-                // throw (Request::UriTooLongException(request));
+            if (line_end_pos >= BUFFER_SIZE - 2)
+                throw (Request::UriTooLongException(request));
             bytes = this->readBufferUntilRequestLine(client_fd, buf, line_end_pos);
             request.parseRequestLine(buf, bytes);
-            request.setReqInfo(ReqInfo::HEADER_SEQUENCE);
+            request.setRecvRequest(RecvRequest::HEADERS);
         }
         else
             throw (Request::RequestFormatException(request, "400"));
@@ -532,10 +478,6 @@ Server::receiveRequestLine(int client_fd)
     Log::trace("< receiveRequestLine", 1);
 }
 
-// temp_buffer을 언제 추가할 것인가에 댛ㄴ 
-// 먼저 peek 한 다음에 \r\n\r\n 을 찾고 거기까지 읽을 것인가?
-// 아니면그냥 다 읽은 다음에 temp_buffer에서 바디를 나눌 것인가?
-
 void
 Server::receiveRequestHeaders(int client_fd)
 {
@@ -544,7 +486,6 @@ Server::receiveRequestHeaders(int client_fd)
     gettimeofday(&from, NULL);
 
     char buf[BUFFER_SIZE + 1];
-    // int peeked_bytes;
     int peeked_bytes;
     Request& request = this->_requests[client_fd];
     if ((peeked_bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
@@ -562,9 +503,9 @@ Server::receiveRequestHeaders(int client_fd)
                 {
                     if (request.isBodyUnnecessary() ||
                         (request.isNormalBody() && request.getHeaders().at("Content-Length") == "0"))
-                        request.setReqInfo(ReqInfo::COMPLETE);
+                        request.setRecvRequest(RecvRequest::COMPLETE);
                 }
-                request.updateReqInfo();
+                request.updateRecvRequest();
             }
         }
     }
@@ -598,17 +539,15 @@ Server::receiveRequestNormalBody(int client_fd)
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
         buf[bytes] = 0;
-        // if (request.getTempBuffer().length() > 0)
-        //     request.appendBody(_temp_buffer);
         request.appendBody(buf, bytes);
         if (request.getBody().length() < static_cast<size_t>(content_length))
             return ;
         else if (request.getBody().length() == static_cast<size_t>(content_length))
-            request.setReqInfo(ReqInfo::COMPLETE);
+            request.setRecvRequest(RecvRequest::COMPLETE);
         else
             throw (PayloadTooLargeException(this->_responses[client_fd]));
         if (bytes < BUFFER_SIZE)
-            request.setReqInfo(ReqInfo::COMPLETE);
+            request.setRecvRequest(RecvRequest::COMPLETE);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -709,7 +648,7 @@ Server::receiveLastChunkData(int client_fd)
             throw (Request::RequestFormatException(request, "400"));
         }
         if (std::string(buf).compare("\r\n") == 0)
-            request.setReqInfo(ReqInfo::COMPLETE);
+            request.setRecvRequest(RecvRequest::COMPLETE);
         else
         {
             throw (Request::RequestFormatException(request, "400"));
@@ -781,32 +720,23 @@ Server::receiveRequest(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-    // ReqInfo REQUEST_LINE_SEQUENCE       <-- ready
-    // ReqInfo HEADER_SEQUENCE           
-    // ReqInfo NORMAL_BODY_SEQUENCE <-- NORMAL_BODY
-    // ReqInfo CHUNKED_BODY_SEQUENCE <-- CHUNKED_BODY
-    // ReqInfo MUST_CLEAR..??? <--MUST_CLEAR
-    // ReqInfo RECV_COMPLETE
-
-    const ReqInfo& req_info = this->_requests[client_fd].getReqInfo();
-
+    const RecvRequest& req_info = this->_requests[client_fd].getRecvRequest();
     switch (req_info)
     {
-    case ReqInfo::READY:
+    case RecvRequest::REQUEST_LINE:
         this->receiveRequestLine(client_fd);
-        // this->receiveRequestWithoutBody(client_fd);
         break ;
 
-    case ReqInfo::HEADER_SEQUENCE:
+    case RecvRequest::HEADERS:
         this->receiveRequestHeaders(client_fd);
         // this->processResponseBody()
         break ;
 
-    case ReqInfo::NORMAL_BODY:
+    case RecvRequest::NORMAL_BODY:
         this->receiveRequestNormalBody(client_fd);
         break ;
 
-    case ReqInfo::CHUNKED_BODY:
+    case RecvRequest::CHUNKED_BODY:
         this->receiveRequestChunkedBody(client_fd);
         break ;
 
@@ -1349,16 +1279,7 @@ Server::run(int fd)
                             this->_requests[fd].init();
                             this->_responses[fd].init();
                         }
-                        if (this->_server_manager->isMonitorTimeOutOn(fd))
-                            std::cout << "Before: timeout is turned on now!!" << std::endl;
-                        else
-                            std::cout << "Before: timeout turned off!!" << std::endl;
-
                         this->_server_manager->monitorTimeOutOff(fd);
-                        if (this->_server_manager->isMonitorTimeOutOn(fd))
-                            std::cout << "After: timeout turned on!!" << std::endl;
-                        else
-                            std::cout << "After: timeout turned off!!" << std::endl;
                     }
                 }
                 else
@@ -1384,7 +1305,7 @@ Server::run(int fd)
                     this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
                     this->closeFdAndUpdateFdTable(fd, FdSet::READ);
                 }
-                
+                std::cerr << e.what() << '\n';
             }
             catch(const std::exception& e)
             {
@@ -1417,7 +1338,7 @@ Server::run(int fd)
                 {
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
-                    if (this->_requests[fd].getReqInfo() == ReqInfo::COMPLETE)
+                    if (this->_requests[fd].getRecvRequest() == RecvRequest::COMPLETE)
                     {
                         this->_server_manager->fdClr(fd, FdSet::READ);
                         this->processResponseBody(fd);
@@ -1444,6 +1365,12 @@ Server::run(int fd)
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
                 this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
             }
+            catch(const Request::UriTooLongException& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
+            }
             catch(const std::exception& e)
             {
                 this->closeClientSocket(fd);
@@ -1460,8 +1387,9 @@ Server::closeClientSocket(int client_fd)
     this->_server_manager->setClosedFdOnFdTable(client_fd);
     this->_server_manager->updateFdMax(client_fd);
     this->_requests[client_fd].init();
-    Log::closeClient(*this, client_fd);
+    this->_server_manager->monitorTimeOutOff(client_fd);
     close(client_fd);
+    Log::closeClient(*this, client_fd);
 }
 
 void

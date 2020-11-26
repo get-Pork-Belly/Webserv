@@ -272,24 +272,24 @@ Log::resTypeToString(const ResType& type)
 }
 
 std::string
-Log::reqInfoToString(const ReqInfo& req_info)
+Log::recvRequestToString(const RecvRequest& req_request_progress)
 {
-    switch (req_info)
+    switch (req_request_progress)
     {
-    case ReqInfo::READY:
-        return ("READY");
+    case RecvRequest::REQUEST_LINE:
+        return ("REQUEST_LINE");
 
-    case ReqInfo::COMPLETE:
+    case RecvRequest::COMPLETE:
         return ("COMPLETE");
 
-    case ReqInfo::NORMAL_BODY:
+    case RecvRequest::NORMAL_BODY:
         return ("NORMAL_BODY");
 
-    case ReqInfo::CHUNKED_BODY:
+    case RecvRequest::CHUNKED_BODY:
         return ("CHUNKED_BODY");
 
     default:
-        return ("NOT YET REGISTED IN reqInfoToString");
+        return ("NOT YET REGISTED IN recvRequestToString");
         break;
     }
 }
