@@ -1016,7 +1016,6 @@ bool
 Response::isExtensionInMimeTypeTable(const std::string& extension) const
 {
     const std::map<std::string, std::string>& mime_type_table = this->getMimeTypeTable();
-    // std::cout<<"in isExtensionInMimeTypeTable extension:"<<extension<<std::endl;
     return (mime_type_table.find(extension) != mime_type_table.end());
 }
 
@@ -1028,6 +1027,8 @@ Response::findAndSetUriExtension()
     if (dot == std::string::npos)
         return ;
     std::string extension = this->getResourceAbsPath().substr(dot);
+    if (extension == ".")
+        return ;
     this->setUriExtension(extension);
 }
 
