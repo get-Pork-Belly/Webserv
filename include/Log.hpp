@@ -44,8 +44,8 @@ public:
     static void printLocationConfig(const std::map<std::string, location_info>& loc_config);
     static void printLocationInfo(const location_info& loc_info);
 
-    static void printFdCopySets(ServerManager& server_manager);
-    static void printFdSets(ServerManager& server_manager);
+    static void printFdCopySets(ServerManager& server_manager, int width);
+    static void printFdSets(ServerManager& server_manager, int width);
     static void printTimeSec(timeval& tv);
 };
 
