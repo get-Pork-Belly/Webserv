@@ -342,41 +342,127 @@ Log::printLocationInfo(const location_info& loc_info)
 }
 
 void
-Log::printFdCopySets(ServerManager& server_manager)
+Log::printFdCopySets(ServerManager& server_manager, int width)
 {
+    int max_fd = server_manager.getFdMax() + 1;
+    bool is_set;
+
     std::cout<<"READ FD COPY SET"<<std::endl;
-    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<i<<" |";
-    std::cout<<std::endl;
-    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<server_manager.fdIsCopySet(i, FdSet::READ)<<" |";
-    std::cout<<std::endl;
+    int start_idx = 0;
+    while(start_idx < max_fd)
+    {
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+            std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+        std::cout<<"|"<<std::endl;
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+            std::cout<<"| fd "<<std::setw(3)<<std::right<<i<<" ";
+        std::cout<<"|"<<std::endl;
+
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+        {
+            is_set = server_manager.fdIsCopySet(i, FdSet::READ);
+
+            if (is_set)
+            {
+                std::cout<<"| ";
+                std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                std::cout<<" ";
+            }
+            else
+                std::cout<<"| "<<std::setw(6)<<is_set<<" ";
+        }
+        std::cout<<"|"<<std::endl;
+        start_idx += width;
+    }
 
     std::cout<<"WRITE FD COPY SET"<<std::endl;
-    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<i<<" |";
-    std::cout<<std::endl;
-    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<server_manager.fdIsCopySet(i, FdSet::WRITE)<<" |";
-    std::cout<<std::endl;
+    start_idx = 0;
+    while(start_idx < max_fd)
+    {
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+            std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+        std::cout<<"|"<<std::endl;
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+            std::cout<<"| fd "<<std::setw(3)<<std::right<<i<<" ";
+        std::cout<<"|"<<std::endl;
+
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+        {
+            is_set = server_manager.fdIsCopySet(i, FdSet::WRITE);
+
+            if (is_set)
+            {
+                std::cout<<"| ";
+                std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                std::cout<<" ";
+            }
+            else
+                std::cout<<"| "<<std::setw(6)<<is_set<<" ";
+        }
+        std::cout<<"|"<<std::endl;
+        start_idx += width;
+    }
 }
 
 void
-Log::printFdSets(ServerManager& server_manager)
+Log::printFdSets(ServerManager& server_manager, int width)
 {
-    std::cout<<"READ ORIGIN FDSET"<<std::endl;
-    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<i<<" |";
-    std::cout<<std::endl;
-    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<server_manager.fdIsOriginSet(i, FdSet::READ)<<" |";
-    std::cout<<std::endl;
+    int max_fd = server_manager.getFdMax() + 1;
+    bool is_set;
 
-    std::cout<<"WRITE ORIGIN FDSET"<<std::endl;
-    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<i<<" |";
-    std::cout<<std::endl;
-    for (int i = 0; i < server_manager.getFdMax() + 1; i++)
-        std::cout<<"| "<<server_manager.fdIsOriginSet(i, FdSet::WRITE)<<" |";
-    std::cout<<std::endl;
+    std::cout<<"READ FD ORIGIN SET"<<std::endl;
+    int start_idx = 0;
+    while(start_idx < max_fd)
+    {
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+            std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+        std::cout<<"|"<<std::endl;
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+            std::cout<<"| fd "<<std::setw(3)<<std::right<<i<<" ";
+        std::cout<<"|"<<std::endl;
+
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+        {
+            is_set = server_manager.fdIsOriginSet(i, FdSet::READ);
+
+            if (is_set)
+            {
+                std::cout<<"| ";
+                std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                std::cout<<" ";
+            }
+            else
+                std::cout<<"| "<<std::setw(6)<<is_set<<" ";
+        }
+        std::cout<<"|"<<std::endl;
+        start_idx += width;
+    }
+
+    std::cout<<"WRITE FD ORIGIN SET"<<std::endl;
+    start_idx = 0;
+    while(start_idx < max_fd)
+    {
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+            std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+        std::cout<<"|"<<std::endl;
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+            std::cout<<"| fd "<<std::setw(3)<<std::right<<i<<" ";
+        std::cout<<"|"<<std::endl;
+
+        for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
+        {
+            is_set = server_manager.fdIsOriginSet(i, FdSet::WRITE);
+
+            if (is_set)
+            {
+                std::cout<<"| ";
+                std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                std::cout<<" ";
+            }
+            else
+                std::cout<<"| "<<std::setw(6)<<is_set<<" ";
+        }
+        std::cout<<"|"<<std::endl;
+        start_idx += width;
+    }
 }
