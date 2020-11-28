@@ -108,7 +108,7 @@ ServerManager::setResourceOnFdTable(int fd, int client_socket)
 }
 
 void
-ServerManager::setCGIPipeOnFdTable(int fd, int client_socket)
+ServerManager::setCgiPipeOnFdTable(int fd, int client_socket)
 {
     this->_fd_table[fd].first = FdType::PIPE;
     this->_fd_table[fd].second = client_socket;
@@ -379,11 +379,11 @@ ServerManager::closeUnresponsiveClient()
                         {
                             Response& response = server->getResponse(fd);
                             response.setStatusCode("408");
-                            if (response.getWriteFdToCGI() != DEFAULT_FD ||
-                                response.getReadFdFromCGI() != DEFAULT_FD)
+                            if (response.getWriteFdToCgi() != DEFAULT_FD ||
+                                response.getReadFdFromCgi() != DEFAULT_FD)
                             {
-                                server->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);
-                                server->closeFdAndUpdateFdTable(response.getWriteFdToCGI(), FdSet::WRITE);
+                                server->closeFdAndUpdateFdTable(response.getReadFdFromCgi(), FdSet::READ);
+                                server->closeFdAndUpdateFdTable(response.getWriteFdToCgi(), FdSet::WRITE);
                             }
                             else if (response.getResourceFd() != DEFAULT_FD)
                                 server->closeFdAndUpdateFdTable(response.getResourceFd(), FdSet::READ);
@@ -404,7 +404,7 @@ void
 ServerManager::closeCgiWritePipe(Server& server, int write_fd_to_cgi)
 {
     int client_fd = this->getLinkedFdFromFdTable(write_fd_to_cgi);
-    server.getResponse(client_fd).setWriteFdToCGI(DEFAULT_FD);
+    server.getResponse(client_fd).setWriteFdToCgi(DEFAULT_FD);
     this->fdClr(write_fd_to_cgi, FdSet::READ);
     this->fdClr(write_fd_to_cgi, FdSet::WRITE);
     this->setClosedFdOnFdTable(write_fd_to_cgi);
@@ -417,7 +417,7 @@ void
 ServerManager::closeCgiReadPipe(Server& server, int read_fd_from_cgi)
 {
     int client_fd = this->getLinkedFdFromFdTable(read_fd_from_cgi);
-    server.getResponse(client_fd).setReadFdFromCGI(DEFAULT_FD);
+    server.getResponse(client_fd).setReadFdFromCgi(DEFAULT_FD);
     this->fdClr(read_fd_from_cgi, FdSet::READ);
     this->fdClr(read_fd_from_cgi, FdSet::WRITE);
     this->setClosedFdOnFdTable(read_fd_from_cgi);

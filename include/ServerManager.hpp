@@ -63,7 +63,7 @@ public:
     void setServerSocketOnFdTable(int fd);
     void setClientSocketOnFdTable(int fd, int server_socket);
     void setResourceOnFdTable(int fd, int client_socket);
-    void setCGIPipeOnFdTable(int fd, int client_socket);
+    void setCgiPipeOnFdTable(int fd, int client_socket);
     void setClosedFdOnFdTable(int fd);
     void setLastRequestTimeOfClient(int client_fd, MonitorStatus check, timeval* time);
     /* Exception */

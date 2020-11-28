@@ -170,31 +170,31 @@ Response::getUriExtension() const
 }
 
 int
-Response::getCGIPid() const
+Response::getCgiPid() const
 {
     return (this->_cgi_pid);
 }
 
 int
-Response::getStdinOfCGI() const
+Response::getStdinOfCgi() const
 {
     return (this->_stdin_of_cgi);
 }
 
 int
-Response::getStdoutOfCGI() const
+Response::getStdoutOfCgi() const
 {
     return (this->_stdout_of_cgi);
 }
 
 int
-Response::getReadFdFromCGI() const
+Response::getReadFdFromCgi() const
 {
     return (this->_read_fd_from_cgi);
 }
 
 int
-Response::getWriteFdToCGI() const
+Response::getWriteFdToCgi() const
 {
     return (this->_write_fd_to_cgi);
 }
@@ -314,31 +314,31 @@ Response::setUriExtension(const std::string& extension)
 }
 
 void
-Response::setCGIPid(const int pid)
+Response::setCgiPid(const int pid)
 {
     this->_cgi_pid = pid;
 }
 
 void
-Response::setStdinOfCGI(const int fd)
+Response::setStdinOfCgi(const int fd)
 {
     this->_stdin_of_cgi = fd;
 }
 
 void
-Response::setStdoutOfCGI(const int fd)
+Response::setStdoutOfCgi(const int fd)
 {
     this->_stdout_of_cgi = fd;
 }
 
 void
-Response::setReadFdFromCGI(const int fd)
+Response::setReadFdFromCgi(const int fd)
 {
     this->_read_fd_from_cgi = fd;
 }
 
 void
-Response::setWriteFdToCGI(const int fd)
+Response::setWriteFdToCgi(const int fd)
 {
     this->_write_fd_to_cgi = fd;
 }
@@ -401,26 +401,26 @@ Response::setSendProgress(const SendProgress& send_progress)
 /******************************  Exception  ***********************************/
 /*============================================================================*/
 
-Response::CannotOpenCGIPipeException::CannotOpenCGIPipeException(Response& response)
+Response::CannotOpenCgiPipeException::CannotOpenCgiPipeException(Response& response)
 : _response(response)
 {
     this->_response.setStatusCode("500");
 }
 
 const char*
-Response::CannotOpenCGIPipeException::what() const throw()
+Response::CannotOpenCgiPipeException::what() const throw()
 {
     return ("[CODE 500] Cannot Open CGI Pipe.");
 }
 
-Response::InvalidCGIMessageException::InvalidCGIMessageException(Response& response)
-: _msg("InvalidCGIMessageException: Invalid Response Format: "), _response(response)
+Response::InvalidCgiMessageException::InvalidCgiMessageException(Response& response)
+: _msg("InvalidCgiMessageException: Invalid Response Format: "), _response(response)
 {
     this->_response.setStatusCode("500");
 }
 
 const char*
-Response::InvalidCGIMessageException::what() const throw()
+Response::InvalidCgiMessageException::what() const throw()
 {
     return (this->_msg.c_str());
 }
@@ -1111,9 +1111,9 @@ Response::getHtmlLangMetaData() const
 }
 
 void
-Response::preparseCGIMessage()
+Response::preparseCgiMessage()
 {
-    Log::trace("> preparseCGIMessage", 1);
+    Log::trace("> preparseCgiMessage", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1121,23 +1121,23 @@ Response::preparseCGIMessage()
     std::string cgi_message(this->getBody());
 
     if (ft::substr(line, cgi_message, "\r\n\r\n") == false)
-        throw (InvalidCGIMessageException(*this));
+        throw (InvalidCgiMessageException(*this));
     else
     {
-        if (this->parseCGIHeaders(line) == false)
-            throw (InvalidCGIMessageException(*this));
+        if (this->parseCgiHeaders(line) == false)
+            throw (InvalidCgiMessageException(*this));
     }
     this->setBody(cgi_message);
     if (this->getHeaders().find("Status") == this->getHeaders().end())
-        throw (InvalidCGIMessageException(*this));
+        throw (InvalidCgiMessageException(*this));
     this->setStatusCode(this->_headers.at("Status").substr(0, 3));
 
     Log::printTimeDiff(from, 1);
-    Log::trace("< preparseCGIMessage", 1);
+    Log::trace("< preparseCgiMessage", 1);
 }
 
 bool
-Response::parseCGIHeaders(std::string& cgi_message)
+Response::parseCgiHeaders(std::string& cgi_message)
 {
     Log::trace("> parseHeaders", 1);
     timeval from;

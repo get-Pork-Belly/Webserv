@@ -369,9 +369,9 @@ Server::init()
 }
 
 bool
-Server::isExistCRLFInChunkSize(int fd)
+Server::isExistCrlfInChunkSize(int fd)
 {
-    return (this->_requests[fd].getIndexOfCRLFInChunkSize() != DEFAULT_INDEX_OF_CRLF);
+    return (this->_requests[fd].getIndexOfCrlfInChunkSize() != DEFAULT_INDEX_OF_CRLF);
 }
 
 bool
@@ -381,12 +381,12 @@ Server::isNotYetSetTargetChunkSize(int fd)
 }
 
 void
-Server::findCRLFInChunkSize(int fd, const std::string& buf)
+Server::findCrlfInChunkSize(int fd, const std::string& buf)
 {
     size_t index_of_crlf;
 
     if ((index_of_crlf = buf.find("\r\n")) != std::string::npos)
-        this->_requests[fd].setIndexOfCRLFInChunkSize(index_of_crlf);
+        this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
     else
         throw (Request::RequestFormatException(this->_requests[fd], "400"));
 }
@@ -420,7 +420,7 @@ Server::prepareToReceiveNextChunkSize(int fd)
 void
 Server::prepareToReceiveNextChunkData(int fd)
 {
-    this->_requests[fd].setIndexOfCRLFInChunkSize(DEFAULT_INDEX_OF_CRLF);
+    this->_requests[fd].setIndexOfCrlfInChunkSize(DEFAULT_INDEX_OF_CRLF);
     this->_requests[fd].setChunkSize("");
     this->_requests[fd].setReceivedChunkSizeLength(0);
 }
@@ -632,7 +632,7 @@ Server::receiveChunkSize(int client_fd)
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    int index_of_crlf = request.getIndexOfCRLFInChunkSize();
+    int index_of_crlf = request.getIndexOfCrlfInChunkSize();
     int received_chunk_size_length = request.getReceivedChunkSizeLength();
 
     if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
@@ -745,10 +745,10 @@ Server::receiveRequestChunkedBody(int client_fd)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        if (this->isExistCRLFInChunkSize(client_fd))
+        if (this->isExistCrlfInChunkSize(client_fd))
             this->receiveChunkSize(client_fd);
         else if (this->isNotYetSetTargetChunkSize(client_fd))
-            this->findCRLFInChunkSize(client_fd, buf);
+            this->findCrlfInChunkSize(client_fd, buf);
         else if (this->isLastSequenceOfParsingChunk(client_fd))
             this->receiveLastChunkData(client_fd);
         else
@@ -995,9 +995,9 @@ Server::isStaticResource(int fd) const
 }
 
 bool
-Server::isCGIPipe(int fd) const
+Server::isCgiPipe(int fd) const
 {
-    Log::trace("> isCGIPipe", 2);
+    Log::trace("> isCgiPipe", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1006,55 +1006,55 @@ Server::isCGIPipe(int fd) const
     if (fd_table[fd].first == FdType::PIPE)
     {
         Log::printTimeDiff(from, 2);
-        Log::trace("< isCGIPipe return true", 2);
+        Log::trace("< isCgiPipe return true", 2);
         return true;
     }
 
 
     Log::printTimeDiff(from, 2);
-    Log::trace("< isCGIPipe return false", 2);
+    Log::trace("< isCgiPipe return false", 2);
     return false;
 }
 
 bool
-Server::isCGIWritePipe(int fd) const
+Server::isCgiWritePipe(int fd) const
 {
-    Log::trace("> isCGIWritePipe", 2);
+    Log::trace("> isCgiWritePipe", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
 
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
-    if (fd_table[fd].first == FdType::PIPE && this->_responses[fd_table[fd].second].getWriteFdToCGI() == fd)
+    if (fd_table[fd].first == FdType::PIPE && this->_responses[fd_table[fd].second].getWriteFdToCgi() == fd)
     {
         Log::printTimeDiff(from, 2);
-        Log::trace("< isCGIWritePipe return true", 2);
+        Log::trace("< isCgiWritePipe return true", 2);
         return true;
     }
     Log::printTimeDiff(from, 2);
-    Log::trace("< isCGIWritePipe return false", 2);
+    Log::trace("< isCgiWritePipe return false", 2);
     return false;
 }
 
 bool
-Server::isCGIReadPipe(int fd) const
+Server::isCgiReadPipe(int fd) const
 {
-    Log::trace("> isCGIReadPipe", 2);
+    Log::trace("> isCgiReadPipe", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
     
     const std::vector<std::pair<FdType, int> >& fd_table = this->_server_manager->getFdTable();
-    if (fd_table[fd].first == FdType::PIPE && this->_responses[fd_table[fd].second].getReadFdFromCGI() == fd)
+    if (fd_table[fd].first == FdType::PIPE && this->_responses[fd_table[fd].second].getReadFdFromCgi() == fd)
     {
         Log::printTimeDiff(from, 2);
-        Log::trace("< isCGIReadPipe return true", 2);
+        Log::trace("< isCgiReadPipe return true", 2);
         return true;
     }
 
 
     Log::printTimeDiff(from, 2);
-    Log::trace("< isCGIReadPipe return false", 2);
+    Log::trace("< isCgiReadPipe return false", 2);
     return false;
 }
 
@@ -1083,16 +1083,16 @@ Server::isAutoIndexOn(int client_fd)
 }
 
 bool
-Server::isCGIUri(int client_fd, const std::string& extension)
+Server::isCgiUri(int client_fd, const std::string& extension)
 {
-    Log::trace("> isCGIUri", 2);
+    Log::trace("> isCgiUri", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
     if (extension == "")
     {
         Log::printTimeDiff(from, 2);
-        Log::trace("< isCGIUri return false", 2);
+        Log::trace("< isCgiUri return false", 2);
         return (false);
     }
 
@@ -1101,7 +1101,7 @@ Server::isCGIUri(int client_fd, const std::string& extension)
     if (it == location_info.end())
     {
         Log::printTimeDiff(from, 2);
-        Log::trace("< isCGIUri return false", 2);
+        Log::trace("< isCgiUri return false", 2);
         return (false);
     }
 
@@ -1109,12 +1109,12 @@ Server::isCGIUri(int client_fd, const std::string& extension)
     if (cgi.find(extension) == std::string::npos)
     {
         Log::printTimeDiff(from, 2);
-        Log::trace("< isCGIUri return false", 2);
+        Log::trace("< isCgiUri return false", 2);
         return (false);
     }
 
     Log::printTimeDiff(from, 2);
-    Log::trace("< isCGIUri return true", 2);
+    Log::trace("< isCgiUri return true", 2);
     return (true);
 }
 
@@ -1151,9 +1151,9 @@ Server::acceptClient()
 int transfered_bytes;
 
 void
-Server::sendDataToCGI(int write_fd_to_cgi)
+Server::sendDataToCgi(int write_fd_to_cgi)
 {
-    Log::trace("> sendDataToCGI", 1);
+    Log::trace("> sendDataToCgi", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1184,7 +1184,7 @@ Server::sendDataToCGI(int write_fd_to_cgi)
             this->finishSendDataToCgiPipe(write_fd_to_cgi);
         else
         {
-            this->_server_manager->fdSet(response.getReadFdFromCGI(), FdSet::READ);
+            this->_server_manager->fdSet(response.getReadFdFromCgi(), FdSet::READ);
             this->_server_manager->fdClr(write_fd_to_cgi, FdSet::WRITE);
             //TODO: client_fd를 클리어해줘야하는지 체크 안해줘도 될 것 같은데?
             // this->_server_manager->fdClr(client_fd, FdSet::READ);
@@ -1196,13 +1196,13 @@ Server::sendDataToCGI(int write_fd_to_cgi)
         throw (InternalServerException(this->_responses[client_fd]));
 
     Log::printTimeDiff(from, 1);
-    Log::trace("< sendDataToCGI", 1);
+    Log::trace("< sendDataToCgi", 1);
 }
 
 void
-Server::receiveDataFromCGI(int read_fd_from_cgi)
+Server::receiveDataFromCgi(int read_fd_from_cgi)
 {
-    Log::trace("> receiveDataFromCGI", 1);
+    Log::trace("> receiveDataFromCgi", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1220,7 +1220,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
         buf[bytes] = 0;
         response.appendBody(buf, bytes);
         if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
-            response.preparseCGIMessage();
+            response.preparseCgiMessage();
 
         this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
@@ -1232,7 +1232,7 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
         throw (InternalServerException(this->_responses[client_fd]));
 
     Log::printTimeDiff(from, 1);
-    Log::trace("< receiveDataFromCGI", 1);
+    Log::trace("< receiveDataFromCgi", 1);
 }
 
 void
@@ -1292,8 +1292,8 @@ Server::run(int fd)
                 timeval from;
                 gettimeofday(&from, NULL);
                 Log::trace(">>> write sequence", 1);
-                if (this->isCGIWritePipe(fd))
-                    this->sendDataToCGI(fd);
+                if (this->isCgiWritePipe(fd))
+                    this->sendDataToCgi(fd);
                 else if (this->isClientSocket(fd))
                 {
                     if (this->_responses[fd].getSendProgress() != SendProgress::SENDING)
@@ -1306,10 +1306,10 @@ Server::run(int fd)
                             this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
                         else
                         {
-                            if (this->_responses[fd].getWriteFdToCGI() == DEFAULT_FD)
-                                this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
+                            if (this->_responses[fd].getWriteFdToCgi() == DEFAULT_FD)
+                                this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCgi(), FdSet::READ);
                             else
-                                this->_server_manager->fdSet(this->_responses[fd].getWriteFdToCGI(), FdSet::WRITE);
+                                this->_server_manager->fdSet(this->_responses[fd].getWriteFdToCgi(), FdSet::WRITE);
                         }
                     }
                     if (this->isResponseAllSended(fd))
@@ -1337,11 +1337,11 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
-                if (this->isCGIWritePipe(fd))
+                if (this->isCgiWritePipe(fd))
                 {
                     int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCGI(), FdSet::WRITE, client_fd, FdSet::WRITE);
-                    this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ);
+                    this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCgi(), FdSet::WRITE, client_fd, FdSet::WRITE);
+                    this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCgi(), FdSet::READ);
                 }
                 else if (this->isClientSocket(fd))
                 {
@@ -1369,8 +1369,8 @@ Server::run(int fd)
         {
             try
             {
-                if (this->isCGIReadPipe(fd))
-                    this->receiveDataFromCGI(fd);
+                if (this->isCgiReadPipe(fd))
+                    this->receiveDataFromCgi(fd);
                 else if (this->isStaticResource(fd))
                     this->readStaticResource(fd);
                 else if (this->isClientSocket(fd))
@@ -1388,13 +1388,13 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
-                // 수정이 필요하다. isCGIPipe
-                if (this->_responses[fd].getWriteFdToCGI() != DEFAULT_FD ||
-                        this->_responses[fd].getReadFdFromCGI() != DEFAULT_FD)
+                // 수정이 필요하다. isCgiPipe
+                if (this->_responses[fd].getWriteFdToCgi() != DEFAULT_FD ||
+                        this->_responses[fd].getReadFdFromCgi() != DEFAULT_FD)
                 {
                     Response& response = this->_responses[fd];
-                    this->closeFdAndUpdateFdTable(response.getReadFdFromCGI(), FdSet::READ);
-                    this->closeFdAndUpdateFdTable(response.getWriteFdToCGI(), FdSet::WRITE);
+                    this->closeFdAndUpdateFdTable(response.getReadFdFromCgi(), FdSet::READ);
+                    this->closeFdAndUpdateFdTable(response.getWriteFdToCgi(), FdSet::WRITE);
                 }
                 //TODO: static resource 추가
                 // else if (this->_)
@@ -1431,9 +1431,9 @@ Server::closeClientSocket(int client_fd)
 
     this->_requests[client_fd].init();
     if (response.isCgiWritePipeNotClosed())
-        this->_server_manager->closeCgiWritePipe(*this, response.getWriteFdToCGI());
+        this->_server_manager->closeCgiWritePipe(*this, response.getWriteFdToCgi());
     if (response.isCgiReadPipeNotClosed())
-        this->_server_manager->closeCgiReadPipe(*this, response.getReadFdFromCGI());
+        this->_server_manager->closeCgiReadPipe(*this, response.getReadFdFromCgi());
     if (response.isResourceNotClosed())
         this->_server_manager->closeStaticResource(*this, response.getResourceFd());
     response.init();
@@ -1661,7 +1661,7 @@ Server::checkAndSetResourceType(int client_fd)
     Response& response = this->_responses[client_fd];
     const std::string& method = this->_requests[client_fd].getMethod();
     response.findAndSetUriExtension();
-    if (this->isCGIUri(client_fd, response.getUriExtension()))
+    if (this->isCgiUri(client_fd, response.getUriExtension()))
     {
         this->checkValidOfCgiMethod(client_fd);
         response.setResourceType(ResType::CGI);
@@ -1729,8 +1729,8 @@ Server::preprocessResponseBody(int client_fd, ResType& res_type)
         this->openStaticResource(client_fd);
         break ;
     case ResType::CGI:
-        this->openCGIPipe(client_fd);
-        this->forkAndExecuteCGI(client_fd);
+        this->openCgiPipe(client_fd);
+        this->forkAndExecuteCgi(client_fd);
         this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
         break ;
     default:
@@ -1827,9 +1827,9 @@ Server::processResponseBody(int client_fd)
 }
 
 void
-Server::openCGIPipe(int client_fd)
+Server::openCgiPipe(int client_fd)
 {
-    Log::trace("> openCGIPipe", 1);
+    Log::trace("> openCgiPipe", 1);
     timeval from;
     gettimeofday(&from, NULL);
     
@@ -1850,24 +1850,24 @@ Server::openCGIPipe(int client_fd)
     Log::openFd(*this, client_fd, FdType::PIPE, read_fd_from_cgi);
     Log::openFd(*this, client_fd, FdType::PIPE, write_fd_to_cgi);
 
-    response.setStdinOfCGI(stdin_of_cgi);
-    response.setStdoutOfCGI(stdout_of_cgi);
-    response.setReadFdFromCGI(read_fd_from_cgi);
-    response.setWriteFdToCGI(write_fd_to_cgi);
+    response.setStdinOfCgi(stdin_of_cgi);
+    response.setStdoutOfCgi(stdout_of_cgi);
+    response.setReadFdFromCgi(read_fd_from_cgi);
+    response.setWriteFdToCgi(write_fd_to_cgi);
 
     fcntl(stdin_of_cgi, F_SETFL, O_NONBLOCK);
     fcntl(stdout_of_cgi, F_SETFL, O_NONBLOCK);
     fcntl(read_fd_from_cgi, F_SETFL, O_NONBLOCK);
     fcntl(write_fd_to_cgi, F_SETFL, O_NONBLOCK);
 
-    this->_server_manager->setCGIPipeOnFdTable(read_fd_from_cgi, client_fd);
-    this->_server_manager->setCGIPipeOnFdTable(write_fd_to_cgi, client_fd);
+    this->_server_manager->setCgiPipeOnFdTable(read_fd_from_cgi, client_fd);
+    this->_server_manager->setCgiPipeOnFdTable(write_fd_to_cgi, client_fd);
     this->_server_manager->updateFdMax(read_fd_from_cgi);
     this->_server_manager->updateFdMax(write_fd_to_cgi);
 
     
     Log::printTimeDiff(from, 1);
-    Log::trace("< openCGIPipe", 1);
+    Log::trace("< openCgiPipe", 1);
 }
 
 bool
@@ -1943,7 +1943,7 @@ Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
     const std::map<std::string, std::string>& location_info =
         this->getLocationConfig().at(this->_responses[client_fd].getRoute());
 
-    if (!(envp[(*idx)++] = ft::strdup("GATEWAY_INTERFACE=CGI/1.1")))
+    if (!(envp[(*idx)++] = ft::strdup("GATEWAY_INTERFACE=Cgi/1.1")))
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
         return (false);
@@ -1961,9 +1961,9 @@ Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
 }
 
 char**
-Server::makeCGIEnvp(int client_fd)
+Server::makeCgiEnvp(int client_fd)
 {
-    Log::trace("> makeCGIEnvp", 2);
+    Log::trace("> makeCgiEnvp", 2);
     timeval from;
     gettimeofday(&from, NULL);
     
@@ -1988,14 +1988,14 @@ Server::makeCGIEnvp(int client_fd)
 
 
     Log::printTimeDiff(from, 2);
-    Log::trace("< makeCGIEnvp", 2);
+    Log::trace("< makeCgiEnvp", 2);
     return (envp);
 }
 
 char**
-Server::makeCGIArgv(int client_fd)
+Server::makeCgiArgv(int client_fd)
 {
-    Log::trace("> makeCGIArgv", 2);
+    Log::trace("> makeCgiArgv", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -2028,7 +2028,7 @@ Server::makeCGIArgv(int client_fd)
 
     
     Log::printTimeDiff(from, 2);
-    Log::trace("< makeCGIArgv", 2);
+    Log::trace("< makeCgiArgv", 2);
     return (argv);
 }
 
@@ -2040,9 +2040,9 @@ Server::isResponseAllSended(int fd) const
 }
 
 void
-Server::forkAndExecuteCGI(int client_fd)
+Server::forkAndExecuteCgi(int client_fd)
 {
-    Log::trace("> forkAndExecuteCGI", 1);
+    Log::trace("> forkAndExecuteCgi", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -2054,14 +2054,14 @@ Server::forkAndExecuteCGI(int client_fd)
     char** envp;
     Response& response = this->_responses[client_fd];
 
-    stdin_of_cgi = response.getStdinOfCGI();
-    stdout_of_cgi = response.getStdoutOfCGI();
-    if (!(argv = this->makeCGIArgv(client_fd)))
+    stdin_of_cgi = response.getStdinOfCgi();
+    stdout_of_cgi = response.getStdoutOfCgi();
+    if (!(argv = this->makeCgiArgv(client_fd)))
     {
         ft::doubleFree(&argv);
         throw (InternalServerException(this->_responses[client_fd]));
     }
-    if (!(envp = this->makeCGIEnvp(client_fd)))
+    if (!(envp = this->makeCgiEnvp(client_fd)))
     {
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
@@ -2071,8 +2071,8 @@ Server::forkAndExecuteCGI(int client_fd)
         throw (InternalServerException(this->_responses[client_fd]));
     else if (pid == 0)
     {
-        close(response.getWriteFdToCGI());
-        close(response.getReadFdFromCGI());
+        close(response.getWriteFdToCgi());
+        close(response.getReadFdFromCgi());
         if (dup2(stdin_of_cgi, 0) < 0)
             throw (InternalServerException(this->_responses[client_fd]));
         if (dup2(stdout_of_cgi, 1) < 0)
@@ -2085,13 +2085,13 @@ Server::forkAndExecuteCGI(int client_fd)
     {
         close(stdin_of_cgi);
         close(stdout_of_cgi);
-        response.setCGIPid(pid);
+        response.setCgiPid(pid);
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
-        this->_server_manager->fdSet(response.getWriteFdToCGI(), FdSet::WRITE);
+        this->_server_manager->fdSet(response.getWriteFdToCgi(), FdSet::WRITE);
     }
     Log::printTimeDiff(from, 1);
-    Log::trace("< forkAndExecuteCGI", 1);
+    Log::trace("< forkAndExecuteCgi", 1);
 }
 
 void
@@ -2100,7 +2100,7 @@ Server::finishSendDataToCgiPipe(int write_fd_to_cgi)
     this->_server_manager->closeCgiWritePipe(*this, write_fd_to_cgi);
 
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
-    this->_server_manager->fdSet(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ);
+    this->_server_manager->fdSet(this->_responses[client_fd].getReadFdFromCgi(), FdSet::READ);
 }
 
 void
@@ -2110,12 +2110,12 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
 
-    waitpid(response.getCGIPid(), &status, 0);
+    waitpid(response.getCgiPid(), &status, 0);
 
     this->_server_manager->closeCgiReadPipe(*this, read_fd_from_cgi);
 
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-    response.setReadFdFromCGI(DEFAULT_FD);
+    response.setReadFdFromCgi(DEFAULT_FD);
     response.setReceiveProgress(ReceiveProgress::FINISH);
 }
 

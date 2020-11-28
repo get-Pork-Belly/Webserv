@@ -271,7 +271,7 @@ Log::resTypeToString(const ResType& type)
         return ("STATIC_RESOURCE");
 
     case ResType::CGI:
-        return ("CGI");
+        return ("Cgi");
 
     case ResType::AUTO_INDEX:
         return ("AUTO_INDEX");
