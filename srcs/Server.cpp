@@ -380,6 +380,17 @@ Server::isNotYetSetTargetChunkSize(int fd)
     return (this->_requests[fd].getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE);
 }
 
+void
+Server::findCRLFInChunkSize(int fd, const std::string& buf)
+{
+    size_t index_of_crlf;
+
+    if ((index_of_crlf = buf.find("\r\n")) != std::string::npos)
+        this->_requests[fd].setIndexOfCRLFInChunkSize(index_of_crlf);
+    else
+        throw (Request::RequestFormatException(this->_requests[fd], "400"));
+}
+
 int
 Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
 {
@@ -730,11 +741,9 @@ Server::receiveRequestChunkedBody(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-
     int bytes;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
-    size_t index_of_crlf;
 
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
@@ -742,12 +751,7 @@ Server::receiveRequestChunkedBody(int client_fd)
         if (this->isExistCRLFInChunkSize(client_fd))
             this->receiveChunkSize(client_fd, request.getIndexOfCRLFInChunkSize());
         else if (this->isNotYetSetTargetChunkSize(client_fd))
-        {
-            if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
-                this->_requests[client_fd].setIndexOfCRLFInChunkSize(index_of_crlf);
-            else
-                throw (Request::RequestFormatException(request, "400"));
-        }
+            this->findCRLFInChunkSize(client_fd, buf);
         else if (request.getTargetChunkSize() == 0)
             this->receiveLastChunkData(client_fd);
         else
