@@ -404,6 +404,12 @@ Server::calculateReceiveTargetSizeOfChunkData(int fd)
             this->_requests[fd].getTargetChunkSize() + CRLF_SIZE - this->_requests[fd].getReceivedChunkDataLength()));
 }
 
+bool
+Server::isReceivedChunkDataToTheEnd(int fd)
+{
+    return ((this->_requests[fd].getTargetChunkSize() + CRLF_SIZE == this->_requests[fd].getReceivedChunkDataLength()));
+}
+
 int
 Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
 {
@@ -772,7 +778,7 @@ Server::receiveRequestChunkedBody(int client_fd)
             int receive_target_size = this->calculateReceiveTargetSizeOfChunkData(client_fd);
             this->receiveChunkData(client_fd, receive_target_size);
 
-            if (request.getTargetChunkSize() + CRLF_SIZE == request.getReceivedChunkDataLength())
+            if (this->isReceivedChunkDataToTheEnd(client_fd))
             {
                 request.setReceivedChunkDataLength(0);
                 request.setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
