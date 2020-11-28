@@ -417,6 +417,23 @@ Server::prepareReceiveNextChunkSize(int fd)
     this->_requests[fd].setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
 }
 
+void
+Server::prepareReceiveNextChunkData(int fd)
+{
+    this->_requests[fd].setIndexOfCRLFInChunkSize(-1);
+    this->_requests[fd].setChunkSize("");
+    this->_requests[fd].setReceivedChunkSizeLength(0);
+}
+
+void
+Server::completeChunkSequence(int fd)
+{
+    this->_requests[fd].setRecvRequest(RecvRequest::COMPLETE);
+    this->_requests[fd].setLastChunkData("");
+    this->_requests[fd].setReceivedLastChunkDataLength(0);
+    this->_requests[fd].setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
+}
+
 int
 Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
 {
@@ -627,9 +644,7 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
         {
             request.appendChunkSize(buf, bytes);
             request.parseTargetChunkSize(request.getChunkSize());
-            request.setIndexOfCRLFInChunkSize(-1);
-            request.setChunkSize("");
-            request.setReceivedChunkSizeLength(0);
+            this->prepareReceiveNextChunkData(client_fd);
         }
         else
             request.appendChunkSize(buf, bytes);
@@ -701,12 +716,7 @@ Server::receiveLastChunkData(int client_fd)
                 throw (Request::RequestFormatException(request, "400"));
             request.appendLastChunkData(buf, bytes);
             if (request.getLastChunkData().compare("\r\n") == 0)
-            {
-                request.setRecvRequest(RecvRequest::COMPLETE);
-                request.setLastChunkData("");
-                request.setReceivedLastChunkDataLength(0);
-                request.setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
-            }
+                this->completeChunkSequence(client_fd);
             else
                 throw (Request::RequestFormatException(request, "400"));
         }

@@ -148,6 +148,8 @@ public:
     int calculateReceiveTargetSizeOfChunkData(int fd);
     bool isReceivedChunkDataToTheEnd(int fd);
     void prepareReceiveNextChunkSize(int fd);
+    void prepareReceiveNextChunkData(int fd);
+    void completeChunkSequence(int fd);
 
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
