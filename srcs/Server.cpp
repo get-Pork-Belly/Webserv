@@ -617,8 +617,7 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
 
     int received_chunk_size_length = request.getReceivedChunkSizeLength();
 
-    // if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
-    if ((bytes = recv(client_fd, buf, 1, 0)) > 0)
+    if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
     {
         buf[bytes] = 0;
         received_chunk_size_length += bytes;
@@ -626,7 +625,7 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
 
         if (received_chunk_size_length == static_cast<int>(index_of_crlf) + CRLF_SIZE)
         {
-            request.appendChunkSize(buf, bytes); //NOTE: CRLF가 포함된 버퍼가 stoiHex로 들어가도 문제없음 확인
+            request.appendChunkSize(buf, bytes);
             request.parseTargetChunkSize(request.getChunkSize());
             request.setIndexOfCRLFInChunkSize(-1);
             request.setChunkSize("");
@@ -644,8 +643,6 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
     Log::trace("< receiveChunkSize", 1);
 }
 
-// bool flag;
-
 void
 Server::receiveChunkData(int client_fd, int receive_size)
 {
@@ -658,50 +655,14 @@ Server::receiveChunkData(int client_fd, int receive_size)
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, receive_size, 0)) > 0)
     {
         buf[bytes] = 0;
-        // readed_bytes += bytes;
-        // std::cout<<"\033[1;33m"<<"in receiveChunkData bytes: "<<bytes<<"\033[0m"<<std::endl;
-        // std::cout<<"\033[1;33m"<<"in receiveChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.setReceivedChunkDataLength(request.getReceivedChunkDataLength() + bytes);
         request.parseChunkData(buf, bytes);
-        // request.setRemainedChunkDataSize(receive_size - bytes);
-        // if (flag == true)
-        // {
-        //     std::cout << "\033[33m\033[01m";
-        // std::cout << "===============================================" << std::endl;
-        //     std::cout << "bytes: " << bytes << std::endl;
-        //     std::cout << "receive_target size: " << receive_size << std::endl;
-        //     std::cout << "target_chunk_size: " << request.getTargetChunkSize() << std::endl;
-        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataLength() << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "\033[0m";
-        //     flag = false;
-        // }
-
-        // std::cout << "\033[35m\033[01m";
-        // if (bytes != receive_size)
-        // {
-        // std::cout << "===============================================" << std::endl;
-        //     std::cout << "bytes: " << bytes << std::endl;
-        //     std::cout << "receive size: " << receive_size << std::endl;
-        //     std::cout << "target_chunk_size: " << request.getTargetChunkSize() << std::endl;
-        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataLength() << std::endl;
-        // std::cout << "request body len: " << request.getBody().length() << std::endl;
-        // std::cout << "next target: " << receive_size - bytes << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // flag = true;
-        // // sleep(100);
-        // }
-        // std::cout << "\033[0m";
     }
     else if (bytes == 0)
-    {
-        // std::cout<<"\033[1;31m"<<"received Bytes: 0"<<"\033[0m"<<std::endl;
         this->closeClientSocket(client_fd);
-    }
     else
         throw (UnchunkedErrorException());
 
@@ -723,8 +684,7 @@ Server::receiveLastChunkData(int client_fd)
 
     int received_last_chunk_data_length = request.getReceivedLastChunkDataLength();
 
-    // bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0);
-    bytes = recv(client_fd, buf, 1, 0);
+    bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0);
     if (bytes > 0)
     {
         buf[bytes] = 0;
