@@ -1302,49 +1302,30 @@ Server::run(int fd)
                     if (this->_responses[fd].getSendProgress() != SendProgress::SENDING)
                         this->makeResponseMessage(fd);
                     this->sendResponse(fd);
-                    // 34 CLIENT -> CGI
                     if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
                     {
-                        // STATIC, CGI
-                std::cout<<"\033[41;1;97m"<<fd<<" in run cleared 1!!!"<<"\033[0m"<<std::endl;
                         this->_server_manager->fdClr(fd, FdSet::WRITE);
-                        if (this->_responses[fd].getResourceFd() != DEFAULT_FD) // STATIC
+                        if (this->_responses[fd].getResourceFd() != DEFAULT_FD)
                             this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
-                        else // CGI
+                        else
                         {
                             if (this->_responses[fd].getWriteFdToCGI() == DEFAULT_FD)
                                 this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
                             else
-                            {
-                                // if (this->_server_manager->getFdType(this->_responses[fd].getWriteFdToCGI()) != FdType::CLOSED)
                                 this->_server_manager->fdSet(this->_responses[fd].getWriteFdToCGI(), FdSet::WRITE);
-                            }
-                            // FdType type = this->_server_manager->getFdType(this->_responses[fd].getWriteFdToCGI());
-                            // if (type != FdType::CLOSED && type != FdType::RESOURCE)
-                            //
-                            // if (type != FdType::CLOSED)
-                                // this->_server_manager->fdSet(this->_responses[fd].getWriteFdToCGI(), FdSet::WRITE);
-                            // else
-                            //     this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
                         }
                     }
                     if (this->isResponseAllSended(fd))
                     {
                         if (this->_responses[fd].getStatusCode()[0] != '2')
                         {
-                std::cout<<"\033[41;1;97m"<<fd<<" in run isResponseAllSended cleared 1!!!"<<"\033[0m"<<std::endl;
                             this->_server_manager->fdClr(fd, FdSet::WRITE);
                             this->_responses[fd].init();
                             this->closeClientSocket(fd);
                         }
                         else
                         {
-                std::cout<<"\033[41;1;97m"<<fd<<" in run isResponseAllSended cleared 2!!!"<<"\033[0m"<<std::endl;
                             this->_server_manager->fdClr(fd, FdSet::WRITE);
-                            std::cout<<"\033[41;1;97m"<<"=============================="<<"\033[0m"<<std::endl;
-                            std::cout<<"\033[41;1;97m"<<"=============================="<<"\033[0m"<<std::endl;
-                            std::cout<<"\033[41;1;97m"<<"========== read set set again ==============="<<"\033[0m"<<std::endl;
-                            std::cout<<"\033[41;1;97m"<<"=============================="<<"\033[0m"<<std::endl;
                             this->_server_manager->fdSet(fd, FdSet::READ);
                             this->_requests[fd].init();
                             this->_responses[fd].init();
@@ -1359,7 +1340,6 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
-                // fd -> write_fd_to_cgi
                 if (this->isCGIWritePipe(fd))
                 {
                     int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
@@ -1402,10 +1382,6 @@ Server::run(int fd)
                     Log::getRequest(*this, fd);
                     if (this->_requests[fd].getRecvRequest() == RecvRequest::COMPLETE)
                     {
-                        std::cout << fd << " run READ sequenct recvReqeust == RecvRequest" << std::endl;
-                        
-                        // send하고, connection header가 close면, 바로 client_socket close
-                        //           아니라면 "FdSet::READ가 셋되어아하고," 이후 recv 한번 더 해서 recv == 0 close
                         this->_server_manager->fdClr(fd, FdSet::READ);
                         this->processResponseBody(fd);
                     }
@@ -1475,20 +1451,18 @@ Server::closeFdAndSetClientOnWriteFdSet(int fd)
 {
     const FdType& type = this->_server_manager->getFdTable()[fd].first; 
     int client_socket = this->_server_manager->getFdTable()[fd].second;
-    Log::closeFd(*this, client_socket, type, fd);
 
-                std::cout<<"\033[41;1;97m"<<fd<<" in closeFdAndSetClientOnWriteFdSet cleared!!!"<<"\033[0m"<<std::endl;
     this->_server_manager->fdClr(fd, FdSet::READ);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
     this->_server_manager->fdSet(client_socket, FdSet::WRITE);
     close(fd);
+    Log::closeFd(*this, client_socket, type, fd);
 }
 
 void
 Server::closeFdAndUpdateFdTable(int fd, FdSet fd_set)
 {
-                std::cout<<"\033[41;1;97m"<<fd<<" in cliseFdAndUpdateFdTable!!!"<<"\033[0m"<<std::endl;
     this->_server_manager->fdClr(fd, fd_set);
     this->_server_manager->setClosedFdOnFdTable(fd);
     this->_server_manager->updateFdMax(fd);
@@ -1504,12 +1478,10 @@ Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_
 
     
     const FdType& type = this->_server_manager->getFdTable()[clear_fd].first;
-    // Log::closeFd(*this, set_fd, type, clear_fd);
 
     int client_socket = this->_server_manager->getFdTable()[clear_fd].second;
     Log::closeFd(*this, client_socket, type, clear_fd);
 
-        std::cout<<"\033[41;1;97m"<<clear_fd<<" in closeFdAndSetFd cleared!!!"<<"\033[0m"<<std::endl;
     this->_server_manager->fdClr(clear_fd, clear_fd_set);
     this->_server_manager->setClosedFdOnFdTable(clear_fd);
     this->_server_manager->updateFdMax(clear_fd);
@@ -1880,8 +1852,6 @@ Server::openCGIPipe(int client_fd)
     int write_fd_to_cgi = pipe1[1];
     Log::openFd(*this, client_fd, FdType::PIPE, read_fd_from_cgi);
     Log::openFd(*this, client_fd, FdType::PIPE, write_fd_to_cgi);
-
-// Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
 
     response.setStdinOfCGI(stdin_of_cgi);
     response.setStdoutOfCGI(stdout_of_cgi);
