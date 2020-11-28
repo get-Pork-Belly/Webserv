@@ -28,7 +28,7 @@ private:
     std::string _remote_ident;
     std::string _auth_type;
     int _target_chunk_size;
-    int _received_chunk_data_size;
+    int _received_chunk_data_length;
 
     int _recv_counts;
     bool _carriege_return_trimmed;
@@ -59,7 +59,7 @@ public:
     const std::string& getRemoteUser() const;
     const std::string& getRemoteIdent() const;
     int getTargetChunkSize() const;
-    int getReceivedChunkDataSize() const;
+    int getReceivedChunkDataLength() const;
     bool getCarriegeReturnTrimmed() const;
 
     int getReceiveCounts() const;
@@ -80,7 +80,7 @@ public:
     void setRemoteUser(const std::string& remote_user);
     void setRemoteIdent(const std::string& remote_ident);
     void setTargetChunkSize(const int target_size);
-    void setReceivedChunkDataSize(const int received_chunk_data_size);
+    void setReceivedChunkDataLength(const int received_chunk_data_length);
 
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);

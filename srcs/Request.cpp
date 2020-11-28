@@ -15,7 +15,7 @@ Request::Request()
 _protocol(""), _body(""), _status_code("200"),
 _info(RecvRequest::REQUEST_LINE), _ip_address(""),
 _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
-_received_chunk_data_size(0), _recv_counts(0),
+_received_chunk_data_length(0), _recv_counts(0),
 _carriege_return_trimmed(false), _temp_buffer("")
  {}
 
@@ -26,7 +26,7 @@ _protocol(other._protocol), _body(other._body),
 _status_code(other._status_code), _info(other._info),
 _ip_address(other._ip_address), _transfered_body_size(other._transfered_body_size),
 _target_chunk_size(other._target_chunk_size),
-_received_chunk_data_size(other._received_chunk_data_size), _recv_counts(other._recv_counts),
+_received_chunk_data_length(other._received_chunk_data_length), _recv_counts(other._recv_counts),
 _carriege_return_trimmed(other._carriege_return_trimmed), _temp_buffer(other._temp_buffer)
 {}
 
@@ -44,7 +44,7 @@ Request::operator=(const Request& other)
     this->_ip_address = other._ip_address;
     this->_transfered_body_size = other._transfered_body_size;
     this->_target_chunk_size = other._target_chunk_size;
-    this->_received_chunk_data_size = other._received_chunk_data_size;
+    this->_received_chunk_data_length = other._received_chunk_data_length;
     this->_recv_counts = other._recv_counts;
     this->_carriege_return_trimmed = other._carriege_return_trimmed;
     this->_temp_buffer = other._temp_buffer;
@@ -146,9 +146,9 @@ Request::getTargetChunkSize() const
 }
 
 int
-Request::getReceivedChunkDataSize() const
+Request::getReceivedChunkDataLength() const
 {
-    return (this->_received_chunk_data_size);
+    return (this->_received_chunk_data_length);
 }
 
 int
@@ -258,9 +258,9 @@ Request::setTargetChunkSize(const int target_size)
 }
 
 void
-Request::setReceivedChunkDataSize(const int received_chunk_data_size)
+Request::setReceivedChunkDataLength(const int received_chunk_data_length)
 {
-    this->_received_chunk_data_size = received_chunk_data_size;
+    this->_received_chunk_data_length = received_chunk_data_length;
 }
 
 void
@@ -607,7 +607,7 @@ Request::init()
     this->_ip_address = "";
     this->_transfered_body_size = 0;
     this->_target_chunk_size = DEFAULT_TARGET_CHUNK_SIZE;
-    this->_received_chunk_data_size = 0;
+    this->_received_chunk_data_length = 0;
     this->_carriege_return_trimmed = false;
     this->_recv_counts = 0;
     this->_temp_buffer = "";

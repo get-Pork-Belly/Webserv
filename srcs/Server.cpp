@@ -615,7 +615,7 @@ Server::receiveChunkData(int client_fd, int receive_size)
         // readed_bytes += bytes;
         // std::cout<<"\033[1;33m"<<"in receiveChunkData bytes: "<<bytes<<"\033[0m"<<std::endl;
         // std::cout<<"\033[1;33m"<<"in receiveChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        request.setReceivedChunkDataSize(request.getReceivedChunkDataSize() + bytes);
+        request.setReceivedChunkDataLength(request.getReceivedChunkDataLength() + bytes);
         request.parseChunkData(buf, bytes);
         // request.setRemainedChunkDataSize(receive_size - bytes);
         // if (flag == true)
@@ -625,7 +625,7 @@ Server::receiveChunkData(int client_fd, int receive_size)
         //     std::cout << "bytes: " << bytes << std::endl;
         //     std::cout << "receive_target size: " << receive_size << std::endl;
         //     std::cout << "target_chunk_size: " << request.getTargetChunkSize() << std::endl;
-        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataSize() << std::endl;
+        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataLength() << std::endl;
         // std::cout << "===============================================" << std::endl;
         // std::cout << "\033[0m";
         //     flag = false;
@@ -638,7 +638,7 @@ Server::receiveChunkData(int client_fd, int receive_size)
         //     std::cout << "bytes: " << bytes << std::endl;
         //     std::cout << "receive size: " << receive_size << std::endl;
         //     std::cout << "target_chunk_size: " << request.getTargetChunkSize() << std::endl;
-        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataSize() << std::endl;
+        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataLength() << std::endl;
         // std::cout << "request body len: " << request.getBody().length() << std::endl;
         // std::cout << "next target: " << receive_size - bytes << std::endl;
         // std::cout << "===============================================" << std::endl;
@@ -749,12 +749,12 @@ Server::receiveRequestChunkedBody(int client_fd)
             this->receiveLastChunkData(client_fd);
     else
         {
-            int receive_target_size = std::min(RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() + CRLF_SIZE - request.getReceivedChunkDataSize());
+            int receive_target_size = std::min(RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() + CRLF_SIZE - request.getReceivedChunkDataLength());
             this->receiveChunkData(client_fd, receive_target_size);
 
-            if (request.getTargetChunkSize() + CRLF_SIZE == request.getReceivedChunkDataSize())
+            if (request.getTargetChunkSize() + CRLF_SIZE == request.getReceivedChunkDataLength())
             {
-                request.setReceivedChunkDataSize(0);
+                request.setReceivedChunkDataLength(0);
                 request.setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
             }
         }
