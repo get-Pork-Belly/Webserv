@@ -79,6 +79,9 @@ public:
     void initServers();
     bool runServers();
     void closeUnresponsiveClient();
+    void closeCgiWritePipe(Server& server, int pipe_fd);
+    void closeCgiReadPipe(Server& server, int pipe_fd);
+    void closeStaticResource(Server& server, int resource_fd);
     //TODO 구현 필요
     // void exitServers();
 

@@ -280,9 +280,9 @@ ServerManager::runServers()
     {
         this->closeUnresponsiveClient();
 
-        std::cout<<"\033[1;44;37m"<<"BEFORE select!"<<"\033[0m"<<std::endl;
-        Log::printFdCopySets(*this, 10);
-        Log::printFdSets(*this, 10);
+        // std::cout<<"\033[1;44;37m"<<"BEFORE select!"<<"\033[0m"<<std::endl;
+        // Log::printFdCopySets(*this, 10);
+        // Log::printFdSets(*this, 10);
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
@@ -300,9 +300,9 @@ ServerManager::runServers()
         }
         else
         {
-        std::cout<<"\033[1;44;37m"<<"After select!"<<"\033[0m"<<std::endl;
-        Log::printFdCopySets(*this, 10);
-        Log::printFdSets(*this, 10);
+        // std::cout<<"\033[1;44;37m"<<"After select!"<<"\033[0m"<<std::endl;
+        // Log::printFdCopySets(*this, 10);
+        // Log::printFdSets(*this, 10);
             for (int fd = 0; fd < this->getFdMax() + 1; fd++)
             {
                 if (this->fdIsCopySet(fd, FdSet::ALL))
@@ -398,6 +398,45 @@ ServerManager::closeUnresponsiveClient()
         else
             this->monitorTimeOutOff(fd);
     }
+}
+
+void
+ServerManager::closeCgiWritePipe(Server& server, int write_fd_to_cgi)
+{
+    int client_fd = this->getLinkedFdFromFdTable(write_fd_to_cgi);
+    server.getResponse(client_fd).setWriteFdToCGI(DEFAULT_FD);
+    this->fdClr(write_fd_to_cgi, FdSet::READ);
+    this->fdClr(write_fd_to_cgi, FdSet::WRITE);
+    this->setClosedFdOnFdTable(write_fd_to_cgi);
+    close(write_fd_to_cgi);
+    this->updateFdMax(write_fd_to_cgi);
+    Log::closeFd(FdType::PIPE, write_fd_to_cgi);
+}
+
+void
+ServerManager::closeCgiReadPipe(Server& server, int read_fd_from_cgi)
+{
+    int client_fd = this->getLinkedFdFromFdTable(read_fd_from_cgi);
+    server.getResponse(client_fd).setReadFdFromCGI(DEFAULT_FD);
+    this->fdClr(read_fd_from_cgi, FdSet::READ);
+    this->fdClr(read_fd_from_cgi, FdSet::WRITE);
+    this->setClosedFdOnFdTable(read_fd_from_cgi);
+    close(read_fd_from_cgi);
+    this->updateFdMax(read_fd_from_cgi);
+    Log::closeFd(FdType::PIPE, read_fd_from_cgi);
+}
+
+void
+ServerManager::closeStaticResource(Server& server, int resource_fd)
+{
+    int client_fd = this->getLinkedFdFromFdTable(resource_fd);
+    server.getResponse(client_fd).setResourceFd(DEFAULT_FD);
+    this->fdClr(resource_fd, FdSet::READ);
+    this->fdClr(resource_fd, FdSet::WRITE);
+    this->setClosedFdOnFdTable(resource_fd);
+    close(resource_fd);
+    this->updateFdMax(resource_fd);
+    Log::closeFd(FdType::RESOURCE, resource_fd);
 }
 
 // void
