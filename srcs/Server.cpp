@@ -680,10 +680,7 @@ Server::receiveLastChunkData(int client_fd)
         // readed_bytes += bytes;
         // std::cout<<"\033[1;33m"<<"in receiveLastChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         if (bytes != CRLF_SIZE)
-        {
-            request.setIsBufferLeft(true);
             throw (Request::RequestFormatException(request, "400"));
-        }
         if (std::string(buf).compare("\r\n") == 0)
         {
             request.setRecvRequest(RecvRequest::COMPLETE);

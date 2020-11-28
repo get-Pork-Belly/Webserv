@@ -22,7 +22,6 @@ private:
     std::string _body;
     std::string _status_code;
     RecvRequest _info;
-    bool _is_buffer_left;
     std::string _ip_address;
     int _transfered_body_size;
     std::string _remote_user;
@@ -53,7 +52,6 @@ public:
     const std::string& getBody() const;
     const std::string& getStatusCode() const;
     const RecvRequest& getRecvRequest() const;
-    bool getIsBufferLeft() const;
     const std::string& getIpAddress() const;
     int getContentLength() const;
     int getTransferedBodySize() const;
@@ -76,7 +74,6 @@ public:
     void setBody(const std::string& body);
     void setStatusCode(const std::string& code);
     void setRecvRequest(const RecvRequest& info);
-    void setIsBufferLeft(const bool& is_left_buffer);
     void setIpAddress(const std::string& ip_address);
     void setTransferedBodySize(const int transfered_body_size);
     void setAuthType(const std::string& auth_type);
@@ -99,7 +96,6 @@ public:
     bool isBodyUnnecessary() const;
     bool isNormalBody() const;
     bool isChunkedBody() const;
-    bool isContentLeftInBuffer() const;
 
     int peekMessageFromClient(int client_fd, char* buf);
     void raiseRecvCounts();
