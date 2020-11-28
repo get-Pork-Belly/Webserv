@@ -411,14 +411,14 @@ Server::isReceivedChunkDataToTheEnd(int fd)
 }
 
 void
-Server::prepareReceiveNextChunkSize(int fd)
+Server::prepareToReceiveNextChunkSize(int fd)
 {
     this->_requests[fd].setReceivedChunkDataLength(0);
     this->_requests[fd].setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
 }
 
 void
-Server::prepareReceiveNextChunkData(int fd)
+Server::prepareToReceiveNextChunkData(int fd)
 {
     this->_requests[fd].setIndexOfCRLFInChunkSize(DEFAULT_INDEX_OF_CRLF);
     this->_requests[fd].setChunkSize("");
@@ -645,7 +645,7 @@ Server::receiveChunkSize(int client_fd)
         {
             request.appendChunkSize(buf, bytes);
             request.parseTargetChunkSize(request.getChunkSize());
-            this->prepareReceiveNextChunkData(client_fd);
+            this->prepareToReceiveNextChunkData(client_fd);
         }
         else
             request.appendChunkSize(buf, bytes);
@@ -756,7 +756,7 @@ Server::receiveRequestChunkedBody(int client_fd)
             int receive_target_size = this->calculateReceiveTargetSizeOfChunkData(client_fd);
             this->receiveChunkData(client_fd, receive_target_size);
             if (this->isReceivedChunkDataToTheEnd(client_fd))
-                this->prepareReceiveNextChunkSize(client_fd);
+                this->prepareToReceiveNextChunkSize(client_fd);
         }
     }
     else if (bytes == RECV_COUNT_NOT_REACHED)

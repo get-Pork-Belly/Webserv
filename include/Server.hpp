@@ -148,8 +148,8 @@ public:
     bool isLastSequenceOfParsingChunk(int fd);
     int calculateReceiveTargetSizeOfChunkData(int fd);
     bool isReceivedChunkDataToTheEnd(int fd);
-    void prepareReceiveNextChunkSize(int fd);
-    void prepareReceiveNextChunkData(int fd);
+    void prepareToReceiveNextChunkSize(int fd);
+    void prepareToReceiveNextChunkData(int fd);
     void finishChunkSequence(int fd);
 
 public:
