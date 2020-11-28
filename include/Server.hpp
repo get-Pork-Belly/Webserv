@@ -24,6 +24,7 @@ const int RECEIVE_SOCKET_STREAM_SIZE = 65536;
 const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
 const int DEFAULT_TARGET_CHUNK_SIZE = -2;
+const int DEFAULT_INDEX_OF_CRLF = -1;
 const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
 const int DEFAULT_FD = -1;
@@ -138,9 +139,18 @@ public:
     bool isCGIReadPipe(int fd) const;
     bool isCGIWritePipe(int fd) const;
 
-    void receiveChunkSize(int fd, size_t index_of_crlf);
+    void receiveChunkSize(int fd);
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
+    bool isExistCRLFInChunkSize(int fd);
+    bool isNotYetSetTargetChunkSize(int fd);
+    void findCRLFInChunkSize(int fd, const std::string& buf);
+    bool isLastSequenceOfParsingChunk(int fd);
+    int calculateReceiveTargetSizeOfChunkData(int fd);
+    bool isChunkDataAllReceived(int fd);
+    void prepareToReceiveNextChunkSize(int fd);
+    void prepareToReceiveNextChunkData(int fd);
+    void finishChunkSequence(int fd);
 
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException

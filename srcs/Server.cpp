@@ -368,6 +368,72 @@ Server::init()
     this->_server_manager->updateFdMax(this->_server_socket);
 }
 
+bool
+Server::isExistCRLFInChunkSize(int fd)
+{
+    return (this->_requests[fd].getIndexOfCRLFInChunkSize() != DEFAULT_INDEX_OF_CRLF);
+}
+
+bool
+Server::isNotYetSetTargetChunkSize(int fd)
+{
+    return (this->_requests[fd].getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE);
+}
+
+void
+Server::findCRLFInChunkSize(int fd, const std::string& buf)
+{
+    size_t index_of_crlf;
+
+    if ((index_of_crlf = buf.find("\r\n")) != std::string::npos)
+        this->_requests[fd].setIndexOfCRLFInChunkSize(index_of_crlf);
+    else
+        throw (Request::RequestFormatException(this->_requests[fd], "400"));
+}
+
+bool
+Server::isLastSequenceOfParsingChunk(int fd)
+{
+    return (this->_requests[fd].getTargetChunkSize() == 0);
+}
+
+int
+Server::calculateReceiveTargetSizeOfChunkData(int fd)
+{
+    return (std::min(RECEIVE_SOCKET_STREAM_SIZE,
+            this->_requests[fd].getTargetChunkSize() + CRLF_SIZE - this->_requests[fd].getReceivedChunkDataLength()));
+}
+
+bool
+Server::isChunkDataAllReceived(int fd)
+{
+    return ((this->_requests[fd].getTargetChunkSize() + CRLF_SIZE == this->_requests[fd].getReceivedChunkDataLength()));
+}
+
+void
+Server::prepareToReceiveNextChunkSize(int fd)
+{
+    this->_requests[fd].setReceivedChunkDataLength(0);
+    this->_requests[fd].setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
+}
+
+void
+Server::prepareToReceiveNextChunkData(int fd)
+{
+    this->_requests[fd].setIndexOfCRLFInChunkSize(DEFAULT_INDEX_OF_CRLF);
+    this->_requests[fd].setChunkSize("");
+    this->_requests[fd].setReceivedChunkSizeLength(0);
+}
+
+void
+Server::finishChunkSequence(int fd)
+{
+    this->_requests[fd].setRecvRequest(RecvRequest::COMPLETE);
+    this->_requests[fd].setLastChunkData("");
+    this->_requests[fd].setReceivedLastChunkDataLength(0);
+    this->_requests[fd].setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
+}
+
 int
 Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
 {
@@ -556,45 +622,42 @@ Server::receiveRequestNormalBody(int client_fd)
 }
 
 void
-Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
+Server::receiveChunkSize(int client_fd)
 {
     Log::trace("> receiveChunkSize", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
-
     int bytes;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    // std::cout<<"\033[1;31m"<<"index_of_crlf: "<<index_of_crlf<<"\033[0m"<<std::endl;
-    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    int index_of_crlf = request.getIndexOfCRLFInChunkSize();
+    int received_chunk_size_length = request.getReceivedChunkSizeLength();
+
     if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
     {
-        // readed_bytes += bytes;
-        // std::cout<<"\033[1;33m"<<"in receiveChunkSize readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        request.parseTargetChunkSize(std::string(buf, bytes - CRLF_SIZE));
-        // std::cout << "\033[36m\033[01m";
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "client fd: " << client_fd << std::endl;
-        // std::cout << "chunk size: " << ft::stoiHex(std::string(buf, bytes - CRLF_SIZE)) << std::endl;
-        // std::cout << "buf: " << std::string(buf, bytes) << "|"<<std::endl;
-        // std::cout << "bytes: " << bytes << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "\033[0m";
-        // std::cout<<"\033[1;34m"<<"TargetChunkSize: "<<request.getTargetChunkSize()<<"\033[0m"<<std::endl;
+        buf[bytes] = 0;
+        received_chunk_size_length += bytes;
+        request.setReceivedChunkSizeLength(received_chunk_size_length);
+
+        if (received_chunk_size_length == static_cast<int>(index_of_crlf) + CRLF_SIZE)
+        {
+            request.appendChunkSize(buf, bytes);
+            request.parseTargetChunkSize(request.getChunkSize());
+            this->prepareToReceiveNextChunkData(client_fd);
+        }
+        else
+            request.appendChunkSize(buf, bytes);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
         throw (UnchunkedErrorException());
 
-
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkSize", 1);
 }
-
-// bool flag;
 
 void
 Server::receiveChunkData(int client_fd, int receive_size)
@@ -608,57 +671,20 @@ Server::receiveChunkData(int client_fd, int receive_size)
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
     if ((bytes = recv(client_fd, buf, receive_size, 0)) > 0)
     {
         buf[bytes] = 0;
-        // readed_bytes += bytes;
-        // std::cout<<"\033[1;33m"<<"in receiveChunkData bytes: "<<bytes<<"\033[0m"<<std::endl;
-        // std::cout<<"\033[1;33m"<<"in receiveChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        request.setReceivedChunkDataSize(request.getReceivedChunkDataSize() + bytes);
+        request.setReceivedChunkDataLength(request.getReceivedChunkDataLength() + bytes);
         request.parseChunkData(buf, bytes);
-        // request.setRemainedChunkDataSize(receive_size - bytes);
-        // if (flag == true)
-        // {
-        //     std::cout << "\033[33m\033[01m";
-        // std::cout << "===============================================" << std::endl;
-        //     std::cout << "bytes: " << bytes << std::endl;
-        //     std::cout << "receive_target size: " << receive_size << std::endl;
-        //     std::cout << "target_chunk_size: " << request.getTargetChunkSize() << std::endl;
-        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataSize() << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "\033[0m";
-        //     flag = false;
-        // }
-
-        // std::cout << "\033[35m\033[01m";
-        // if (bytes != receive_size)
-        // {
-        // std::cout << "===============================================" << std::endl;
-        //     std::cout << "bytes: " << bytes << std::endl;
-        //     std::cout << "receive size: " << receive_size << std::endl;
-        //     std::cout << "target_chunk_size: " << request.getTargetChunkSize() << std::endl;
-        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataSize() << std::endl;
-        // std::cout << "request body len: " << request.getBody().length() << std::endl;
-        // std::cout << "next target: " << receive_size - bytes << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // flag = true;
-        // // sleep(100);
-        // }
-        // std::cout << "\033[0m";
     }
     else if (bytes == 0)
-    {
-        // std::cout<<"\033[1;31m"<<"received Bytes: 0"<<"\033[0m"<<std::endl;
         this->closeClientSocket(client_fd);
-    }
     else
         throw (UnchunkedErrorException());
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkData", 1);
 }
-
 
 void
 Server::receiveLastChunkData(int client_fd)
@@ -667,59 +693,39 @@ Server::receiveLastChunkData(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-
     int bytes = 0;
+    int is_buffer_left = 0;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
+    int received_last_chunk_data_length = request.getReceivedLastChunkDataLength();
+
     bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0);
     if (bytes > 0)
     {
         buf[bytes] = 0;
-        // readed_bytes += bytes;
-        // std::cout<<"\033[1;33m"<<"in receiveLastChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        if (bytes != CRLF_SIZE)
-        {
-            request.setIsBufferLeft(true);
-            throw (Request::RequestFormatException(request, "400"));
-        }
-        if (std::string(buf).compare("\r\n") == 0)
-        {
-            request.setRecvRequest(RecvRequest::COMPLETE);
+        received_last_chunk_data_length += bytes;
+        request.setReceivedLastChunkDataLength(received_last_chunk_data_length);
 
-            // if (request.getBody().length() > 100000000)
-            // {
-            //     std::cout << "body length: " <<request.getBody().length()<< std::endl;
-            //     char content_char = request.getBody()[0];
-            //     for (size_t i = 0; i < request.getBody().length(); i++)
-            //     {
-            //         if (request.getBody()[i] != content_char)
-            //         {
-            //             if (request.getBody()[i] == '\r')
-            //                 std::cout << i << ": " << "CR" << std::endl;
-            //             else if (request.getBody()[i] == '\n')
-            //                 std::cout << i << ": " << "NL" << std::endl;
-            //             else
-            //                 std::cout << i << ": " << request.getBody()[i] << std::endl;
-            //         }
-            //     }
-                // std::cout << "last content[-3]: " << *(request.getBody().end() - 2) << std::endl;
-                // std::cout << "last content[-2]: " << *(request.getBody().end() - 1) << std::endl;
-                // std::cout << "last content[-1]: " << request.getBody().back() << std::endl;
-                // sleep(100);
-            // }
-        }
+        if (received_last_chunk_data_length < CRLF_SIZE)
+            request.appendLastChunkData(buf, bytes);
+        else if (received_last_chunk_data_length > CRLF_SIZE)
+            throw (Request::RequestFormatException(request, "400"));
         else
         {
-            throw (Request::RequestFormatException(request, "400"));
+            if ((is_buffer_left = recv(client_fd, buf, 1, MSG_PEEK)) > 0)
+                throw (Request::RequestFormatException(request, "400"));
+            request.appendLastChunkData(buf, bytes);
+            if (request.getLastChunkData().compare("\r\n") == 0)
+                this->finishChunkSequence(client_fd);
+            else
+                throw (Request::RequestFormatException(request, "400"));
         }
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
         throw (UnchunkedErrorException());
-
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveLastChunkData", 1);
@@ -732,34 +738,25 @@ Server::receiveRequestChunkedBody(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-
     int bytes;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
-    size_t index_of_crlf;
 
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
-        {
-            if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
-                this->receiveChunkSize(client_fd, index_of_crlf);
-            else
-                throw (Request::RequestFormatException(request, "400"));
-        }
-        else if (request.getTargetChunkSize() == 0)
+        if (this->isExistCRLFInChunkSize(client_fd))
+            this->receiveChunkSize(client_fd);
+        else if (this->isNotYetSetTargetChunkSize(client_fd))
+            this->findCRLFInChunkSize(client_fd, buf);
+        else if (this->isLastSequenceOfParsingChunk(client_fd))
             this->receiveLastChunkData(client_fd);
-    else
+        else
         {
-            int receive_target_size = std::min(RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() + CRLF_SIZE - request.getReceivedChunkDataSize());
+            int receive_target_size = this->calculateReceiveTargetSizeOfChunkData(client_fd);
             this->receiveChunkData(client_fd, receive_target_size);
-
-            if (request.getTargetChunkSize() + CRLF_SIZE == request.getReceivedChunkDataSize())
-            {
-                request.setReceivedChunkDataSize(0);
-                request.setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
-            }
+            if (this->isChunkDataAllReceived(client_fd))
+                this->prepareToReceiveNextChunkSize(client_fd);
         }
     }
     else if (bytes == RECV_COUNT_NOT_REACHED)
