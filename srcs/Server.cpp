@@ -1253,17 +1253,13 @@ Server::putFileOnServer(int resource_fd)
         bytes = write(resource_fd, &(body.c_str()[transfered_body_size]), remained);
         if (bytes > 0)
         {
-            if (bytes == remained)
-                this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
             transfered_body_size += bytes;
             request.setTransferedBodySize(transfered_body_size);
+            if (bytes == remained)
+                this->finishPutFileOnServer(resource_fd);
         }
         else if (bytes == 0)
-        {
-            if (remained > 0)
-                throw (InternalServerException(this->_responses[resource_fd]));
-            this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
-        }
+            this->finishPutFileOnServer(resource_fd);
         else
             throw (InternalServerException(this->_responses[resource_fd]));
     }
@@ -1279,7 +1275,6 @@ Server::putFileOnServer(int resource_fd)
         {
             if (remained > 0)
                 throw (InternalServerException(this->_responses[resource_fd]));
-            this->closeFdAndSetFd(resource_fd, FdSet::WRITE, client_fd, FdSet::WRITE);
         }
         else
             throw (InternalServerException(this->_responses[resource_fd]));
@@ -1610,7 +1605,6 @@ Server::readStaticResource(int resource_fd)
         else
         {
             this->_responses[client_socket].setReceiveProgress(ReceiveProgress::ON_GOING);
-            std::cout << resource_fd << "in readStaticResource fd: " << resource_fd << std::endl;
             this->_server_manager->fdClr(resource_fd, FdSet::READ);
             this->_server_manager->fdSet(client_socket, FdSet::WRITE);
         }
@@ -1619,6 +1613,7 @@ Server::readStaticResource(int resource_fd)
         this->finishReadStaticResource(resource_fd);
     else
     {
+        //TODO: exception 손보기
         this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
         throw (InternalServerException(this->_responses[client_socket]));
     }
@@ -2166,4 +2161,12 @@ Server::finishReadStaticResource(int resource_fd)
 
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     this->_responses[client_fd].setReceiveProgress(ReceiveProgress::FINISH);
+}
+void
+Server::finishPutFileOnServer(int resource_fd)
+{
+    int client_fd = this->_server_manager->getLinkedFdFromFdTable(resource_fd);
+
+    this->_server_manager->closeStaticResource(*this, resource_fd);
+    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
 }
