@@ -142,6 +142,9 @@ public:
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
 
+    void finishSendDataToCgiPipe(int write_fd_to_cgi);
+    void finishReceiveDataFromCgiPipe(int read_fd_from_cgi);
+
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
     {

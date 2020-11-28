@@ -1179,36 +1179,22 @@ Server::sendDataToCGI(int write_fd_to_cgi)
 
     int bytes;
 
-
     if ((bytes = write(write_fd_to_cgi, &body.c_str()[transfered_body_size], target_send_data_size)) > 0)
     {
         transfered_body_size += bytes;
         request.setTransferedBodySize(transfered_body_size);
         if (content_length == transfered_body_size)
-        {
-            std::cout << "Debug 1" << std::endl;
-            // fd Table -> 34(STATIC_RESOURce)
-            // 32 client -> response -> readFdFromCGI, (writeFdTOCGI = -3)
-            // 9 client -> OPEN(34)
-            this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-            response.setWriteFdToCGI(DEFAULT_FD);
-        }
+            this->finishSendDataToCgiPipe(write_fd_to_cgi);
         else
         {
-            std::cout << "Debug 2" << std::endl;
             this->_server_manager->fdSet(response.getReadFdFromCGI(), FdSet::READ);
-                std::cout<<"\033[41;1;97m"<<write_fd_to_cgi<<" in sendDataToCGI cleared 1!!!"<<"\033[0m"<<std::endl;
             this->_server_manager->fdClr(write_fd_to_cgi, FdSet::WRITE);
-                std::cout<<"\033[41;1;97m"<<client_fd<<" in sendDataToCGI cleared 2!!!"<<"\033[0m"<<std::endl;
-            this->_server_manager->fdClr(client_fd, FdSet::READ);
+            //TODO: client_fd를 클리어해줘야하는지 체크 안해줘도 될 것 같은데?
+            // this->_server_manager->fdClr(client_fd, FdSet::READ);
         }
     }
     else if (bytes == 0)
-    {
-        std::cout<<"\033[41;1;97m"<<"read fd from cgu: " << response.getReadFdFromCGI()<<"\033[0m"<<std::endl;
-        this->closeFdAndSetFd(write_fd_to_cgi, FdSet::WRITE, response.getReadFdFromCGI(), FdSet::READ);
-        response.setWriteFdToCGI(DEFAULT_FD);
-    }
+        this->finishSendDataToCgiPipe(write_fd_to_cgi);
     else
         throw (InternalServerException(this->_responses[client_fd]));
 
@@ -1226,44 +1212,27 @@ Server::receiveDataFromCGI(int read_fd_from_cgi)
 
     int bytes;
     int client_fd;
-    int status;
 
     client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
 
-    std::cout << "\033[1;34m" << "in receiveData!" << "\033[0m" << std::endl;
     char buf[BUFFER_SIZE + 1];
-    // ft::memset(static_cast<void *>(buf), 0, BUFFER_SIZE + 1);
-    //TODO: usleep 필요 여부와 적정 수치 조정 필요함.
-    // usleep(1000);
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
     if (bytes > 0)
     {
-        std::cout << "\033[1;34m" << "read_fd: " << read_fd_from_cgi << " in receiveData bytes > 0!" << "\033[0m" << std::endl;
         buf[bytes] = 0;
         response.appendBody(buf, bytes);
         if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
             response.preparseCGIMessage();
 
-        std::cout<<"\033[41;1;97m"<<client_fd<<" in receiveDataFromCGI cleared!!!"<<"\033[0m"<<std::endl;
         this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
         response.setReceiveProgress(ReceiveProgress::ON_GOING);
     }
     else if (bytes == 0)
-    {
-        waitpid(response.getCGIPid(), &status, 0);
-        std::cout << "\033[1;34m" << "read_fd: " << read_fd_from_cgi << " receive bytes == 0!" << "\033[0m" << std::endl;
-        this->closeFdAndSetFd(read_fd_from_cgi, FdSet::READ, client_fd, FdSet::WRITE);
-        response.setReadFdFromCGI(DEFAULT_FD);
-        response.setReceiveProgress(ReceiveProgress::FINISH);
-    }
+        this->finishReceiveDataFromCgiPipe(read_fd_from_cgi);
     else
-    {
-        std::cout << "\033[1;34m" << "in receiveData!" << "\033[0m" << std::endl;
         throw (InternalServerException(this->_responses[client_fd]));
-    }
-
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveDataFromCGI", 1);
@@ -1415,15 +1384,6 @@ Server::run(int fd)
             }
             catch(const std::exception& e)
             {
-                if (this->_responses[fd].getResourceFd() != DEFAULT_FD)
-                    this->closeFdAndUpdateFdTable(this->_responses[fd].getResourceFd(), FdSet::READ);
-                else
-                {
-                    if (this->_server_manager->getFdType(this->_responses[fd].getWriteFdToCGI()) != FdType::CLOSED)
-                        this->closeFdAndUpdateFdTable(this->_responses[fd].getWriteFdToCGI(), FdSet::READ);
-                    if (this->_server_manager->getFdType(this->_responses[fd].getReadFdFromCGI()) != FdType::CLOSED)
-                        this->closeFdAndUpdateFdTable(this->_responses[fd].getReadFdFromCGI(), FdSet::READ);
-                }
                 this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
             }
@@ -1493,20 +1453,65 @@ Server::run(int fd)
 void
 Server::closeClientSocket(int client_fd)
 {
-                std::cout<<"\033[41;1;97m"<<client_fd<<" in closeClientSocket cleared!!!"<<"\033[0m"<<std::endl;
+    Response& response = this->_responses[client_fd];
     this->_server_manager->fdClr(client_fd, FdSet::READ);
+    this->_server_manager->fdClr(client_fd, FdSet::WRITE);  //new
     this->_server_manager->setClosedFdOnFdTable(client_fd);
     this->_server_manager->updateFdMax(client_fd);
+
     this->_requests[client_fd].init();
+    if (response.isCgiWritePipeNotClosed())
+        this->_server_manager->closeCgiWritePipe(*this, response.getWriteFdToCGI());
+    if (response.isCgiReadPipeNotClosed())
+        this->_server_manager->closeCgiReadPipe(*this, response.getReadFdFromCGI());
+    if (response.isResourceNotClosed())
+        this->_server_manager->closeStaticResource(*this, response.getResourceFd());
+    response.init();
+
     this->_server_manager->monitorTimeOutOff(client_fd);
     close(client_fd);
     Log::closeClient(*this, client_fd);
 }
 
+// closeClientSocket
+//   1. RDSET
+//   2. WRSET
+//   3. fdTable  close로 초기화
+//   4. updateFdMax
+//   5. Request init              
+        //  5-1) RecvRequest 초기화됨? ㅇㅋ  
+//   6. Response init        ??? 
+        //  6-1) ResType ??
+        //  6-2) SendProgress ??
+        //  6-3) ParseProgress ??
+        //  6-4) ReceiveProgress ??
+//   7. monitorTimeOutOff
+//   8. close
+//   9. Log 찍기
+//   10. Static_resource_fd  ???
+//      10-1) 만약 static_resource_Fd가 열려있으면 닫아줘야하지 않나?
+//      10-2) 만약 static_resource_fd가 닫혀있었으면, 그냥 init
+//   11. pipe_fd    ???
+//      11-1) 만약 pipe_fd가 열려있으면 닫아줘야하지 않나?
+//      11-2) 만약 pipe_fd가 닫혀있었으면, 그냥 init
+
+// closeReadPipeFd - 
+//
+// closeWritePipeFd - sendDataToCGI 종료될 때
+// 1. READ, WRITE - clear
+// 2. fdTable close
+// 3. Update Fd Max
+// 4. write_fd_to_cgi -> DEFAULT_FD
+// 4. read_fd_from_cgi -> FdSet::READ
+// closeWritePipeFd - sendDataToCGI
+
+
+// closeResourceFd - ㅇ
+
 void
 Server::closeFdAndSetClientOnWriteFdSet(int fd)
 {
-    const FdType& type = this->_server_manager->getFdTable()[fd].first;
+    const FdType& type = this->_server_manager->getFdTable()[fd].first; 
     int client_socket = this->_server_manager->getFdTable()[fd].second;
     Log::closeFd(*this, client_socket, type, fd);
 
@@ -2168,4 +2173,29 @@ Server::forkAndExecuteCGI(int client_fd)
     }
     Log::printTimeDiff(from, 1);
     Log::trace("< forkAndExecuteCGI", 1);
+}
+
+void
+Server::finishSendDataToCgiPipe(int write_fd_to_cgi)
+{
+    this->_server_manager->closeCgiWritePipe(*this, write_fd_to_cgi);
+
+    int client_fd = this->_server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
+    this->_server_manager->fdSet(this->_responses[client_fd].getReadFdFromCGI(), FdSet::READ);
+}
+
+void
+Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
+{
+    int status;
+    int client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
+    Response& response = this->_responses[client_fd];
+
+    waitpid(response.getCGIPid(), &status, 0);
+
+    this->_server_manager->closeCgiReadPipe(*this, read_fd_from_cgi);
+
+    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+    response.setReadFdFromCGI(DEFAULT_FD);
+    response.setReceiveProgress(ReceiveProgress::FINISH);
 }
