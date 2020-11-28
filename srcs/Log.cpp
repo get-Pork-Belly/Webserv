@@ -352,7 +352,10 @@ Log::printFdCopySets(ServerManager& server_manager, int width)
     while(start_idx < max_fd)
     {
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
-            std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+            if (server_manager.getFdType(i) == FdType::RESOURCE)
+                std::cout<<std::right<<"|"<<std::setw(7)<< " STATIC ";
+            else
+                std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
         std::cout<<"|"<<std::endl;
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
             std::cout<<"| fd "<<std::setw(3)<<std::right<<i<<" ";
@@ -361,12 +364,19 @@ Log::printFdCopySets(ServerManager& server_manager, int width)
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
         {
             is_set = server_manager.fdIsCopySet(i, FdSet::READ);
-
+            std::string color;
             if (is_set)
             {
+                if (server_manager.getFdType(i) == FdType::CLOSED)
+                    color = "\033[46;1;97m";
+                else
+                    color = "\033[41;1;97m";
                 std::cout<<"| ";
-                std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                std::cout<<color<<std::setw(6)<<is_set<<"\033[0m";
                 std::cout<<" ";
+                // std::cout<<"| ";
+                // std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                // std::cout<<" ";
             }
             else
                 std::cout<<"| "<<std::setw(6)<<is_set<<" ";
@@ -380,7 +390,10 @@ Log::printFdCopySets(ServerManager& server_manager, int width)
     while(start_idx < max_fd)
     {
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
-            std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+            if (server_manager.getFdType(i) == FdType::RESOURCE)
+                std::cout<<std::right<<"|"<<std::setw(7)<< " STATIC ";
+            else
+                std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
         std::cout<<"|"<<std::endl;
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
             std::cout<<"| fd "<<std::setw(3)<<std::right<<i<<" ";
@@ -389,12 +402,19 @@ Log::printFdCopySets(ServerManager& server_manager, int width)
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
         {
             is_set = server_manager.fdIsCopySet(i, FdSet::WRITE);
-
+            std::string color;
             if (is_set)
             {
+                if (server_manager.getFdType(i) == FdType::CLOSED)
+                    color = "\033[46;1;97m";
+                else
+                    color = "\033[41;1;97m";
                 std::cout<<"| ";
-                std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                std::cout<<color<<std::setw(6)<<is_set<<"\033[0m";
                 std::cout<<" ";
+                // std::cout<<"| ";
+                // std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                // std::cout<<" ";
             }
             else
                 std::cout<<"| "<<std::setw(6)<<is_set<<" ";
@@ -415,7 +435,12 @@ Log::printFdSets(ServerManager& server_manager, int width)
     while(start_idx < max_fd)
     {
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
-            std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+        {
+            if (server_manager.getFdType(i) == FdType::RESOURCE)
+                std::cout<<std::right<<"|"<<std::setw(7)<< " STATIC ";
+            else
+                std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+        }
         std::cout<<"|"<<std::endl;
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
             std::cout<<"| fd "<<std::setw(3)<<std::right<<i<<" ";
@@ -424,12 +449,19 @@ Log::printFdSets(ServerManager& server_manager, int width)
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
         {
             is_set = server_manager.fdIsOriginSet(i, FdSet::READ);
-
+            std::string color;
             if (is_set)
             {
+                if (server_manager.getFdType(i) == FdType::CLOSED)
+                    color = "\033[46;1;97m";
+                else
+                    color = "\033[41;1;97m";
                 std::cout<<"| ";
-                std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                std::cout<<color<<std::setw(6)<<is_set<<"\033[0m";
                 std::cout<<" ";
+                // std::cout<<"| ";
+                // std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                // std::cout<<" ";
             }
             else
                 std::cout<<"| "<<std::setw(6)<<is_set<<" ";
@@ -443,7 +475,10 @@ Log::printFdSets(ServerManager& server_manager, int width)
     while(start_idx < max_fd)
     {
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
-            std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
+            if (server_manager.getFdType(i) == FdType::RESOURCE)
+                std::cout<<std::right<<"|"<<std::setw(7)<< " STATIC ";
+            else
+                std::cout<<std::right<<"|"<<std::setw(7)<<Log::fdTypeToString(server_manager.getFdType(i))<<" ";
         std::cout<<"|"<<std::endl;
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
             std::cout<<"| fd "<<std::setw(3)<<std::right<<i<<" ";
@@ -452,11 +487,16 @@ Log::printFdSets(ServerManager& server_manager, int width)
         for (int i = start_idx; i < std::min(start_idx + width, max_fd); i++)
         {
             is_set = server_manager.fdIsOriginSet(i, FdSet::WRITE);
-
+            std::string color;
+            // std::string purple = "\033[41;35m";
             if (is_set)
             {
+                if (server_manager.getFdType(i) == FdType::CLOSED)
+                    color = "\033[46;1;97m";
+                else
+                    color = "\033[41;1;97m";
                 std::cout<<"| ";
-                std::cout<<"\033[41;1;97m"<<std::setw(6)<<is_set<<"\033[0m";
+                std::cout<<color<<std::setw(6)<<is_set<<"\033[0m";
                 std::cout<<" ";
             }
             else
