@@ -368,6 +368,12 @@ Server::init()
     this->_server_manager->updateFdMax(this->_server_socket);
 }
 
+bool
+Server::isExistCRLFInChunkSize(int fd)
+{
+    return (this->_requests[fd].getIndexOfCRLFInChunkSize() != -1);
+}
+
 int
 Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
 {
@@ -727,7 +733,7 @@ Server::receiveRequestChunkedBody(int client_fd)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        if (this->_requests[client_fd].getIndexOfCRLFInChunkSize() != -1)
+        if (this->isExistCRLFInChunkSize(client_fd))
             this->receiveChunkSize(client_fd, request.getIndexOfCRLFInChunkSize());
         else if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
         {

@@ -141,6 +141,7 @@ public:
     void receiveChunkSize(int fd, size_t index_of_crlf);
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
+    bool isExistCRLFInChunkSize(int fd);
 
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
