@@ -521,7 +521,7 @@ Server::receiveRequestLine(int client_fd)
         std::string readed(buf, bytes);
         if ((line_end_pos = readed.find("\r\n")) != std::string::npos)
         {
-            if (line_end_pos >= BUFFER_SIZE - 2)
+            if (line_end_pos >= BUFFER_SIZE - 2) //NOTE: RFC에는 8000 octets 권장
                 throw (Request::UriTooLongException(request));
             bytes = this->readBufferUntilRequestLine(client_fd, buf, line_end_pos);
             request.parseRequestLine(buf, bytes);
@@ -1427,6 +1427,18 @@ Server::run(int fd)
                 this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
             }
             catch(const Request::UriTooLongException& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
+            }
+            catch(const Request::HTTPVersionNotSupportedException& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->_server_manager->fdSet(fd, FdSet::WRITE);
+                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
+            }
+            catch(const Request::NotImplementedException& e)
             {
                 std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
