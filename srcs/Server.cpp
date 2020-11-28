@@ -562,33 +562,34 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
     timeval from;
     gettimeofday(&from, NULL);
 
-
     int bytes;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    // std::cout<<"\033[1;31m"<<"index_of_crlf: "<<index_of_crlf<<"\033[0m"<<std::endl;
-    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
-    if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
+    int received_chunk_size_length = request.getReceivedChunkSizeLength();
+
+    // if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
+    if ((bytes = recv(client_fd, buf, 1, 0)) > 0)
     {
-        // readed_bytes += bytes;
-        // std::cout<<"\033[1;33m"<<"in receiveChunkSize readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        request.parseTargetChunkSize(std::string(buf, bytes - CRLF_SIZE));
-        // std::cout << "\033[36m\033[01m";
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "client fd: " << client_fd << std::endl;
-        // std::cout << "chunk size: " << ft::stoiHex(std::string(buf, bytes - CRLF_SIZE)) << std::endl;
-        // std::cout << "buf: " << std::string(buf, bytes) << "|"<<std::endl;
-        // std::cout << "bytes: " << bytes << std::endl;
-        // std::cout << "===============================================" << std::endl;
-        // std::cout << "\033[0m";
-        // std::cout<<"\033[1;34m"<<"TargetChunkSize: "<<request.getTargetChunkSize()<<"\033[0m"<<std::endl;
+        buf[bytes] = 0;
+        received_chunk_size_length += bytes;
+        request.setReceivedChunkSizeLength(received_chunk_size_length);
+
+        if (received_chunk_size_length == static_cast<int>(index_of_crlf) + CRLF_SIZE)
+        {
+            request.appendChunkSize(buf, bytes); //NOTE: CRLF가 포함된 버퍼가 stoiHex로 들어가도 문제없음 확인
+            request.parseTargetChunkSize(request.getChunkSize());
+            request.setIndexOfCRLFInChunkSize(-1);
+            request.setChunkSize("");
+            request.setReceivedChunkSizeLength(0);
+        }
+        else
+            request.appendChunkSize(buf, bytes);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
         throw (UnchunkedErrorException());
-
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkSize", 1);
@@ -738,16 +739,18 @@ Server::receiveRequestChunkedBody(int client_fd)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
+        if (this->_requests[client_fd].getIndexOfCRLFInChunkSize() != -1)
+            this->receiveChunkSize(client_fd, request.getIndexOfCRLFInChunkSize());
+        else if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
         {
             if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
-                this->receiveChunkSize(client_fd, index_of_crlf);
+                this->_requests[client_fd].setIndexOfCRLFInChunkSize(index_of_crlf);
             else
                 throw (Request::RequestFormatException(request, "400"));
         }
         else if (request.getTargetChunkSize() == 0)
             this->receiveLastChunkData(client_fd);
-    else
+        else
         {
             int receive_target_size = std::min(RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() + CRLF_SIZE - request.getReceivedChunkDataLength());
             this->receiveChunkData(client_fd, receive_target_size);
