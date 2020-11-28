@@ -660,7 +660,6 @@ Server::receiveChunkData(int client_fd, int receive_size)
     Log::trace("< receiveChunkData", 1);
 }
 
-
 void
 Server::receiveLastChunkData(int client_fd)
 {
@@ -668,56 +667,45 @@ Server::receiveLastChunkData(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-
     int bytes = 0;
+    int is_buffer_left = 0;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
-    bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0);
+    int received_last_chunk_data_length = request.getReceivedLastChunkDataLength();
+
+    // bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0);
+    bytes = recv(client_fd, buf, 1, 0);
     if (bytes > 0)
     {
         buf[bytes] = 0;
-        // readed_bytes += bytes;
-        // std::cout<<"\033[1;33m"<<"in receiveLastChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
-        if (bytes != CRLF_SIZE)
-            throw (Request::RequestFormatException(request, "400"));
-        if (std::string(buf).compare("\r\n") == 0)
-        {
-            request.setRecvRequest(RecvRequest::COMPLETE);
+        received_last_chunk_data_length += bytes;
+        request.setReceivedLastChunkDataLength(received_last_chunk_data_length);
 
-            // if (request.getBody().length() > 100000000)
-            // {
-            //     std::cout << "body length: " <<request.getBody().length()<< std::endl;
-            //     char content_char = request.getBody()[0];
-            //     for (size_t i = 0; i < request.getBody().length(); i++)
-            //     {
-            //         if (request.getBody()[i] != content_char)
-            //         {
-            //             if (request.getBody()[i] == '\r')
-            //                 std::cout << i << ": " << "CR" << std::endl;
-            //             else if (request.getBody()[i] == '\n')
-            //                 std::cout << i << ": " << "NL" << std::endl;
-            //             else
-            //                 std::cout << i << ": " << request.getBody()[i] << std::endl;
-            //         }
-            //     }
-                // std::cout << "last content[-3]: " << *(request.getBody().end() - 2) << std::endl;
-                // std::cout << "last content[-2]: " << *(request.getBody().end() - 1) << std::endl;
-                // std::cout << "last content[-1]: " << request.getBody().back() << std::endl;
-                // sleep(100);
-            // }
-        }
+        if (received_last_chunk_data_length < CRLF_SIZE)
+            request.appendLastChunkData(buf, bytes);
+        else if (received_last_chunk_data_length > CRLF_SIZE)
+            throw (Request::RequestFormatException(request, "400"));
         else
         {
-            throw (Request::RequestFormatException(request, "400"));
+            if ((is_buffer_left = recv(client_fd, buf, 1, MSG_PEEK)) > 0)
+                throw (Request::RequestFormatException(request, "400"));
+            request.appendLastChunkData(buf, bytes);
+            if (request.getLastChunkData().compare("\r\n") == 0)
+            {
+                request.setRecvRequest(RecvRequest::COMPLETE);
+                request.setLastChunkData("");
+                request.setReceivedLastChunkDataLength(0);
+                request.setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
+            }
+            else
+                throw (Request::RequestFormatException(request, "400"));
         }
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
         throw (UnchunkedErrorException());
-
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveLastChunkData", 1);
