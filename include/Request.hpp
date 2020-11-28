@@ -22,14 +22,18 @@ private:
     std::string _body;
     std::string _status_code;
     RecvRequest _info;
-    bool _is_buffer_left;
     std::string _ip_address;
     int _transfered_body_size;
     std::string _remote_user;
     std::string _remote_ident;
     std::string _auth_type;
     int _target_chunk_size;
-    int _received_chunk_data_size;
+    int _received_chunk_data_length;
+    int _index_of_crlf_in_chunk_size;
+    int _received_chunk_size_length;
+    std::string _chunk_size;
+    int _received_last_chunk_data_length;
+    std::string _last_chunk_data;
 
     int _recv_counts;
     bool _carriege_return_trimmed;
@@ -53,7 +57,6 @@ public:
     const std::string& getBody() const;
     const std::string& getStatusCode() const;
     const RecvRequest& getRecvRequest() const;
-    bool getIsBufferLeft() const;
     const std::string& getIpAddress() const;
     int getContentLength() const;
     int getTransferedBodySize() const;
@@ -61,8 +64,13 @@ public:
     const std::string& getRemoteUser() const;
     const std::string& getRemoteIdent() const;
     int getTargetChunkSize() const;
-    int getReceivedChunkDataSize() const;
+    int getReceivedChunkDataLength() const;
     bool getCarriegeReturnTrimmed() const;
+    int getIndexOfCRLFInChunkSize() const;
+    int getReceivedChunkSizeLength() const;
+    const std::string& getChunkSize() const;
+    int getReceivedLastChunkDataLength() const;
+    const std::string& getLastChunkData() const;
 
     int getReceiveCounts() const;
     const std::string& getTempBuffer() const;
@@ -76,14 +84,18 @@ public:
     void setBody(const std::string& body);
     void setStatusCode(const std::string& code);
     void setRecvRequest(const RecvRequest& info);
-    void setIsBufferLeft(const bool& is_left_buffer);
     void setIpAddress(const std::string& ip_address);
     void setTransferedBodySize(const int transfered_body_size);
     void setAuthType(const std::string& auth_type);
     void setRemoteUser(const std::string& remote_user);
     void setRemoteIdent(const std::string& remote_ident);
     void setTargetChunkSize(const int target_size);
-    void setReceivedChunkDataSize(const int received_chunk_data_size);
+    void setReceivedChunkDataLength(const int received_chunk_data_length);
+    void setIndexOfCRLFInChunkSize(const int index_of_crlf_in_chunk_size);
+    void setReceivedChunkSizeLength(const int received_chunk_size_length);
+    void setChunkSize(const std::string& chunk_size);
+    void setReceivedLastChunkDataLength(const int received_last_chunk_data_length);
+    void setLastChunkData(const std::string& last_chunk_data);
 
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);
@@ -99,7 +111,6 @@ public:
     bool isBodyUnnecessary() const;
     bool isNormalBody() const;
     bool isChunkedBody() const;
-    bool isContentLeftInBuffer() const;
 
     int peekMessageFromClient(int client_fd, char* buf);
     void raiseRecvCounts();
@@ -126,6 +137,8 @@ public:
     void appendBody(char* buf, int bytes);
     void appendBody(const char* buf, int bytes);
     void appendTempBuffer(char* buf, int bytes);
+    void appendChunkSize(char* buf, int bytes);
+    void appendLastChunkData(char* buf, int bytes);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
