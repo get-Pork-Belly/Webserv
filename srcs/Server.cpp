@@ -391,6 +391,12 @@ Server::findCRLFInChunkSize(int fd, const std::string& buf)
         throw (Request::RequestFormatException(this->_requests[fd], "400"));
 }
 
+bool
+Server::isLastSequenceOfParsingChunk(int fd)
+{
+    return (this->_requests[fd].getTargetChunkSize() == 0);
+}
+
 int
 Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
 {
