@@ -63,7 +63,7 @@ public:
     void setServerSocketOnFdTable(int fd);
     void setClientSocketOnFdTable(int fd, int server_socket);
     void setResourceOnFdTable(int fd, int client_socket);
-    void setCGIPipeOnFdTable(int fd, int client_socket);
+    void setCgiPipeOnFdTable(int fd, int client_socket);
     void setClosedFdOnFdTable(int fd);
     void setLastRequestTimeOfClient(int client_fd, MonitorStatus check, timeval* time);
     /* Exception */
@@ -79,6 +79,9 @@ public:
     void initServers();
     bool runServers();
     void closeUnresponsiveClient();
+    void closeCgiWritePipe(Server& server, int pipe_fd);
+    void closeCgiReadPipe(Server& server, int pipe_fd);
+    void closeStaticResource(Server& server, int resource_fd);
     //TODO 구현 필요
     // void exitServers();
 

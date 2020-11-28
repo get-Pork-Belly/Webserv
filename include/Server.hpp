@@ -86,7 +86,7 @@ public:
     bool isServerSocket(int fd) const;
     bool isClientSocket(int fd) const;
     bool isStaticResource(int fd) const;
-    bool isCGIPipe(int fd) const;
+    bool isCgiPipe(int fd) const;
 
     /* Server function */
     void init();
@@ -104,15 +104,15 @@ public:
     bool isIndexFileExist(int fd);
     void findResourceAbsPath(int fd);
     bool isAutoIndexOn(int fd);
-    bool isCGIUri(int fd, const std::string& extension);
+    bool isCgiUri(int fd, const std::string& extension);
     void checkAndSetResourceType(int fd);
     void checkValidOfCgiMethod(int fd);
     void openStaticResource(int fd);
     void setResourceAbsPathAsIndex(int fd);
     void processResponseBody(int fd);
     void preprocessResponseBody(int fd, ResType& res_type);
-    void sendDataToCGI(int fd);
-    void receiveDataFromCGI(int fd);
+    void sendDataToCgi(int fd);
+    void receiveDataFromCgi(int fd);
 
     void readStaticResource(int fd);
 
@@ -126,31 +126,36 @@ public:
 
     /* Server run function */
     void acceptClient();
-    void openCGIPipe(int fd);
-    void forkAndExecuteCGI(int fd);
-    char** makeCGIArgv(int fd);
-    char** makeCGIEnvp(int fd);
+    void openCgiPipe(int fd);
+    void forkAndExecuteCgi(int fd);
+    char** makeCgiArgv(int fd);
+    char** makeCgiEnvp(int fd);
     bool makeEnvpUsingRequest(char** envp, int fd, int* idx);
     bool makeEnvpUsingResponse(char** envp, int fd, int* idx);
     bool makeEnvpUsingHeaders(char** envp, int fd, int* idx);
     bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
     bool isResponseAllSended(int fd) const;
 
-    bool isCGIReadPipe(int fd) const;
-    bool isCGIWritePipe(int fd) const;
+    bool isCgiReadPipe(int fd) const;
+    bool isCgiWritePipe(int fd) const;
 
     void receiveChunkSize(int fd);
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
-    bool isExistCRLFInChunkSize(int fd);
+    bool isExistCrlfInChunkSize(int fd);
     bool isNotYetSetTargetChunkSize(int fd);
-    void findCRLFInChunkSize(int fd, const std::string& buf);
+    void findCrlfInChunkSize(int fd, const std::string& buf);
     bool isLastSequenceOfParsingChunk(int fd);
     int calculateReceiveTargetSizeOfChunkData(int fd);
     bool isChunkDataAllReceived(int fd);
     void prepareToReceiveNextChunkSize(int fd);
     void prepareToReceiveNextChunkData(int fd);
     void finishChunkSequence(int fd);
+
+    void finishPutFileOnServer(int resource_fd);
+    void finishReadStaticResource(int resource_fd);
+    void finishSendDataToCgiPipe(int write_fd_to_cgi);
+    void finishReceiveDataFromCgiPipe(int read_fd_from_cgi);
 
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException

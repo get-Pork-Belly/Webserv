@@ -66,7 +66,7 @@ public:
     int getTargetChunkSize() const;
     int getReceivedChunkDataLength() const;
     bool getCarriegeReturnTrimmed() const;
-    int getIndexOfCRLFInChunkSize() const;
+    int getIndexOfCrlfInChunkSize() const;
     int getReceivedChunkSizeLength() const;
     const std::string& getChunkSize() const;
     int getReceivedLastChunkDataLength() const;
@@ -91,7 +91,7 @@ public:
     void setRemoteIdent(const std::string& remote_ident);
     void setTargetChunkSize(const int target_size);
     void setReceivedChunkDataLength(const int received_chunk_data_length);
-    void setIndexOfCRLFInChunkSize(const int index_of_crlf_in_chunk_size);
+    void setIndexOfCrlfInChunkSize(const int index_of_crlf_in_chunk_size);
     void setReceivedChunkSizeLength(const int received_chunk_size_length);
     void setChunkSize(const std::string& chunk_size);
     void setReceivedLastChunkDataLength(const int received_last_chunk_data_length);

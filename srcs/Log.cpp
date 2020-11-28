@@ -152,6 +152,23 @@ Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
 }
 
 void
+Log::closeFd(const FdType& type, int fd)
+{
+    if (DEBUG == 0)
+        return ;
+
+    int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
+
+    std::string line;
+    line = "SEVER CLOSES " 
+                    + fdTypeToString(type) + "(" + std::to_string(fd) 
+                    + ") which requested by CLIENT\n";
+
+    Log::timeLog(log_print_fd);
+    write(log_print_fd, line.c_str(), line.length());
+}
+
+void
 Log::getRequest(Server& server, int client_fd)
 {
     if (DEBUG == 0)
@@ -254,7 +271,7 @@ Log::resTypeToString(const ResType& type)
         return ("STATIC_RESOURCE");
 
     case ResType::CGI:
-        return ("CGI");
+        return ("Cgi");
 
     case ResType::AUTO_INDEX:
         return ("AUTO_INDEX");
