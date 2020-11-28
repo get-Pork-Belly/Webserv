@@ -574,6 +574,14 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
         // readed_bytes += bytes;
         // std::cout<<"\033[1;33m"<<"in receiveChunkSize readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.parseTargetChunkSize(std::string(buf, bytes - CRLF_SIZE));
+        // std::cout << "\033[36m\033[01m";
+        // std::cout << "===============================================" << std::endl;
+        // std::cout << "client fd: " << client_fd << std::endl;
+        // std::cout << "chunk size: " << ft::stoiHex(std::string(buf, bytes - CRLF_SIZE)) << std::endl;
+        // std::cout << "buf: " << std::string(buf, bytes) << "|"<<std::endl;
+        // std::cout << "bytes: " << bytes << std::endl;
+        // std::cout << "===============================================" << std::endl;
+        // std::cout << "\033[0m";
         // std::cout<<"\033[1;34m"<<"TargetChunkSize: "<<request.getTargetChunkSize()<<"\033[0m"<<std::endl;
     }
     else if (bytes == 0)
@@ -585,6 +593,8 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkSize", 1);
 }
+
+// bool flag;
 
 void
 Server::receiveChunkData(int client_fd, int receive_size)
@@ -607,6 +617,35 @@ Server::receiveChunkData(int client_fd, int receive_size)
         // std::cout<<"\033[1;33m"<<"in receiveChunkData readed_bytes: "<<readed_bytes<<"\033[0m"<<std::endl;
         request.setReceivedChunkDataSize(request.getReceivedChunkDataSize() + bytes);
         request.parseChunkData(buf, bytes);
+        // request.setRemainedChunkDataSize(receive_size - bytes);
+        // if (flag == true)
+        // {
+        //     std::cout << "\033[33m\033[01m";
+        // std::cout << "===============================================" << std::endl;
+        //     std::cout << "bytes: " << bytes << std::endl;
+        //     std::cout << "receive_target size: " << receive_size << std::endl;
+        //     std::cout << "target_chunk_size: " << request.getTargetChunkSize() << std::endl;
+        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataSize() << std::endl;
+        // std::cout << "===============================================" << std::endl;
+        // std::cout << "\033[0m";
+        //     flag = false;
+        // }
+
+        // std::cout << "\033[35m\033[01m";
+        // if (bytes != receive_size)
+        // {
+        // std::cout << "===============================================" << std::endl;
+        //     std::cout << "bytes: " << bytes << std::endl;
+        //     std::cout << "receive size: " << receive_size << std::endl;
+        //     std::cout << "target_chunk_size: " << request.getTargetChunkSize() << std::endl;
+        //     std::cout << "received_chunk_data_size: " << request.getReceivedChunkDataSize() << std::endl;
+        // std::cout << "request body len: " << request.getBody().length() << std::endl;
+        // std::cout << "next target: " << receive_size - bytes << std::endl;
+        // std::cout << "===============================================" << std::endl;
+        // flag = true;
+        // // sleep(100);
+        // }
+        // std::cout << "\033[0m";
     }
     else if (bytes == 0)
     {
@@ -629,12 +668,13 @@ Server::receiveLastChunkData(int client_fd)
     gettimeofday(&from, NULL);
 
 
-    int bytes;
+    int bytes = 0;
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
     // ft::memset(buf, 0, RECEIVE_SOCKET_STREAM_SIZE + 1);
-    if ((bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0)) > 0)
+    bytes = recv(client_fd, buf, CRLF_SIZE + 1, 0);
+    if (bytes > 0)
     {
         buf[bytes] = 0;
         // readed_bytes += bytes;
@@ -645,7 +685,31 @@ Server::receiveLastChunkData(int client_fd)
             throw (Request::RequestFormatException(request, "400"));
         }
         if (std::string(buf).compare("\r\n") == 0)
+        {
             request.setRecvRequest(RecvRequest::COMPLETE);
+
+            // if (request.getBody().length() > 100000000)
+            // {
+            //     std::cout << "body length: " <<request.getBody().length()<< std::endl;
+            //     char content_char = request.getBody()[0];
+            //     for (size_t i = 0; i < request.getBody().length(); i++)
+            //     {
+            //         if (request.getBody()[i] != content_char)
+            //         {
+            //             if (request.getBody()[i] == '\r')
+            //                 std::cout << i << ": " << "CR" << std::endl;
+            //             else if (request.getBody()[i] == '\n')
+            //                 std::cout << i << ": " << "NL" << std::endl;
+            //             else
+            //                 std::cout << i << ": " << request.getBody()[i] << std::endl;
+            //         }
+            //     }
+                // std::cout << "last content[-3]: " << *(request.getBody().end() - 2) << std::endl;
+                // std::cout << "last content[-2]: " << *(request.getBody().end() - 1) << std::endl;
+                // std::cout << "last content[-1]: " << request.getBody().back() << std::endl;
+                // sleep(100);
+            // }
+        }
         else
         {
             throw (Request::RequestFormatException(request, "400"));
@@ -765,16 +829,16 @@ Server::makeResponseMessage(int client_fd)
 
     if (response.isRedirection(response.getStatusCode()) == false)
         response.makeBody(request);
-    //TODO: 헤더와 스테이터스 라인은 처음에만 만들어 준다. 조건 만들자
 
-    const ParseProgress& parse_progress = response.getParseProgress();
-    // if (parse_progress == ParseProgress::DEFAULT)
-    // {
+    const SendProgress& send_progress = response.getSendProgress();
+    if (send_progress == SendProgress::READY)
+    {
         headers = response.makeHeaders(request);
         status_line = response.makeStatusLine();
-    // }
+    }
 
     //TODO: refactoring
+    const ParseProgress& parse_progress = response.getParseProgress();
     switch (parse_progress)
     {
     case ParseProgress::FINISH:
@@ -1432,7 +1496,7 @@ Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_
     this->_server_manager->fdSet(set_fd, set_fd_set);
     close(clear_fd);
 
-    
+
     gettimeofday(&from, NULL);
     Log::trace("< closeFdAndSetFd", 2);
 }

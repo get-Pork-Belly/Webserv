@@ -524,43 +524,33 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
 }
 
 void
-Request::parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size)
-{
-    if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
-        this->appendBody(buf, bytes);
-    else
-        this->appendBody(buf, bytes - 2);
-    this->setTargetChunkSize(next_target_chunk_size);
-}
-
-void
 Request::parseChunkData(char* buf, size_t bytes)
 {
-    if (bytes <= CRLF_SIZE)
-    {
-        if (!(bytes == 1 && buf[0] == '\n') && this->isCarriegeReturnTrimmed())
-        {
-            this->appendBody("\r", 1);
-            this->setCarriegeReturnTrimmed(false);
-        }
-        return ;
-    }
+    // \r
+    // \n
+    // C
+    // \r\n
+    // C\r
+    // C\r\n
+    // CC\r
+    // CCC
     if (this->isCarriegeReturnTrimmed())
     {
-        this->appendBody("\r", 1);
         this->setCarriegeReturnTrimmed(false);
+        if (bytes == 1 && buf[0] == '\n')
+            return ;
+        this->appendBody("\r", 1);
     }
-    if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n')
-        this->appendBody(buf, bytes - 2);
-    else if (bytes == RECEIVE_SOCKET_STREAM_SIZE && buf[bytes - 1] == '\r')
+
+    if (buf[bytes - 1] == '\r')
     {
         this->setCarriegeReturnTrimmed(true);
         this->appendBody(buf, bytes - 1);
     }
-    else if (bytes == RECEIVE_SOCKET_STREAM_SIZE)
-        this->appendBody(buf, bytes);
-    else
+    else if (bytes >= 2 && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n')
         this->appendBody(buf, bytes - CRLF_SIZE);
+    else
+        this->appendBody(buf, bytes);
 }
 
 int
