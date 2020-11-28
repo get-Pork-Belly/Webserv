@@ -1364,6 +1364,7 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
+                // fd -> write_fd_to_cgi
                 if (this->isCGIWritePipe(fd))
                 {
                     int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
@@ -1419,6 +1420,7 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
                 this->_server_manager->fdSet(fd, FdSet::WRITE);
+                // 수정이 필요하다. isCGIPipe
                 if (this->_responses[fd].getWriteFdToCGI() != DEFAULT_FD ||
                         this->_responses[fd].getReadFdFromCGI() != DEFAULT_FD)
                 {
@@ -1472,41 +1474,6 @@ Server::closeClientSocket(int client_fd)
     close(client_fd);
     Log::closeClient(*this, client_fd);
 }
-
-// closeClientSocket
-//   1. RDSET
-//   2. WRSET
-//   3. fdTable  close로 초기화
-//   4. updateFdMax
-//   5. Request init              
-        //  5-1) RecvRequest 초기화됨? ㅇㅋ  
-//   6. Response init        ??? 
-        //  6-1) ResType ??
-        //  6-2) SendProgress ??
-        //  6-3) ParseProgress ??
-        //  6-4) ReceiveProgress ??
-//   7. monitorTimeOutOff
-//   8. close
-//   9. Log 찍기
-//   10. Static_resource_fd  ???
-//      10-1) 만약 static_resource_Fd가 열려있으면 닫아줘야하지 않나?
-//      10-2) 만약 static_resource_fd가 닫혀있었으면, 그냥 init
-//   11. pipe_fd    ???
-//      11-1) 만약 pipe_fd가 열려있으면 닫아줘야하지 않나?
-//      11-2) 만약 pipe_fd가 닫혀있었으면, 그냥 init
-
-// closeReadPipeFd - 
-//
-// closeWritePipeFd - sendDataToCGI 종료될 때
-// 1. READ, WRITE - clear
-// 2. fdTable close
-// 3. Update Fd Max
-// 4. write_fd_to_cgi -> DEFAULT_FD
-// 4. read_fd_from_cgi -> FdSet::READ
-// closeWritePipeFd - sendDataToCGI
-
-
-// closeResourceFd - ㅇ
 
 void
 Server::closeFdAndSetClientOnWriteFdSet(int fd)
@@ -1634,17 +1601,12 @@ Server::readStaticResource(int resource_fd)
     int bytes;
     int client_socket = this->_server_manager->getFdTable()[resource_fd].second;
 
-    // ft::memset(buf, 0, BUFFER_SIZE + 1);
     if ((bytes = read(resource_fd, buf, BUFFER_SIZE)) > 0)
     {
         buf[bytes] = 0;
         this->_responses[client_socket].appendBody(buf, bytes);
         if (bytes < BUFFER_SIZE)
-        {
-            this->_responses[client_socket].setReceiveProgress(ReceiveProgress::FINISH);
-            this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-            this->_responses[client_socket].setResourceFd(DEFAULT_FD);
-        }
+            this->finishReadStaticResource(resource_fd);
         else
         {
             this->_responses[client_socket].setReceiveProgress(ReceiveProgress::ON_GOING);
@@ -1654,12 +1616,7 @@ Server::readStaticResource(int resource_fd)
         }
     }
     else if (bytes == 0)
-    {
-            this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-            this->_responses[client_socket].setReceiveProgress(ReceiveProgress::FINISH);
-            this->_responses[client_socket].setResourceFd(DEFAULT_FD);
-        // this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-    }
+        this->finishReadStaticResource(resource_fd);
     else
     {
         this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
@@ -2198,4 +2155,15 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     response.setReadFdFromCGI(DEFAULT_FD);
     response.setReceiveProgress(ReceiveProgress::FINISH);
+}
+
+void
+Server::finishReadStaticResource(int resource_fd)
+{
+    int client_fd = this->_server_manager->getLinkedFdFromFdTable(resource_fd);
+
+    this->_server_manager->closeStaticResource(*this, resource_fd);
+
+    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+    this->_responses[client_fd].setReceiveProgress(ReceiveProgress::FINISH);
 }
