@@ -371,7 +371,7 @@ Server::init()
 bool
 Server::isExistCRLFInChunkSize(int fd)
 {
-    return (this->_requests[fd].getIndexOfCRLFInChunkSize() != -1);
+    return (this->_requests[fd].getIndexOfCRLFInChunkSize() != DEFAULT_INDEX_OF_CRLF);
 }
 
 bool
@@ -420,7 +420,7 @@ Server::prepareReceiveNextChunkSize(int fd)
 void
 Server::prepareReceiveNextChunkData(int fd)
 {
-    this->_requests[fd].setIndexOfCRLFInChunkSize(-1);
+    this->_requests[fd].setIndexOfCRLFInChunkSize(DEFAULT_INDEX_OF_CRLF);
     this->_requests[fd].setChunkSize("");
     this->_requests[fd].setReceivedChunkSizeLength(0);
 }
