@@ -398,6 +398,13 @@ Server::isLastSequenceOfParsingChunk(int fd)
 }
 
 int
+Server::calculateReceiveTargetSizeOfChunkData(int fd)
+{
+    return (std::min(RECEIVE_SOCKET_STREAM_SIZE,
+            this->_requests[fd].getTargetChunkSize() + CRLF_SIZE - this->_requests[fd].getReceivedChunkDataLength()));
+}
+
+int
 Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
 {
     Log::trace("> readBufferUntilRequestLine", 1);
@@ -758,11 +765,11 @@ Server::receiveRequestChunkedBody(int client_fd)
             this->receiveChunkSize(client_fd, request.getIndexOfCRLFInChunkSize());
         else if (this->isNotYetSetTargetChunkSize(client_fd))
             this->findCRLFInChunkSize(client_fd, buf);
-        else if (request.getTargetChunkSize() == 0)
+        else if (this->isLastSequenceOfParsingChunk(client_fd))
             this->receiveLastChunkData(client_fd);
         else
         {
-            int receive_target_size = std::min(RECEIVE_SOCKET_STREAM_SIZE, request.getTargetChunkSize() + CRLF_SIZE - request.getReceivedChunkDataLength());
+            int receive_target_size = this->calculateReceiveTargetSizeOfChunkData(client_fd);
             this->receiveChunkData(client_fd, receive_target_size);
 
             if (request.getTargetChunkSize() + CRLF_SIZE == request.getReceivedChunkDataLength())

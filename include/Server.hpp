@@ -145,6 +145,7 @@ public:
     bool isNotYetSetTargetChunkSize(int fd);
     void findCRLFInChunkSize(int fd, const std::string& buf);
     bool isLastSequenceOfParsingChunk(int fd);
+    int calculateReceiveTargetSizeOfChunkData(int fd);
 
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
