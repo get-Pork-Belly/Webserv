@@ -374,6 +374,12 @@ Server::isExistCRLFInChunkSize(int fd)
     return (this->_requests[fd].getIndexOfCRLFInChunkSize() != -1);
 }
 
+bool
+Server::isNotYetSetTargetChunkSize(int fd)
+{
+    return (this->_requests[fd].getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE);
+}
+
 int
 Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
 {
@@ -735,7 +741,7 @@ Server::receiveRequestChunkedBody(int client_fd)
         buf[bytes] = 0;
         if (this->isExistCRLFInChunkSize(client_fd))
             this->receiveChunkSize(client_fd, request.getIndexOfCRLFInChunkSize());
-        else if (request.getTargetChunkSize() == DEFAULT_TARGET_CHUNK_SIZE)
+        else if (this->isNotYetSetTargetChunkSize(client_fd))
         {
             if ((index_of_crlf = std::string(buf).find("\r\n")) != std::string::npos)
                 this->_requests[client_fd].setIndexOfCRLFInChunkSize(index_of_crlf);
