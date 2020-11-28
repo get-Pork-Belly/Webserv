@@ -42,7 +42,7 @@ private:
     ParseProgress _parse_progress;
     ReceiveProgress _receive_progress;
 
-    int _resoure_fd;
+    int _resource_fd;
     int _sended_response_size;
     std::string _response_message;
     SendProgress _send_progress;
@@ -116,6 +116,11 @@ public:
     void setSendedResponseSize(const int sended_response_size);
     void setResponseMessage(const std::string& response_message);
     void setSendProgress(const SendProgress& send_progress);
+
+    bool isCgiWritePipeNotClosed() const;
+    bool isCgiReadPipeNotClosed() const;
+    bool isResourceNotClosed() const;
+
 
     /* Exception */
 public:
