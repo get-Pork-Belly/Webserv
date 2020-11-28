@@ -379,6 +379,30 @@ Request::UriTooLongException::what() const throw()
     return ("[CODE 414] Request uri is too long");
 }
 
+Request::HTTPVersionNotSupportedException::HTTPVersionNotSupportedException(Request& req)
+: _req(req)
+{
+    this->_req.setStatusCode("505");
+}
+
+const char*
+Request::HTTPVersionNotSupportedException::what() const throw()
+{
+    return ("[CODE 505] HTTP Version Not Supported");
+}
+
+Request::NotImplementedException::NotImplementedException(Request& req)
+: _req(req)
+{
+    this->_req.setStatusCode("501");
+}
+
+const char*
+Request::NotImplementedException::what() const throw()
+{
+    return ("[CODE 501] Not Implemented");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/
 /*============================================================================*/
@@ -519,8 +543,15 @@ Request::parseRequestLine(char* buf, int bytes)
     std::string req_message(buf, bytes - 2);
     std::vector<std::string> request_line = ft::split(req_message, " ");
 
-    if (this->isValidLine(request_line) == false)
+    if (request_line.size() != 3)
         throw (RequestFormatException(*this, "400"));
+    if (this->isValidMethod(request_line[0]) == false)
+        throw (NotImplementedException(*this));
+    if (this->isValidUri(request_line[1]) == false)
+        throw (RequestFormatException(*this, "400"));
+    if (this->isValidVersion(request_line[2]) == false)
+        throw (HTTPVersionNotSupportedException(*this));
+
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
     this->setVersion(request_line[2]);
@@ -714,17 +745,6 @@ Request::getContentLength() const
 /*============================================================================*/
 
 bool
-Request::isValidLine(std::vector<std::string>& request_line)
-{
-    if (request_line.size() != 3 ||
-        this->isValidMethod(request_line[0]) == false ||
-        this->isValidUri(request_line[1]) == false ||
-        this->isValidVersion(request_line[2]) == false)
-        return (false);
-    return (true);
-}
-
-bool
 Request::isValidMethod(const std::string& method)
 {
     if (method.compare("GET") == 0 ||
@@ -751,9 +771,9 @@ Request::isValidUri(const std::string& uri)
 bool
 Request::isValidVersion(const std::string& version)
 {
-    if (version.compare("HTTP/1.1") == 0 || version.compare("HTTP/1.0") == 0)
+    if (version.compare("HTTP/1.1") == 0)
         return (true);
-    return (this->updateStatusCodeAndReturn("400", false));
+    return (this->updateStatusCodeAndReturn("505", false));
 }
 
 bool

@@ -122,7 +122,6 @@ public:
     bool parseHeaders(std::string& req_message);
 
     /* valid check */
-    bool isValidLine(std::vector<std::string>& request_line);
     bool isValidMethod(const std::string& method);
     bool isValidUri(const std::string& uri);
     bool isValidVersion(const std::string& version);
@@ -164,6 +163,24 @@ public:
         Request& _req;
     public:
         UriTooLongException(Request& req);
+        virtual const char* what() const throw();
+    };
+
+    class HTTPVersionNotSupportedException : public std::exception
+    {
+    private:
+        Request& _req;
+    public:
+        HTTPVersionNotSupportedException(Request& req);
+        virtual const char* what() const throw();
+    };
+
+    class NotImplementedException : public std::exception
+    {
+    private:
+        Request& _req;
+    public:
+        NotImplementedException(Request& req);
         virtual const char* what() const throw();
     };
 
