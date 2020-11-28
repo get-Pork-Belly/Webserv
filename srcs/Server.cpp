@@ -622,7 +622,7 @@ Server::receiveRequestNormalBody(int client_fd)
 }
 
 void
-Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
+Server::receiveChunkSize(int client_fd)
 {
     Log::trace("> receiveChunkSize", 1);
     timeval from;
@@ -632,6 +632,7 @@ Server::receiveChunkSize(int client_fd, size_t index_of_crlf)
     char buf[RECEIVE_SOCKET_STREAM_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
+    int index_of_crlf = request.getIndexOfCRLFInChunkSize();
     int received_chunk_size_length = request.getReceivedChunkSizeLength();
 
     if ((bytes = recv(client_fd, buf, index_of_crlf + CRLF_SIZE, 0)) > 0)
@@ -745,7 +746,7 @@ Server::receiveRequestChunkedBody(int client_fd)
     {
         buf[bytes] = 0;
         if (this->isExistCRLFInChunkSize(client_fd))
-            this->receiveChunkSize(client_fd, request.getIndexOfCRLFInChunkSize());
+            this->receiveChunkSize(client_fd);
         else if (this->isNotYetSetTargetChunkSize(client_fd))
             this->findCRLFInChunkSize(client_fd, buf);
         else if (this->isLastSequenceOfParsingChunk(client_fd))

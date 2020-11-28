@@ -139,7 +139,7 @@ public:
     bool isCGIReadPipe(int fd) const;
     bool isCGIWritePipe(int fd) const;
 
-    void receiveChunkSize(int fd, size_t index_of_crlf);
+    void receiveChunkSize(int fd);
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
     bool isExistCRLFInChunkSize(int fd);
