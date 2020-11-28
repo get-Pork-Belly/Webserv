@@ -150,7 +150,7 @@ public:
     bool isReceivedChunkDataToTheEnd(int fd);
     void prepareReceiveNextChunkSize(int fd);
     void prepareReceiveNextChunkData(int fd);
-    void completeChunkSequence(int fd);
+    void finishChunkSequence(int fd);
 
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException

@@ -426,7 +426,7 @@ Server::prepareReceiveNextChunkData(int fd)
 }
 
 void
-Server::completeChunkSequence(int fd)
+Server::finishChunkSequence(int fd)
 {
     this->_requests[fd].setRecvRequest(RecvRequest::COMPLETE);
     this->_requests[fd].setLastChunkData("");
@@ -717,7 +717,7 @@ Server::receiveLastChunkData(int client_fd)
                 throw (Request::RequestFormatException(request, "400"));
             request.appendLastChunkData(buf, bytes);
             if (request.getLastChunkData().compare("\r\n") == 0)
-                this->completeChunkSequence(client_fd);
+                this->finishChunkSequence(client_fd);
             else
                 throw (Request::RequestFormatException(request, "400"));
         }
