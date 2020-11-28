@@ -147,6 +147,7 @@ public:
     bool isLastSequenceOfParsingChunk(int fd);
     int calculateReceiveTargetSizeOfChunkData(int fd);
     bool isReceivedChunkDataToTheEnd(int fd);
+    void prepareReceiveNextChunkSize(int fd);
 
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
