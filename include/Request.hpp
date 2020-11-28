@@ -29,6 +29,9 @@ private:
     std::string _auth_type;
     int _target_chunk_size;
     int _received_chunk_data_length;
+    int _index_of_crlf_in_chunk_size;
+    int _received_chunk_size_length;
+    std::string _chunk_size;
 
     int _recv_counts;
     bool _carriege_return_trimmed;
@@ -61,6 +64,9 @@ public:
     int getTargetChunkSize() const;
     int getReceivedChunkDataLength() const;
     bool getCarriegeReturnTrimmed() const;
+    int getIndexOfCRLFInChunkSize() const;
+    int getReceivedChunkSizeLength() const;
+    const std::string& getChunkSize() const;
 
     int getReceiveCounts() const;
     const std::string& getTempBuffer() const;
@@ -81,6 +87,9 @@ public:
     void setRemoteIdent(const std::string& remote_ident);
     void setTargetChunkSize(const int target_size);
     void setReceivedChunkDataLength(const int received_chunk_data_length);
+    void setIndexOfCRLFInChunkSize(const int index_of_crlf_in_chunk_size);
+    void setReceivedChunkSizeLength(const int received_chunk_size_length);
+    void setChunkSize(const std::string& chunk_size);
 
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);
@@ -122,6 +131,7 @@ public:
     void appendBody(char* buf, int bytes);
     void appendBody(const char* buf, int bytes);
     void appendTempBuffer(char* buf, int bytes);
+    void appendChunkSize(char* buf, int bytes);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);

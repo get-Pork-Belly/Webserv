@@ -15,7 +15,8 @@ Request::Request()
 _protocol(""), _body(""), _status_code("200"),
 _info(RecvRequest::REQUEST_LINE), _ip_address(""),
 _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
-_received_chunk_data_length(0), _recv_counts(0),
+_received_chunk_data_length(0), _index_of_crlf_in_chunk_size(-1),
+_received_chunk_size_length(0), _chunk_size(""), _recv_counts(0),
 _carriege_return_trimmed(false), _temp_buffer("")
  {}
 
@@ -25,8 +26,10 @@ _version(other._version), _headers(other._headers),
 _protocol(other._protocol), _body(other._body),
 _status_code(other._status_code), _info(other._info),
 _ip_address(other._ip_address), _transfered_body_size(other._transfered_body_size),
-_target_chunk_size(other._target_chunk_size),
-_received_chunk_data_length(other._received_chunk_data_length), _recv_counts(other._recv_counts),
+_target_chunk_size(other._target_chunk_size), _received_chunk_data_length(other._received_chunk_data_length),
+_index_of_crlf_in_chunk_size(other._index_of_crlf_in_chunk_size),
+_received_chunk_size_length(other._received_chunk_size_length),
+_chunk_size(other._chunk_size), _recv_counts(other._recv_counts),
 _carriege_return_trimmed(other._carriege_return_trimmed), _temp_buffer(other._temp_buffer)
 {}
 
@@ -45,6 +48,9 @@ Request::operator=(const Request& other)
     this->_transfered_body_size = other._transfered_body_size;
     this->_target_chunk_size = other._target_chunk_size;
     this->_received_chunk_data_length = other._received_chunk_data_length;
+    this->_index_of_crlf_in_chunk_size = other._index_of_crlf_in_chunk_size;
+    this->_received_chunk_size_length = other._received_chunk_size_length;
+    this->_chunk_size = other._chunk_size;
     this->_recv_counts = other._recv_counts;
     this->_carriege_return_trimmed = other._carriege_return_trimmed;
     this->_temp_buffer = other._temp_buffer;
@@ -149,6 +155,24 @@ int
 Request::getReceivedChunkDataLength() const
 {
     return (this->_received_chunk_data_length);
+}
+
+int
+Request::getIndexOfCRLFInChunkSize() const
+{
+    return (this->_index_of_crlf_in_chunk_size);
+}
+
+int
+Request::getReceivedChunkSizeLength() const
+{
+    return (this->_received_chunk_size_length);
+}
+
+const std::string&
+Request::getChunkSize() const
+{
+    return (this->_chunk_size);
 }
 
 int
@@ -261,6 +285,24 @@ void
 Request::setReceivedChunkDataLength(const int received_chunk_data_length)
 {
     this->_received_chunk_data_length = received_chunk_data_length;
+}
+
+void
+Request::setIndexOfCRLFInChunkSize(const int index_of_crlf_in_chunk_size)
+{
+    this->_index_of_crlf_in_chunk_size = index_of_crlf_in_chunk_size;
+}
+
+void
+Request::setReceivedChunkSizeLength(const int received_chunk_size_length)
+{
+    this->_received_chunk_size_length = received_chunk_size_length;
+}
+
+void
+Request::setChunkSize(const std::string& chunk_size)
+{
+    this->_chunk_size = chunk_size;
 }
 
 void
@@ -594,6 +636,12 @@ Request::appendTempBuffer(char* buf, int bytes)
 }
 
 void
+Request::appendChunkSize(char* buf, int bytes)
+{
+    this->_chunk_size.append(buf, bytes);
+}
+
+void
 Request::init()
 {
     this->_method = "";
@@ -608,6 +656,9 @@ Request::init()
     this->_transfered_body_size = 0;
     this->_target_chunk_size = DEFAULT_TARGET_CHUNK_SIZE;
     this->_received_chunk_data_length = 0;
+    this->_index_of_crlf_in_chunk_size = -1;
+    this->_received_chunk_size_length = 0;
+    this->_chunk_size = "";
     this->_carriege_return_trimmed = false;
     this->_recv_counts = 0;
     this->_temp_buffer = "";
