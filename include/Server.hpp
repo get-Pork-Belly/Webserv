@@ -265,7 +265,13 @@ public:
    class SendDataToCgiPipeErrorException: public SendErrorCodeToClientException
     {
     public:
-        SendDataToCgiPipeErrorException(Server& server, int read_fd_from_cgi);
+        SendDataToCgiPipeErrorException(Server& server, int write_fd_to_cgi);
+        virtual const char* what() const throw();
+    };
+   class PutFileOnServerErrorException: public SendErrorCodeToClientException
+    {
+    public:
+        PutFileOnServerErrorException(Server& server, int resource_fd);
         virtual const char* what() const throw();
     };
 };

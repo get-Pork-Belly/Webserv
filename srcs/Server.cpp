@@ -394,6 +394,20 @@ Server::SendDataToCgiPipeErrorException::what() const throw()
     return ("[CODE 500] Send data to cgi error exception");
 }
 
+Server::PutFileOnServerErrorException::PutFileOnServerErrorException(Server& server, int resource_fd)
+{
+    int client_fd = server._server_manager->getLinkedFdFromFdTable(resource_fd);
+    server._server_manager->closeStaticResource(server, resource_fd);
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+const char*
+Server::PutFileOnServerErrorException::what() const throw()
+{
+    return ("[CODE 500] Put file on server error exception");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
@@ -1325,7 +1339,7 @@ Server::putFileOnServer(int resource_fd)
         else if (bytes == 0)
             this->finishPutFileOnServer(resource_fd);
         else
-            throw (InternalServerException(*this, resource_fd));
+            throw (PutFileOnServerErrorException(*this, resource_fd));
     }
     else
     {
@@ -1338,10 +1352,10 @@ Server::putFileOnServer(int resource_fd)
         else if (bytes == 0)
         {
             if (remained > 0)
-                throw (InternalServerException(*this, resource_fd));
+                throw (PutFileOnServerErrorException(*this, resource_fd));
         }
         else
-            throw (InternalServerException(*this, resource_fd));
+            throw (PutFileOnServerErrorException(*this, resource_fd));
     }
 }
 
