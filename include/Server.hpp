@@ -175,10 +175,9 @@ public:
     class MustRedirectException : public SendErrorCodeToClientException
     {
     private:
-        Response& _res;
         std::string _msg;
     public:
-        MustRedirectException(Response& res);
+        MustRedirectException(Server& server,int client_fd);
         virtual const char* what() const throw();
     };
     class CannotOpenDirectoryException : public SendErrorCodeToClientException

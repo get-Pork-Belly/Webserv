@@ -190,10 +190,11 @@ Server::ReadErrorException::what() const throw()
     return ("[CODE 900] Read empty buffer or occured reading error");
 }
 
-Server::MustRedirectException::MustRedirectException(Response& res)
-: _res(res), _msg("MustRedirectException: [CODE " + res.getRedirectStatusCode() + "]")
+Server::MustRedirectException::MustRedirectException(Server& server, int client_fd)
+: _msg("MustRedirectException: [CODE " + server._responses[client_fd].getRedirectStatusCode() + "]")
 {
-    this->_res.setStatusCode(res.getRedirectStatusCode());
+    Response& response = server.getResponse(client_fd);
+    response.setStatusCode(response.getRedirectStatusCode());
 }
 
 const char*
@@ -1808,7 +1809,7 @@ Server::processResponseBody(int client_fd)
             throw (NotAllowedMethodException(this->_responses[client_fd]));
     
     if (this->_responses[client_fd].isLocationToBeRedirected())
-        throw (MustRedirectException(this->_responses[client_fd]));
+        throw (MustRedirectException(*this, client_fd));
     if (this->_requests[client_fd].getMethod().compare("DELETE") == 0)
     {
         this->deleteResourceOfUri(client_fd, this->_responses[client_fd].getResourceAbsPath());
