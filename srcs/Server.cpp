@@ -172,10 +172,10 @@ Server::setAuthenticateRealm()
 /******************************  Exception  ***********************************/
 /*============================================================================*/
 
-Server::PayloadTooLargeException::PayloadTooLargeException(Response& response) 
-: _response(response)
+Server::PayloadTooLargeException::PayloadTooLargeException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("413");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("413");
 }
 
 const char*
@@ -193,6 +193,7 @@ Server::ReadErrorException::what() const throw()
 Server::MustRedirectException::MustRedirectException(Server& server, int client_fd)
 : _msg("MustRedirectException: [CODE " + server._responses[client_fd].getRedirectStatusCode() + "]")
 {
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
     Response& response = server.getResponse(client_fd);
     response.setStatusCode(response.getRedirectStatusCode());
 }
@@ -247,16 +248,16 @@ Server::IndexNoExistException::what() const throw()
     return ("[CODE 404] No index & Autoindex off");
 }
 
-Server::CgiMethodErrorException::CgiMethodErrorException(Response& response)
-: _response(response)
+Server::CgiMethodErrorException::CgiMethodErrorException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("400");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("400");
 }
 
 const char*
 Server::CgiMethodErrorException::what() const throw()
 {
-    return ("[CODE 400] CGI can handle only GET HEAD POST");
+    return ("[CODE 400] CGI can hANDLE ONLY get head post");
 }
 
 Server::InternalServerException::InternalServerException(Response& response)
@@ -271,16 +272,16 @@ Server::InternalServerException::what() const throw()
     return ("[CODE 500] Server Internal error");
 }
 
-Server::AuthenticateErrorException::AuthenticateErrorException(Response& res, const std::string& status_code)
-: _res(res), _status_code(status_code)
+Server::AuthenticateErrorException::AuthenticateErrorException(Server& server, int client_fd, const std::string& status_code)
 {
-    this->_res.setStatusCode(this->_status_code);
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode(status_code);
 }
 
 const char*
 Server::AuthenticateErrorException::what() const throw()
 {
-    return ("");
+    return ("Authenticate Error Exception");
 }
 
 Server::CannotPutOnDirectoryException::CannotPutOnDirectoryException(Response& response)
@@ -295,10 +296,10 @@ Server::CannotPutOnDirectoryException::what() const throw()
     return ("[CODE 409] Cannot put on directory exception");
 }
 
-Server::TargetResourceConflictException::TargetResourceConflictException(Response& response)
-: _response(response)
+Server::TargetResourceConflictException::TargetResourceConflictException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("409");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("409");
 }
 
 const char*
@@ -319,10 +320,10 @@ Server::UnchunkedErrorException::what() const throw()
     return ("[CODE 500] Chunked request couldn't receive or Receive error");
 }
 
-Server::NotAllowedMethodException::NotAllowedMethodException(Response& response)
-: _response(response)
+Server::NotAllowedMethodException::NotAllowedMethodException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("405");
+    server._responses[client_fd].setStatusCode("405");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
 }
 
 const char*
@@ -606,7 +607,7 @@ Server::receiveRequestNormalBody(int client_fd)
 
     int content_length = request.getContentLength();
     if (content_length > this->_limit_client_body_size)
-        throw (PayloadTooLargeException(this->_responses[client_fd]));
+        throw (PayloadTooLargeException(*this, client_fd));
 
     char buf[BUFFER_SIZE + 1];
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
@@ -618,7 +619,7 @@ Server::receiveRequestNormalBody(int client_fd)
         else if (request.getBody().length() == static_cast<size_t>(content_length))
             request.setRecvRequest(RecvRequest::COMPLETE);
         else
-            throw (PayloadTooLargeException(this->_responses[client_fd]));
+            throw (PayloadTooLargeException(*this, client_fd));
         if (bytes < BUFFER_SIZE)
             request.setRecvRequest(RecvRequest::COMPLETE);
     }
@@ -663,7 +664,7 @@ Server::receiveChunkSize(int client_fd)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (UnchunkedErrorException());
+        throw (UnchunkedErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkSize", 1);
@@ -690,7 +691,7 @@ Server::receiveChunkData(int client_fd, int receive_size)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (UnchunkedErrorException());
+        throw (UnchunkedErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkData", 1);
@@ -735,7 +736,7 @@ Server::receiveLastChunkData(int client_fd)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (UnchunkedErrorException());
+        throw (UnchunkedErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveLastChunkData", 1);
@@ -774,7 +775,7 @@ Server::receiveRequestChunkedBody(int client_fd)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (UnchunkedErrorException());
+        throw (UnchunkedErrorException(*this, client_fd));
         
         
     Log::printTimeDiff(from, 1);
@@ -1520,14 +1521,14 @@ Server::checkAuthenticate(int client_fd)
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
     it = headers.find("Authorization");
     if (it == headers.end())
-        throw (AuthenticateErrorException(this->_responses[client_fd], "401"));
+        throw (AuthenticateErrorException(*this, client_fd, "401"));
     std::vector<std::string> authenticate_info = ft::split(it->second, " ");
     if (authenticate_info[0] != "Basic")
-        throw (AuthenticateErrorException(this->_responses[client_fd], "401"));
+        throw (AuthenticateErrorException(*this, client_fd, "401"));
     before_decode = authenticate_info[1];
     Base64::decode(before_decode, after_decode);
     if (id_password != after_decode)
-        throw (AuthenticateErrorException(this->_responses[client_fd], "403"));
+        throw (AuthenticateErrorException(*this, client_fd, "403"));
     request.setAuthType(authenticate_info[0]);
     size_t pos = after_decode.find(":");
     request.setRemoteUser(after_decode.substr(0, pos));
@@ -1657,7 +1658,7 @@ Server::checkValidOfCgiMethod(int client_fd)
     const Request& request = this->_requests[client_fd];
     const std::string& method = request.getMethod();
     if (method != "GET" && method != "POST" && method != "HEAD")
-        throw (CgiMethodErrorException(this->_responses[client_fd]));
+        throw (CgiMethodErrorException(*this, client_fd));
 }
 
 void
@@ -1781,7 +1782,7 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
         if (errno == ENOTDIR) // dicrectory가 아니다ㅏ. -> unlink
         {
             if (unlink(path.c_str()) == -1)
-                throw (TargetResourceConflictException(response));
+                throw (TargetResourceConflictException(*this, client_fd));
         }
         else
             throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
@@ -1806,13 +1807,13 @@ Server::processResponseBody(int client_fd)
     if (location_info.find("limit_client_body_size") != location_info.end())
     {
         if (this->_requests[client_fd].getBody().length() > static_cast<unsigned int>(std::stoi(location_info.at("limit_client_body_size"))))
-            throw (PayloadTooLargeException(this->_responses[client_fd]));
+            throw (PayloadTooLargeException(*this, client_fd));
     }
 
     this->checkAuthenticate(client_fd);
     if (this->_responses[client_fd].isLimitExceptInLocation() && 
         !(this->_responses[client_fd].isAllowedMethod(this->_requests[client_fd].getMethod())))
-            throw (NotAllowedMethodException(this->_responses[client_fd]));
+            throw (NotAllowedMethodException(*this, client_fd));
     
     if (this->_responses[client_fd].isLocationToBeRedirected())
         throw (MustRedirectException(*this, client_fd));

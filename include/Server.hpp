@@ -160,10 +160,8 @@ public:
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        PayloadTooLargeException(Response& response);
+        PayloadTooLargeException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class ReadErrorException : public std::exception
@@ -204,10 +202,8 @@ public:
     };
     class CgiMethodErrorException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        CgiMethodErrorException(Response& response);
+        CgiMethodErrorException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class InternalServerException : public SendErrorCodeToClientException
@@ -220,11 +216,8 @@ public:
     };
     class AuthenticateErrorException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _res;
-        std::string _status_code;
     public:
-        AuthenticateErrorException(Response& res, const std::string& status_code);
+        AuthenticateErrorException(Server& server, int client_fd, const std::string& status_code);
         virtual const char* what() const throw();
     };
     class CannotPutOnDirectoryException : public SendErrorCodeToClientException
@@ -237,10 +230,8 @@ public:
     };
     class TargetResourceConflictException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        TargetResourceConflictException(Response& response);
+        TargetResourceConflictException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class UnchunkedErrorException : public SendErrorCodeToClientException
@@ -251,11 +242,9 @@ public:
     };
     class NotAllowedMethodException : public SendErrorCodeToClientException
     {
-        private:
-            Response& _response;
-        public:
-            NotAllowedMethodException(Response& response);
-            virtual const char* what() const throw();
+    public:
+        NotAllowedMethodException(Server& server, int client_fd);
+        virtual const char* what() const throw();
     };
     class CannotWriteToClientException : public std::exception
     {
