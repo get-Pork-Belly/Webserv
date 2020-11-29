@@ -352,6 +352,24 @@ Server::CannotWriteToClientException::what() const throw()
     return ("[CODE 901] Cannot write to client");
 }
 
+Server::ReceiveDataFromCgiPipeErrorException::ReceiveDataFromCgiPipeErrorException(Server& server, int read_fd_from_cgi)
+{
+    int client_fd = server._server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
+    int write_fd_to_cgi = server._responses[client_fd].getWriteFdToCgi();
+
+    kill(server._responses[client_fd].getCgiPid(), SIGKILL);
+    server._server_manager->closeCgiWritePipe(server, write_fd_to_cgi);
+    server._server_manager->closeCgiReadPipe(server, read_fd_from_cgi);
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+const char*
+Server::ReceiveDataFromCgiPipeErrorException::what() const throw()
+{
+    return ("[CODE 500] Read Static Resource exception");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
@@ -1254,7 +1272,7 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
     else if (bytes == 0)
         this->finishReceiveDataFromCgiPipe(read_fd_from_cgi);
     else
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (ReceiveDataFromCgiPipeErrorException(*this, read_fd_from_cgi));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveDataFromCgi", 1);

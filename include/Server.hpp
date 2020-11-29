@@ -257,6 +257,12 @@ public:
         ReadStaticResourceErrorException(Server& server, int resource_fd);
         virtual const char* what() const throw();
     };
+   class ReceiveDataFromCgiPipeErrorException: public SendErrorCodeToClientException
+    {
+    public:
+        ReceiveDataFromCgiPipeErrorException(Server& server, int read_fd_from_cgi);
+        virtual const char* what() const throw();
+    };
 };
 
 #endif
