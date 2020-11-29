@@ -246,6 +246,7 @@ public:
     class UnchunkedErrorException : public SendErrorCodeToClientException
     {
     public:
+        UnchunkedErrorException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class NotAllowedMethodException : public SendErrorCodeToClientException

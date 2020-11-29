@@ -307,10 +307,16 @@ Server::TargetResourceConflictException::what() const throw()
     return ("[CODE 409] Target resource conflict exception");
 }
 
+Server::UnchunkedErrorException::UnchunkedErrorException(Server& server, int client_fd)
+{
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
 const char*
 Server::UnchunkedErrorException::what() const throw()
 {
-    return ("[CODE 902] Chunked request couldn't receive or Receive error");
+    return ("[CODE 500] Chunked request couldn't receive or Receive error");
 }
 
 Server::NotAllowedMethodException::NotAllowedMethodException(Response& response)
