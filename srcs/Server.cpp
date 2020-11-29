@@ -332,6 +332,20 @@ Server::NotAllowedMethodException::what() const throw()
     return ("[CODE 405] Not Allowed Method");
 }
 
+Server::ReadStaticResourceErrorException::ReadStaticResourceErrorException(Server& server, int resource_fd)
+{
+    int client_fd = server._server_manager->getLinkedFdFromFdTable(resource_fd);
+    server._server_manager->closeStaticResource(server, resource_fd);
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+const char*
+Server::ReadStaticResourceErrorException::what() const throw()
+{
+    return ("[CODE 500] Read Static Resource exception");
+}
+
 const char*
 Server::CannotWriteToClientException::what() const throw()
 {
@@ -1592,11 +1606,7 @@ Server::readStaticResource(int resource_fd)
     else if (bytes == 0)
         this->finishReadStaticResource(resource_fd);
     else
-    {
-        //TODO: exception 손보기
-        this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-        throw (InternalServerException(this->_responses[client_socket]));
-    }
+        throw (ReadStaticResourceErrorException(*this, resource_fd));
 
     
     Log::printTimeDiff(from, 1);

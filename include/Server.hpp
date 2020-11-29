@@ -251,6 +251,12 @@ public:
     public:
         virtual const char* what() const throw();
     };
+   class ReadStaticResourceErrorException: public SendErrorCodeToClientException
+    {
+    public:
+        ReadStaticResourceErrorException(Server& server, int resource_fd);
+        virtual const char* what() const throw();
+    };
 };
 
 #endif
