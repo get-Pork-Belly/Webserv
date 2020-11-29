@@ -1435,34 +1435,11 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
-                std::cerr << e.what() << '\n';
-                // this->_server_manager->fdSet(fd, FdSet::WRITE);
-                // // 수정이 필요하다. isCgiPipe
-                // if (this->_responses[fd].getWriteFdToCgi() != DEFAULT_FD ||
-                //         this->_responses[fd].getReadFdFromCgi() != DEFAULT_FD)
-                // {
-                //     Response& response = this->_responses[fd];
-                //     this->closeFdAndUpdateFdTable(response.getReadFdFromCgi(), FdSet::READ);
-                //     this->closeFdAndUpdateFdTable(response.getWriteFdToCgi(), FdSet::WRITE);
-                // }
-                //TODO: static resource 추가
-                // else if (this->_)
-            }
-            catch(const Request::RequestFormatException& e)
-            {
-                std::cerr << e.what() << '\n';
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
-            }
-            catch(const Request::UriTooLongException& e)
-            {
-                std::cerr << e.what() << '\n';
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
-            }
-            catch(const std::exception& e)
-            {
-                this->closeClientSocket(fd);
+                if (this->isClientSocket(fd) && this->_requests[fd].getStatusCode().front() != '2')
+                {
+                    this->_server_manager->fdSet(fd, FdSet::WRITE);
+                    this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
+                }
                 std::cerr << e.what() << '\n';
             }
         }
