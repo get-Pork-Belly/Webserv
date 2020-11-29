@@ -245,9 +245,10 @@ public:
         NotAllowedMethodException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
-    class CannotWriteToClientException : public std::exception
+    class CannotWriteToClientException : public SendErrorCodeToClientException
     {
     public:
+        CannotWriteToClientException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
    class ReadStaticResourceErrorException: public SendErrorCodeToClientException

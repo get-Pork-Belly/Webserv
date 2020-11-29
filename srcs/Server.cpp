@@ -352,6 +352,13 @@ Server::ReadStaticResourceErrorException::what() const throw()
     return ("[CODE 500] Read Static Resource exception");
 }
 
+Server::CannotWriteToClientException::CannotWriteToClientException(Server& server, int client_fd)
+{
+    server.closeClientSocket(client_fd);
+    server._responses[client_fd].init();
+    server._requests[client_fd].init();
+}
+
 const char*
 Server::CannotWriteToClientException::what() const throw()
 {
@@ -1418,27 +1425,6 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
-                // if (this->isCgiWritePipe(fd))
-                // {
-                //     int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                //     this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCgi(), FdSet::WRITE, client_fd, FdSet::WRITE);
-                //     this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCgi(), FdSet::READ);
-                // }
-                // else if (this->isClientSocket(fd))
-                // {
-                // }
-                // else
-                // {
-                //     int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                //     //TODO
-                //     this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
-                //     this->closeFdAndUpdateFdTable(fd, FdSet::READ);
-                // }
-                std::cerr << e.what() << '\n';
-            }
-            catch(const std::exception& e)
-            {
-                this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
             }
             catch(const char* e)
