@@ -262,6 +262,12 @@ public:
         ReceiveDataFromCgiPipeErrorException(Server& server, int read_fd_from_cgi);
         virtual const char* what() const throw();
     };
+   class SendDataToCgiPipeErrorException: public SendErrorCodeToClientException
+    {
+    public:
+        SendDataToCgiPipeErrorException(Server& server, int read_fd_from_cgi);
+        virtual const char* what() const throw();
+    };
 };
 
 #endif

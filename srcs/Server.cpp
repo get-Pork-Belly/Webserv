@@ -373,7 +373,25 @@ Server::ReceiveDataFromCgiPipeErrorException::ReceiveDataFromCgiPipeErrorExcepti
 const char*
 Server::ReceiveDataFromCgiPipeErrorException::what() const throw()
 {
-    return ("[CODE 500] Read Static Resource exception");
+    return ("[CODE 500] Receive data from cgi error exception");
+}
+
+Server::SendDataToCgiPipeErrorException::SendDataToCgiPipeErrorException(Server& server, int write_fd_to_cgi)
+{
+    int client_fd = server._server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
+    int read_fd_from_cgi= server._responses[client_fd].getReadFdFromCgi();
+
+    kill(server._responses[client_fd].getCgiPid(), SIGKILL);
+    server._server_manager->closeCgiWritePipe(server, write_fd_to_cgi);
+    server._server_manager->closeCgiReadPipe(server, read_fd_from_cgi);
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+const char*
+Server::SendDataToCgiPipeErrorException::what() const throw()
+{
+    return ("[CODE 500] Send data to cgi error exception");
 }
 
 /*============================================================================*/
@@ -1242,7 +1260,7 @@ Server::sendDataToCgi(int write_fd_to_cgi)
     else if (bytes == 0)
         this->finishSendDataToCgiPipe(write_fd_to_cgi);
     else
-        throw (InternalServerException(*this, client_fd));
+        throw (SendDataToCgiPipeErrorException(*this, write_fd_to_cgi));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< sendDataToCgi", 1);
@@ -1386,22 +1404,22 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
-                if (this->isCgiWritePipe(fd))
-                {
-                    int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCgi(), FdSet::WRITE, client_fd, FdSet::WRITE);
-                    this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCgi(), FdSet::READ);
-                }
-                else if (this->isClientSocket(fd))
-                {
-                }
-                else
-                {
-                    int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    //TODO 
-                    this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
-                    this->closeFdAndUpdateFdTable(fd, FdSet::READ);
-                }
+                // if (this->isCgiWritePipe(fd))
+                // {
+                //     int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+                //     this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCgi(), FdSet::WRITE, client_fd, FdSet::WRITE);
+                //     this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCgi(), FdSet::READ);
+                // }
+                // else if (this->isClientSocket(fd))
+                // {
+                // }
+                // else
+                // {
+                //     int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+                //     //TODO
+                //     this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
+                //     this->closeFdAndUpdateFdTable(fd, FdSet::READ);
+                // }
                 std::cerr << e.what() << '\n';
             }
             catch(const std::exception& e)
