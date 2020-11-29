@@ -202,10 +202,11 @@ Server::MustRedirectException::what() const throw()
     return (this->_msg.c_str());
 }
 
-Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num)
-: _res(res), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
+Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Server& server, int client_fd, const std::string& status_code, int error_num)
+:_msg("CannotOpenDirectoryException: " + std::string(strerror(error_num)))
 {
-    this->_res.setStatusCode(status_code);
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode(status_code);
 }
 
 const char*
@@ -214,15 +215,17 @@ Server::CannotOpenDirectoryException::what() const throw()
     return (this->_msg.c_str());
 }
 
-Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error_num)
-: _response(response), _error_num(error_num), _msg("OpenResourceErrorException: " + std::string(strerror(this->_error_num)))
+Server::OpenResourceErrorException::OpenResourceErrorException(Server& server, int client_fd, int error_num)
+:_msg("OpenResourceErrorException: " + std::string(strerror(error_num)))
 {
-    if (this->_error_num == EACCES)
-        this->_response.setStatusCode("403");
-    else if (this->_error_num == ENOMEM)
-        this->_response.setStatusCode("500");
+    Response& response = server.getResponse(client_fd);
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    if (error_num == EACCES)
+        response.setStatusCode("403");
+    else if (error_num == ENOMEM)
+        response.setStatusCode("500");
     else
-        this->_response.setStatusCode("404");
+        response.setStatusCode("404");
 }
 
 const char*
@@ -231,10 +234,10 @@ Server::OpenResourceErrorException::what() const throw()
     return (this->_msg.c_str());
 }
 
-Server::IndexNoExistException::IndexNoExistException(Response& response)
-: _response(response)
+Server::IndexNoExistException::IndexNoExistException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("404");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("404");
 }
 
 const char*
@@ -1387,15 +1390,15 @@ Server::run(int fd)
             catch(const SendErrorCodeToClientException& e)
             {
                 std::cerr << e.what() << '\n';
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-                // 수정이 필요하다. isCgiPipe
-                if (this->_responses[fd].getWriteFdToCgi() != DEFAULT_FD ||
-                        this->_responses[fd].getReadFdFromCgi() != DEFAULT_FD)
-                {
-                    Response& response = this->_responses[fd];
-                    this->closeFdAndUpdateFdTable(response.getReadFdFromCgi(), FdSet::READ);
-                    this->closeFdAndUpdateFdTable(response.getWriteFdToCgi(), FdSet::WRITE);
-                }
+                // this->_server_manager->fdSet(fd, FdSet::WRITE);
+                // // 수정이 필요하다. isCgiPipe
+                // if (this->_responses[fd].getWriteFdToCgi() != DEFAULT_FD ||
+                //         this->_responses[fd].getReadFdFromCgi() != DEFAULT_FD)
+                // {
+                //     Response& response = this->_responses[fd];
+                //     this->closeFdAndUpdateFdTable(response.getReadFdFromCgi(), FdSet::READ);
+                //     this->closeFdAndUpdateFdTable(response.getWriteFdToCgi(), FdSet::WRITE);
+                // }
                 //TODO: static resource 추가
                 // else if (this->_)
             }
@@ -1618,7 +1621,7 @@ Server::openStaticResource(int client_fd)
         this->_responses[client_fd].setResourceFd(resource_fd);
         this->_server_manager->updateFdMax(resource_fd);
         if ((fstat(resource_fd, &tmp)) == -1)
-            throw OpenResourceErrorException(this->_responses[client_fd], errno);
+            throw OpenResourceErrorException(*this, client_fd, errno);
         this->_responses[client_fd].setFileInfo(tmp);
     }
     else if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
@@ -1629,12 +1632,12 @@ Server::openStaticResource(int client_fd)
         this->_responses[client_fd].setResourceFd(resource_fd);
         this->_server_manager->updateFdMax(resource_fd);
         if ((fstat(resource_fd, &tmp)) == -1)
-            throw OpenResourceErrorException(this->_responses[client_fd], errno);
+            throw OpenResourceErrorException(*this, client_fd, errno);
         this->_responses[client_fd].setFileInfo(tmp);
         Log::openFd(*this, client_fd, FdType::RESOURCE, resource_fd);
     }
     else
-        throw OpenResourceErrorException(this->_responses[client_fd], errno);
+        throw OpenResourceErrorException(*this, client_fd, errno);
 
         
     Log::printTimeDiff(from, 1);
@@ -1684,7 +1687,7 @@ Server::checkAndSetResourceType(int client_fd)
             if (this->isAutoIndexOn(client_fd))
                 response.setResourceType(ResType::AUTO_INDEX);
             else
-                throw (IndexNoExistException(this->_responses[client_fd]));
+                throw (IndexNoExistException(*this, client_fd));
         }
     }
     else
@@ -1696,7 +1699,7 @@ Server::checkAndSetResourceType(int client_fd)
             response.setResourceType(ResType::STATIC_RESOURCE);
         }
         else if (errno == EACCES)
-            throw (CannotOpenDirectoryException(this->_responses[client_fd], "403", errno));
+            throw (CannotOpenDirectoryException(*this, client_fd, "403", errno));
         else if (errno == ENOENT)
         {
             if (method == "PUT")
@@ -1705,7 +1708,7 @@ Server::checkAndSetResourceType(int client_fd)
                 response.setStatusCode("201");
                 return ;
             }
-            throw (CannotOpenDirectoryException(this->_responses[client_fd], "404", errno));
+            throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
         }
     }
 
@@ -1754,7 +1757,7 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
     if ((dir_ptr = opendir(path.c_str())) != NULL)
     {
         if (path.back() != '/')
-            throw (CannotOpenDirectoryException(response, "409", errno));
+            throw (CannotOpenDirectoryException(*this, client_fd, "409", errno));
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
         std::vector<std::string> directory_entry = ft::split(response.getDirectoryEntry(), " ");
@@ -1774,7 +1777,7 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
                 throw (TargetResourceConflictException(response));
         }
         else
-            throw (CannotOpenDirectoryException(response, "404", errno));
+            throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
     }
     response.setStatusCode("204");
 

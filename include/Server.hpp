@@ -184,29 +184,23 @@ public:
     class CannotOpenDirectoryException : public SendErrorCodeToClientException
     {
     private:
-        Response& _res;
-        int _error_num;
         std::string _msg;
     public:
-        CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num);
+        CannotOpenDirectoryException(Server& server, int client_fd, const std::string& status_code, int error_num);
         virtual const char* what() const throw();
     };
     class IndexNoExistException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        IndexNoExistException(Response& response);
+        IndexNoExistException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class OpenResourceErrorException : public SendErrorCodeToClientException
     {
     private:
-        Response& _response;
-        int _error_num;
         std::string _msg;
     public:
-        OpenResourceErrorException(Response& response, int error_num);
+        OpenResourceErrorException(Server& server, int client_fd, int error_num);
         virtual const char* what() const throw();
     };
     class CgiMethodErrorException : public SendErrorCodeToClientException
