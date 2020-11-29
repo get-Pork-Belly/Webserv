@@ -184,10 +184,16 @@ Server::PayloadTooLargeException::what() const throw()
     return ("[CODE 413] Payload Too Large");
 }
 
+Server::ReadErrorException::ReadErrorException(Server& server, int client_fd)
+{
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("500");
+}
+
 const char*
 Server::ReadErrorException::what() const throw()
 {
-    return ("[CODE 900] Read empty buffer or occured reading error");
+    return ("[CODE 500] Read empty buffer or occured reading error");
 }
 
 Server::MustRedirectException::MustRedirectException(Server& server, int client_fd)
@@ -492,7 +498,7 @@ Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
     return (bytes);
 
     Log::printTimeDiff(from, 1);
@@ -517,7 +523,7 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t read_target_size
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
     return (true);
 
     Log::printTimeDiff(from, 1);
@@ -537,12 +543,12 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_messag
         {
             buf[bytes] = 0;
             if (bytes != CRLF_SIZE)
-                throw (ReadErrorException());
+                throw (ReadErrorException(*this, client_fd));
         }
         else if (bytes == 0)
-            throw (ReadErrorException());
+            throw (ReadErrorException(*this, client_fd));
         else
-            throw (ReadErrorException());
+            throw (ReadErrorException(*this, client_fd));
     }
 }
 
@@ -578,7 +584,7 @@ Server::receiveRequestLine(int client_fd)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveRequestLine", 1);
@@ -620,7 +626,7 @@ Server::receiveRequestHeaders(int client_fd)
     else if (peeked_bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
 
     
     Log::printTimeDiff(from, 1);
@@ -658,7 +664,7 @@ Server::receiveRequestNormalBody(int client_fd)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveRequestNormalBody", 1);

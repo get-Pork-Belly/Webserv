@@ -164,9 +164,10 @@ public:
         PayloadTooLargeException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
-    class ReadErrorException : public std::exception
+    class ReadErrorException : public SendErrorCodeToClientException
     {
     public:
+        ReadErrorException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
 public:
