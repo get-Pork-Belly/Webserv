@@ -266,10 +266,10 @@ Server::CgiMethodErrorException::what() const throw()
     return ("[CODE 400] CGI can hANDLE ONLY get head post");
 }
 
-Server::InternalServerException::InternalServerException(Response& response)
-: _response(response)
+Server::InternalServerException::InternalServerException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("500");
 }
 
 const char*
@@ -1242,7 +1242,7 @@ Server::sendDataToCgi(int write_fd_to_cgi)
     else if (bytes == 0)
         this->finishSendDataToCgiPipe(write_fd_to_cgi);
     else
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< sendDataToCgi", 1);
@@ -1307,7 +1307,7 @@ Server::putFileOnServer(int resource_fd)
         else if (bytes == 0)
             this->finishPutFileOnServer(resource_fd);
         else
-            throw (InternalServerException(this->_responses[resource_fd]));
+            throw (InternalServerException(*this, resource_fd));
     }
     else
     {
@@ -1320,10 +1320,10 @@ Server::putFileOnServer(int resource_fd)
         else if (bytes == 0)
         {
             if (remained > 0)
-                throw (InternalServerException(this->_responses[resource_fd]));
+                throw (InternalServerException(*this, resource_fd));
         }
         else
-            throw (InternalServerException(this->_responses[resource_fd]));
+            throw (InternalServerException(*this, resource_fd));
     }
 }
 
@@ -1630,7 +1630,7 @@ Server::openStaticResource(int client_fd)
     {
         resource_fd = open(path.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);
         if (resource_fd < 0)
-            throw InternalServerException(this->_responses[client_fd]);
+            throw (InternalServerException(*this, client_fd));
         // resource_fd = open("/Users/sanam/Desktop/Webserv/abcd", O_CREAT | O_RDWR, 0666);
         // 여기서 파일이 오픈되지 않는다는 건 상위 폴더 자체가 없다는 것.
         // 409 에러를 보내줄 수 있게 만들자
@@ -1786,7 +1786,7 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
                 this->deleteResourceOfUri(client_fd, path + entry);
         }
         if (rmdir(path.c_str()) == -1)
-            throw (InternalServerException(response));
+            throw (InternalServerException(*this, client_fd));
     }
     else
     {
@@ -1861,9 +1861,13 @@ Server::openCgiPipe(int client_fd)
     int pipe2[2];
 
     if (pipe(pipe1) < 0)
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     if (pipe(pipe2) < 0)
-        throw (InternalServerException(this->_responses[client_fd]));
+    {
+        close(pipe1[0]);
+        close(pipe1[1]);
+        throw (InternalServerException(*this, client_fd));
+    }
 
     int stdin_of_cgi = pipe1[0];
     int stdout_of_cgi = pipe2[1];
@@ -1996,7 +2000,7 @@ Server::makeCgiEnvp(int client_fd)
 
     num_of_envp = NUM_OF_META_VARIABLES + this->_requests[client_fd].getHeaders().size();
     if (!(envp = (char **)malloc(sizeof(char *) * num_of_envp)))
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     for (int i = 0; i < num_of_envp; i++)
         envp[i] = nullptr;
     if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
@@ -2005,7 +2009,7 @@ Server::makeCgiEnvp(int client_fd)
         !this->makeEnvpUsingEtc(envp, client_fd, &idx))
     {
         ft::doubleFree(&envp);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
 
 
@@ -2026,7 +2030,7 @@ Server::makeCgiArgv(int client_fd)
     Response& response = this->_responses[client_fd];
 
     if (!(argv = (char **)malloc(sizeof(char *) * 3)))
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     const location_info& location_info =
             this->getLocationConfig().at(this->_responses[client_fd].getRoute());
     for (int i = 0; i < 3; i++)
@@ -2035,17 +2039,17 @@ Server::makeCgiArgv(int client_fd)
     if (it == location_info.end())
     {
         ft::doubleFree(&argv);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
     {
         ft::doubleFree(&argv);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
     if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
     {
         ft::doubleFree(&argv);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
 
     
@@ -2081,24 +2085,24 @@ Server::forkAndExecuteCgi(int client_fd)
     if (!(argv = this->makeCgiArgv(client_fd)))
     {
         ft::doubleFree(&argv);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
     if (!(envp = this->makeCgiEnvp(client_fd)))
     {
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
     if ((pid = fork()) < 0)
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     else if (pid == 0)
     {
         close(response.getWriteFdToCgi());
         close(response.getReadFdFromCgi());
         if (dup2(stdin_of_cgi, 0) < 0)
-            throw (InternalServerException(this->_responses[client_fd]));
+            throw (InternalServerException(*this, client_fd));
         if (dup2(stdout_of_cgi, 1) < 0)
-            throw (InternalServerException(this->_responses[client_fd]));
+            throw (InternalServerException(*this, client_fd));
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
         exit(ret);

@@ -209,10 +209,8 @@ public:
     };
     class InternalServerException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        InternalServerException(Response& response);
+        InternalServerException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class AuthenticateErrorException : public SendErrorCodeToClientException
