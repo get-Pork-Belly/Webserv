@@ -245,7 +245,7 @@ public:
         NotAllowedMethodException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
-    class CannotWriteToClientException : public SendErrorCodeToClientException
+    class CannotWriteToClientException : public CannotSendErrorCodeToClientException
     {
     public:
         CannotWriteToClientException(Server& server, int client_fd);

@@ -1003,9 +1003,9 @@ Server::sendResponse(int client_fd)
             response.setSendProgress(SendProgress::SENDING);
     }
     else if (bytes == 0)
-        throw (CannotWriteToClientException());
+        throw (CannotWriteToClientException(*this, client_fd));
     else
-        throw (CannotWriteToClientException());
+        throw (CannotWriteToClientException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< sendResponse", 1);
@@ -1427,9 +1427,9 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
             }
-            catch(const char* e)
+            catch(const CannotSendErrorCodeToClientException& e)
             {
-                std::cerr << e << '\n';
+                std::cerr << e.what() << '\n';
             }
         }
         else if (this->_server_manager->fdIsCopySet(fd, FdSet::READ))
