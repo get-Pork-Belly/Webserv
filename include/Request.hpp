@@ -129,7 +129,8 @@ public:
     bool isValidVersion(const std::string& version);
 
     bool isValidHeaders(std::string& key, std::string& value);
-    bool isValidHeaderFields(std::string& key);
+    bool isExistentHostHeader();
+
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
 

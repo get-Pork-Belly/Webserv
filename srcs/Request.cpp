@@ -551,6 +551,9 @@ Request::parseRequestHeaders()
         this->setHeaders(key, value);
     }
 
+    if (this->isExistentHostHeader() == false)
+        throw (RequestFormatException(*this, "400"));
+
     Log::printTimeDiff(from, 2);
     Log::trace("< parseHeaders", 2);
 }
@@ -742,6 +745,20 @@ Request::isValidHeaders(std::string& key, std::string& value)
         this->isDuplicatedHeader(key) == false)
         return (false);
     return (true);
+}
+
+bool
+Request::isExistentHostHeader()
+{
+    const std::map<std::string, std::string>& headers = this->getHeaders();
+
+    if (headers.begin()->first != "Host")
+        return (false);
+    else
+    {
+        if (headers.begin()->second.find('@') != std::string::npos)
+            return (false);
+    }
 }
 
 bool
