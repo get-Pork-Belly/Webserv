@@ -719,6 +719,8 @@ Request::getContentLength() const
 /*****************************  Valid Check  **********************************/
 /*============================================================================*/
 
+
+
 bool
 Request::isValidMethod(const std::string& method)
 {
@@ -734,11 +736,10 @@ Request::isValidMethod(const std::string& method)
     return (this->updateStatusCodeAndReturn("501", false));
 }
 
-//TODO: uri 유효성 검사 부분 더 알아보기.
 bool
 Request::isValidUri(const std::string& uri)
 {
-    if (uri[0] == '/' || uri[0] == 'w')
+    if (uri[0] == '/' || (uri.length() == 1 && uri[0] == '*'))
         return (true);
     return (this->updateStatusCodeAndReturn("400", false));
 }
