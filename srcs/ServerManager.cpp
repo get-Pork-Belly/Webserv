@@ -24,7 +24,7 @@ ServerManager::ServerManager(const char* config_path)
     // this->_fd_table.resize(1024, FdType::CLOSED);
 
     this->_fd_table.resize(1024, std::pair<FdType, int>(FdType::CLOSED, DEFAULT_FD));
-    this->_last_request_time_of_client.resize(1024, std::pair<MonitorStatus, timeval>(false, timeval()));
+    this->_last_update_time_of_fd.resize(1024, std::pair<MonitorStatus, timeval>(false, timeval()));
     this->_fd = DEFAULT_FD;
     this->_fd_max = 2;
     this->initServers();
@@ -278,7 +278,7 @@ ServerManager::runServers()
     //TODO: siganl 입력시 반복종료 구현
     while (true)
     {
-        this->closeUnresponsiveClient();
+        this->closeUnresponsiveFd();
 
         // std::cout<<"\033[1;44;37m"<<"BEFORE select!"<<"\033[0m"<<std::endl;
         // Log::printFdCopySets(*this, 10);
@@ -320,80 +320,155 @@ ServerManager::runServers()
 }
 
 void
-ServerManager::setLastRequestTimeOfClient(int client_fd, MonitorStatus check, timeval* time)
+ServerManager::setLastUpdateTimeOfFd(int fd, MonitorStatus check, timeval* time)
 {
-    this->_last_request_time_of_client[client_fd].first = check;
+    this->_last_update_time_of_fd[fd].first = check;
     if (time != NULL)
-        this->_last_request_time_of_client[client_fd].second = *time;
+        this->_last_update_time_of_fd[fd].second = *time;
 }
 
 bool
-ServerManager::isClientTimeOut(int fd)
+ServerManager::isFdTimeOut(int fd)
 {
     timeval now;
     gettimeofday(&now, NULL);
     
-    if (this->_last_request_time_of_client[fd].first == false)
+    if (this->_last_update_time_of_fd[fd].first == false)
         return (false);
-    if (now.tv_sec - this->_last_request_time_of_client[fd].second.tv_sec > TIME_OUT_SECOND)
-        return (true);
+
+    switch (this->getFdType(fd))
+    {
+    case FdType::CLIENT_SOCKET:
+        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > CLIENT_TIME_OUT_SECOND)
+            return (true);
+    
+    case FdType::PIPE:
+        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > CGI_TIME_OUT_SECOND)
+            return (true);
+
+    default:
+        break;
+    }
     return (false);
 }
 
 void
 ServerManager::monitorTimeOutOff(int fd)
 {
-    this->_last_request_time_of_client[fd].first = false;
+    this->_last_update_time_of_fd[fd].first = false;
 }
 
 void
 ServerManager::monitorTimeOutOn(int fd)
 {
-    this->_last_request_time_of_client[fd].first = true;
-    gettimeofday(&(this->_last_request_time_of_client[fd].second), NULL);
+    this->_last_update_time_of_fd[fd].first = true;
+    gettimeofday(&(this->_last_update_time_of_fd[fd].second), NULL);
 }
 
 bool
 ServerManager::isMonitorTimeOutOn(int fd)
 {
-    return (this->_last_request_time_of_client[fd].first);
+    return (this->_last_update_time_of_fd[fd].first);
 }
 
 void
-ServerManager::closeUnresponsiveClient()
+ServerManager::closeUnresponsiveClient(int client_fd)
+{
+    if (this->isMonitorTimeOutOn(client_fd))
+    {
+        if (this->isFdTimeOut(client_fd))
+        {
+            Server* server = findLinkedServer(client_fd);
+            if (!server)
+                return ;
+            if (server->getServerSocket() == this->getFdTable()[client_fd].second)
+                server->getResponse(client_fd).setStatusCode("408");
+            this->fdSet(client_fd, FdSet::WRITE);
+            this->monitorTimeOutOff(client_fd);
+        }
+    }
+    else
+        this->monitorTimeOutOn(client_fd);
+}
+
+void
+ServerManager::closeUnresponsiveCgi(int pipe_fd)
+{
+    if (this->isMonitorTimeOutOn(pipe_fd))
+    {
+        if (this->isFdTimeOut(pipe_fd))
+        {
+            int client_fd = this->getLinkedFdFromFdTable(pipe_fd);
+            Server* server = findLinkedServer(client_fd);
+            if (!server)
+                return ;
+            Response& response = server->getResponse(client_fd);
+            kill(response.getCgiPid(), SIGKILL);
+            if (response.getSendProgress() == SendProgress::READY)
+                response.setStatusCode("500");
+            else
+            {
+                response.setTransmittingBody("0\r\n\r\n");
+                response.setParseProgress(ParseProgress::FINISH);
+                if (response.getWriteFdToCgi() != DEFAULT_FD)
+                    this->closeCgiWritePipe(*server, response.getWriteFdToCgi());
+                if (response.getReadFdFromCgi() != DEFAULT_FD)
+                    this->closeCgiReadPipe(*server, response.getReadFdFromCgi());
+                if (response.getResourceFd() != DEFAULT_FD)
+                    this->closeStaticResource(*server, response.getResourceFd());
+            }
+            this->fdSet(client_fd, FdSet::WRITE);
+            this->monitorTimeOutOff(pipe_fd);
+        }
+    }
+    else
+        this->monitorTimeOutOn(pipe_fd);
+}
+
+bool
+ServerManager::isUnresponsiveFd(int fd)
+{
+    if (this->fdIsOriginSet(fd, FdSet::READ) &&
+        this->fdIsOriginSet(fd, FdSet::READ) != this->fdIsCopySet(fd, FdSet::READ))
+        return (true);
+    if (this->fdIsOriginSet(fd, FdSet::WRITE) &&
+        this->fdIsOriginSet(fd, FdSet::WRITE) != this->fdIsCopySet(fd, FdSet::WRITE))
+        return (true);
+    return (false);
+}
+
+Server*
+ServerManager::findLinkedServer(int client_fd)
+{
+    for (Server* server : this->_servers)
+    {
+        if (server->getServerSocket() == this->getFdTable()[client_fd].second)
+            return (server);
+    }
+    return (nullptr);
+}
+
+void
+ServerManager::closeUnresponsiveFd()
 {
     for (int fd = 3; fd < this->getFdMax() + 1; fd++)
     {
-        if (this->fdIsOriginSet(fd, FdSet::READ) &&
-            this->getFdType(fd) == FdType::CLIENT_SOCKET &&
-            this->fdIsOriginSet(fd, FdSet::READ) != this->fdIsCopySet(fd, FdSet::READ))
+        if (this->isUnresponsiveFd(fd))
         {
-            if (this->isMonitorTimeOutOn(fd))
+            const FdType& type = this->getFdType(fd);
+            switch (type)
             {
-                if (this->isClientTimeOut(fd))
-                {
-                    this->fdSet(fd, FdSet::WRITE);
-                    for (Server* server : this->_servers)
-                    {
-                        if (server->getServerSocket() == this->getFdTable()[fd].second)
-                        {
-                            Response& response = server->getResponse(fd);
-                            response.setStatusCode("408");
-                            if (response.getWriteFdToCgi() != DEFAULT_FD ||
-                                response.getReadFdFromCgi() != DEFAULT_FD)
-                            {
-                                server->closeFdAndUpdateFdTable(response.getReadFdFromCgi(), FdSet::READ);
-                                server->closeFdAndUpdateFdTable(response.getWriteFdToCgi(), FdSet::WRITE);
-                            }
-                            else if (response.getResourceFd() != DEFAULT_FD)
-                                server->closeFdAndUpdateFdTable(response.getResourceFd(), FdSet::READ);
-                        }
-                    }
-                    this->monitorTimeOutOff(fd);
-                }
+            case FdType::CLIENT_SOCKET:
+                closeUnresponsiveClient(fd);
+                break;
+            
+            case FdType::PIPE:
+                closeUnresponsiveCgi(fd);
+                break;
+
+            default:
+                break;
             }
-            else
-                this->monitorTimeOutOn(fd);
         }
         else
             this->monitorTimeOutOff(fd);
