@@ -263,7 +263,7 @@ Server::CgiMethodErrorException::CgiMethodErrorException(Server& server, int cli
 const char*
 Server::CgiMethodErrorException::what() const throw()
 {
-    return ("[CODE 400] CGI can hANDLE ONLY get head post");
+    return ("[CODE 400] CGI can handle only GET HEAD POST");
 }
 
 Server::InternalServerException::InternalServerException(Server& server, int client_fd)

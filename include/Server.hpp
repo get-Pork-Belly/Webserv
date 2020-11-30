@@ -176,7 +176,7 @@ public:
     private:
         std::string _msg;
     public:
-        MustRedirectException(Server& server,int client_fd);
+        MustRedirectException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class CannotOpenDirectoryException : public SendErrorCodeToClientException
