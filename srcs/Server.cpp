@@ -369,8 +369,10 @@ Server::init()
 }
 
 bool
-Server::isExistCrlfInChunkSize(int fd)
+Server::isExistCrlf(int fd, const RecvRequest recv_request)
 {
+    if (recv_request == RecvRequest::REQUEST_LINE)
+        return (this->_requests[fd].getIndexOfCrlfInRequestLine() != DEFAULT_INDEX_OF_CRLF);
     return (this->_requests[fd].getIndexOfCrlfInChunkSize() != DEFAULT_INDEX_OF_CRLF);
 }
 
@@ -381,12 +383,17 @@ Server::isNotYetSetTargetChunkSize(int fd)
 }
 
 void
-Server::findCrlfInChunkSize(int fd, const std::string& buf)
+Server::findCrlfAndSetIndexOfCrlf(int fd, const std::string& buf, const RecvRequest recv_request)
 {
     size_t index_of_crlf;
 
     if ((index_of_crlf = buf.find("\r\n")) != std::string::npos)
-        this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
+    {
+        if (recv_request == RecvRequest::REQUEST_LINE)
+            this->_requests[fd].setIndexOfCrlfInRequestLine(index_of_crlf);
+        else if (recv_request == RecvRequest::CHUNKED_BODY)
+            this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
+    }
     else
         throw (Request::RequestFormatException(this->_requests[fd], "400"));
 }
@@ -426,6 +433,15 @@ Server::prepareToReceiveNextChunkData(int fd)
 }
 
 void
+Server::prepareToReceiveHeaders(int fd)
+{
+    this->_requests[fd].setIndexOfCrlfInRequestLine(DEFAULT_INDEX_OF_CRLF);
+    this->_requests[fd].setRequestLine("");
+    this->_requests[fd].setReceivedRequestLineLength(0);
+    this->_requests[fd].setRecvRequest(RecvRequest::HEADERS);
+}
+
+void
 Server::finishChunkSequence(int fd)
 {
     this->_requests[fd].setRecvRequest(RecvRequest::COMPLETE);
@@ -443,8 +459,8 @@ Server::readBufferUntilRequestLine(int client_fd)
     gettimeofday(&from, NULL);
 
     int bytes;
-    Request& request = this->_requests[client_fd];
     char buf[BUFFER_SIZE + 1];
+    Request& request = this->_requests[client_fd];
 
     int index_of_crlf = request.getIndexOfCrlfInRequestLine();
     int received_request_line_length = request.getReceivedRequestLineLength();
@@ -459,10 +475,7 @@ Server::readBufferUntilRequestLine(int client_fd)
         {
             request.appendRequestLine(buf, bytes);
             request.parseRequestLine();
-            request.setIndexOfCrlfInRequestLine(DEFAULT_INDEX_OF_CRLF);
-            request.setRequestLine("");
-            request.setReceivedRequestLineLength(0);
-            request.setRecvRequest(RecvRequest::HEADERS);
+            this->prepareToReceiveHeaders(client_fd);
         }
         else
             request.appendRequestLine(buf, bytes);
@@ -533,25 +546,17 @@ Server::receiveRequestLine(int client_fd)
     int bytes;
     char buf[BUFFER_SIZE + 1];
     Request& request = this->_requests[client_fd];
-    int index_of_crlf_in_request_line = request.getIndexOfCrlfInRequestLine();
 
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        if (index_of_crlf_in_request_line != DEFAULT_INDEX_OF_CRLF)
+        if (this->isExistCrlf(client_fd, RecvRequest::REQUEST_LINE))
             this->readBufferUntilRequestLine(client_fd);
         else
         {
-            std::string readed(buf, bytes);
-            size_t tmp;
-            if ((tmp = readed.find("\r\n")) != std::string::npos)
-            {
-                if (index_of_crlf_in_request_line >= BUFFER_SIZE - 2)
-                    throw (Request::UriTooLongException(request));
-                request.setIndexOfCrlfInRequestLine(tmp);
-            }
-            else
-                throw (Request::RequestFormatException(request, "400"));
+            this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::REQUEST_LINE);
+            if (request.getIndexOfCrlfInRequestLine() >= BUFFER_SIZE - 2)
+                throw (Request::UriTooLongException(request));
         }
     }
     else if (bytes == RECV_COUNT_NOT_REACHED)
@@ -769,10 +774,10 @@ Server::receiveRequestChunkedBody(int client_fd)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        if (this->isExistCrlfInChunkSize(client_fd))
+        if (this->isExistCrlf(client_fd, RecvRequest::CHUNKED_BODY))
             this->receiveChunkSize(client_fd);
         else if (this->isNotYetSetTargetChunkSize(client_fd))
-            this->findCrlfInChunkSize(client_fd, buf);
+            this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::CHUNKED_BODY);
         else if (this->isLastSequenceOfParsingChunk(client_fd))
             this->receiveLastChunkData(client_fd);
         else
