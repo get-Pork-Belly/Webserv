@@ -566,7 +566,7 @@ Request::parseRequestHeaders()
     if (this->isExistentHostHeader() == false)
         throw (RequestFormatException(*this, "400"));
     if (this->getHeaders().size() >= LIMIT_HEADERS_LENGTH)
-        throw (RequestHeaderFieldsTooLargeException());
+        throw (RequestHeaderFieldsTooLargeException(*this));
 
     Log::printTimeDiff(from, 2);
     Log::trace("< parseHeaders", 2);
@@ -773,6 +773,7 @@ Request::isExistentHostHeader()
         if (headers.begin()->second.find('@') != std::string::npos)
             return (false);
     }
+    return (true);
 }
 
 bool
