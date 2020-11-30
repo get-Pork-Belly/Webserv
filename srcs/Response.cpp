@@ -1125,6 +1125,16 @@ Response::getHtmlLangMetaData() const
     return (html_tag_block.substr(lang_meta_data_start + 6, lang_meta_data_end - (lang_meta_data_start + 6)));
 }
 
+bool
+Response::findEndOfHeaders()
+{
+    const std::string& temp_buffer = this->getTempBuffer();
+
+    if (temp_buffer.find("\r\n\r\n") != std::string::npos)
+        return (true);
+    return (false);
+}
+
 void
 Response::preparseCgiMessage()
 {
@@ -1133,7 +1143,7 @@ Response::preparseCgiMessage()
     gettimeofday(&from, NULL);
 
     std::string line;
-    std::string cgi_message(this->getBody());
+    std::string cgi_message(this->getTempBuffer());
 
     if (ft::substr(line, cgi_message, "\r\n\r\n") == false)
         throw (InvalidCgiMessageException(*this));
@@ -1142,6 +1152,7 @@ Response::preparseCgiMessage()
         if (this->parseCgiHeaders(line) == false)
             throw (InvalidCgiMessageException(*this));
     }
+    // this->setTempBuffer("");
     this->setBody(cgi_message);
     if (this->getHeaders().find("Status") == this->getHeaders().end())
         throw (InvalidCgiMessageException(*this));

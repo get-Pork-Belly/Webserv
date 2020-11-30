@@ -161,6 +161,7 @@ public:
     std::string getRedirectUri(const Request& request) const;
     std::string getLastModifiedDateTimeOfResource() const;
     std::string getHtmlLangMetaData() const;
+    bool findEndOfHeaders();
     void preparseCgiMessage();
     bool parseCgiHeaders(std::string& cgi_message);
     bool isValidHeaders(std::string& key, std::string& value);
