@@ -1199,6 +1199,8 @@ Server::sendDataToCgi(int write_fd_to_cgi)
     Log::trace("< sendDataToCgi", 1);
 }
 
+long long received_bytes;
+
 void
 Server::receiveDataFromCgi(int read_fd_from_cgi)
 {
@@ -1215,6 +1217,8 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
 
     char buf[BUFFER_SIZE + 1];
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
+    received_bytes += bytes;
+    std::cout<<"\033[1;37;41m"<<"receivedDataFromCgi: "<<received_bytes<<"\033[0m"<<std::endl;
     if (bytes > 0)
     {
         buf[bytes] = 0;
@@ -1315,11 +1319,7 @@ Server::run(int fd)
                     if (this->isResponseAllSended(fd))
                     {
                         if (this->_responses[fd].getStatusCode()[0] != '2')
-                        {
-                            this->_server_manager->fdClr(fd, FdSet::WRITE);
-                            this->_responses[fd].init();
                             this->closeClientSocket(fd);
-                        }
                         else
                         {
                             this->_server_manager->fdClr(fd, FdSet::WRITE);
@@ -2114,6 +2114,9 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
 
     this->_server_manager->closeCgiReadPipe(*this, read_fd_from_cgi);
 
+    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+    if (response.getSendProgress() == SendProgress::READY)
+        throw (InternalServerException(response));
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     response.setReadFdFromCgi(DEFAULT_FD);
     response.setReceiveProgress(ReceiveProgress::FINISH);
