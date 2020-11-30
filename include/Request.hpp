@@ -31,17 +31,14 @@ private:
     int _received_chunk_data_length;
     int _index_of_crlf_in_chunk_size;
     int _received_chunk_size_length;
-    std::string _chunk_size;
     int _received_last_chunk_data_length;
-    std::string _last_chunk_data;
+    int _received_request_line_length;
+    int _index_of_crlf_in_request_line;
 
     int _recv_counts;
     bool _carriege_return_trimmed;
     std::string _temp_buffer;
 
-    int _received_request_line_length;
-    std::string _request_line;
-    int _index_of_crlf_in_request_line;
 
 public:
     /* Constructor */
@@ -72,15 +69,12 @@ public:
     bool getCarriegeReturnTrimmed() const;
     int getIndexOfCrlfInChunkSize() const;
     int getReceivedChunkSizeLength() const;
-    const std::string& getChunkSize() const;
     int getReceivedLastChunkDataLength() const;
-    const std::string& getLastChunkData() const;
 
     int getReceiveCounts() const;
     const std::string& getTempBuffer() const;
 
     int getReceivedRequestLineLength() const;
-    const std::string& getRequestLine() const;
     int getIndexOfCrlfInRequestLine() const;
 
     /* Setter */
@@ -101,16 +95,13 @@ public:
     void setReceivedChunkDataLength(const int received_chunk_data_length);
     void setIndexOfCrlfInChunkSize(const int index_of_crlf_in_chunk_size);
     void setReceivedChunkSizeLength(const int received_chunk_size_length);
-    void setChunkSize(const std::string& chunk_size);
     void setReceivedLastChunkDataLength(const int received_last_chunk_data_length);
-    void setLastChunkData(const std::string& last_chunk_data);
 
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);
     void setTempBuffer(const std::string& temp_buffer);
 
     void setReceivedRequestLineLength(const int received_request_line_length);
-    void setRequestLine(const std::string& request_line);
     void setIndexOfCrlfInRequestLine(const int index_of_crlf_in_request_line);
 
     /* Util */
@@ -149,9 +140,6 @@ public:
     void appendBody(char* buf, int bytes);
     void appendBody(const char* buf, int bytes);
     void appendTempBuffer(char* buf, int bytes);
-    void appendChunkSize(char* buf, int bytes);
-    void appendLastChunkData(char* buf, int bytes);
-    void appendRequestLine(char* buf, int bytes);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
