@@ -95,6 +95,7 @@ public:
     bool isMonitorTimeOutOn(int fd);
 
     bool isUnresponsiveFd(int fd);
+    Server* findLinkedServer(int client_fd);
 };
 
 #endif

@@ -341,11 +341,11 @@ ServerManager::isFdTimeOut(int fd)
     case FdType::CLIENT_SOCKET:
         if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > CLIENT_TIME_OUT_SECOND)
             return (true);
-        break;
     
     case FdType::PIPE:
         if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > CGI_TIME_OUT_SECOND)
             return (true);
+
     default:
         break;
     }
@@ -378,11 +378,11 @@ ServerManager::closeUnresponsiveClient(int client_fd)
     {
         if (this->isFdTimeOut(client_fd))
         {
-            for (Server* server : this->_servers)
-            {
-                if (server->getServerSocket() == this->getFdTable()[client_fd].second)
-                    server->getResponse(client_fd).setStatusCode("408");
-            }
+            Server* server = findLinkedServer(client_fd);
+            if (!server)
+                return ;
+            if (server->getServerSocket() == this->getFdTable()[client_fd].second)
+                server->getResponse(client_fd).setStatusCode("408");
             this->fdSet(client_fd, FdSet::WRITE);
             this->monitorTimeOutOff(client_fd);
         }
@@ -399,26 +399,23 @@ ServerManager::closeUnresponsiveCgi(int pipe_fd)
         if (this->isFdTimeOut(pipe_fd))
         {
             int client_fd = this->getLinkedFdFromFdTable(pipe_fd);
-            for (Server* server : this->_servers)
+            Server* server = findLinkedServer(client_fd);
+            if (!server)
+                return ;
+            Response& response = server->getResponse(client_fd);
+            kill(response.getCgiPid(), SIGKILL);
+            if (response.getSendProgress() == SendProgress::READY)
+                response.setStatusCode("500");
+            else
             {
-                if (server->getServerSocket() == this->getFdTable()[client_fd].second)
-                {
-                    Response& response = server->getResponse(client_fd);
-                    kill(response.getCgiPid(), SIGKILL);
-                    if (response.getSendProgress() == SendProgress::READY)
-                        response.setStatusCode("500");
-                    else
-                    {
-                        response.setTransmittingBody("0\r\n\r\n");
-                        response.setParseProgress(ParseProgress::FINISH);
-                        if (response.getWriteFdToCgi() != DEFAULT_FD)
-                            this->closeCgiWritePipe(*server, response.getWriteFdToCgi());
-                        if (response.getReadFdFromCgi() != DEFAULT_FD)
-                            this->closeCgiReadPipe(*server, response.getReadFdFromCgi());
-                        if (response.getResourceFd() != DEFAULT_FD)
-                            this->closeStaticResource(*server, response.getResourceFd());
-                    }
-                }
+                response.setTransmittingBody("0\r\n\r\n");
+                response.setParseProgress(ParseProgress::FINISH);
+                if (response.getWriteFdToCgi() != DEFAULT_FD)
+                    this->closeCgiWritePipe(*server, response.getWriteFdToCgi());
+                if (response.getReadFdFromCgi() != DEFAULT_FD)
+                    this->closeCgiReadPipe(*server, response.getReadFdFromCgi());
+                if (response.getResourceFd() != DEFAULT_FD)
+                    this->closeStaticResource(*server, response.getResourceFd());
             }
             this->fdSet(client_fd, FdSet::WRITE);
             this->monitorTimeOutOff(pipe_fd);
@@ -440,6 +437,17 @@ ServerManager::isUnresponsiveFd(int fd)
     return (false);
 }
 
+Server*
+ServerManager::findLinkedServer(int client_fd)
+{
+    for (Server* server : this->_servers)
+    {
+        if (server->getServerSocket() == this->getFdTable()[client_fd].second)
+            return (server);
+    }
+    return (nullptr);
+}
+
 void
 ServerManager::closeUnresponsiveFd()
 {
@@ -456,6 +464,7 @@ ServerManager::closeUnresponsiveFd()
             
             case FdType::PIPE:
                 closeUnresponsiveCgi(fd);
+                break;
 
             default:
                 break;
