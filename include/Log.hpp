@@ -26,6 +26,7 @@ public:
     static void closeClient(Server& server, int client_fd);
     static void openFd(Server& server, int client_socket, const FdType& type, int fd);
     static void closeFd(Server& server, int client_socket, const FdType& type, int fd);
+    static void closeFd(const FdType& type, int fd);
     static void getRequest(Server& server, int fd);
     static void timeLog(int fd);
     // error

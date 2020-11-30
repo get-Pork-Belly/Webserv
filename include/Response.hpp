@@ -42,7 +42,7 @@ private:
     ParseProgress _parse_progress;
     ReceiveProgress _receive_progress;
 
-    int _resoure_fd;
+    int _resource_fd;
     int _sended_response_size;
     std::string _response_message;
     SendProgress _send_progress;
@@ -71,14 +71,14 @@ public:
     const ResType& getResourceType() const;
     const std::string& getBody() const;
     const std::string& getUriPath() const;
-    // int getCGIPipeFd() const;
+    // int getCgiPipeFd() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
-    int getStdinOfCGI() const;
-    int getStdoutOfCGI() const;
-    int getReadFdFromCGI() const;
-    int getWriteFdToCGI() const;
-    int getCGIPid() const;
+    int getStdinOfCgi() const;
+    int getStdoutOfCgi() const;
+    int getReadFdFromCgi() const;
+    int getWriteFdToCgi() const;
+    int getCgiPid() const;
     const std::string& getTransmittingBody() const;
 
     size_t getAlreadyEncodedSize() const;
@@ -102,12 +102,12 @@ public:
     void setUriExtension(const std::string& extension);
     void setHeaders(const std::string& key, const std::string& value);
 
-    void setStdinOfCGI(const int fd);
-    void setStdoutOfCGI(const int fd);
-    void setReadFdFromCGI(const int fd);
-    void setWriteFdToCGI(const int fd);
+    void setStdinOfCgi(const int fd);
+    void setStdoutOfCgi(const int fd);
+    void setReadFdFromCgi(const int fd);
+    void setWriteFdToCgi(const int fd);
 
-    void setCGIPid(const int pid);
+    void setCgiPid(const int pid);
 
     void setAlreadyEncodedSize(const size_t already_encoded_size);
     void setParseProgress(const ParseProgress sparseprogress);
@@ -117,24 +117,29 @@ public:
     void setResponseMessage(const std::string& response_message);
     void setSendProgress(const SendProgress& send_progress);
 
+    bool isCgiWritePipeNotClosed() const;
+    bool isCgiReadPipeNotClosed() const;
+    bool isResourceNotClosed() const;
+
+
     /* Exception */
 public:
-    class CannotOpenCGIPipeException : public SendErrorCodeToClientException
+    class CannotOpenCgiPipeException : public SendErrorCodeToClientException
     {
     private:
         Response& _response;
     public:
-        CannotOpenCGIPipeException(Response& response);
+        CannotOpenCgiPipeException(Response& response);
         virtual const char* what() const throw();
     };
-    class InvalidCGIMessageException: public SendErrorCodeToClientException
+    class InvalidCgiMessageException: public SendErrorCodeToClientException
     {
     private:
         std::string _msg;
         Response& _response;
     public:
-        InvalidCGIMessageException(Response& response);
-        InvalidCGIMessageException(Response& response, const std::string& status_code);
+        InvalidCgiMessageException(Response& response);
+        InvalidCgiMessageException(Response& response, const std::string& status_code);
         virtual const char* what() const throw();
     };
     /* Util */
@@ -152,8 +157,8 @@ public:
     std::string getRedirectUri(const Request& request) const;
     std::string getLastModifiedDateTimeOfResource() const;
     std::string getHtmlLangMetaData() const;
-    void preparseCGIMessage();
-    bool parseCGIHeaders(std::string& cgi_message);
+    void preparseCgiMessage();
+    bool parseCgiHeaders(std::string& cgi_message);
     bool isValidHeaders(std::string& key, std::string& value);
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);

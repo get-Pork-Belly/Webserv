@@ -10,4 +10,11 @@ public:
     virtual const char* what() const throw();
 };
 
+class CannotSendErrorCodeToClientException : public std::exception
+{
+public:
+    CannotSendErrorCodeToClientException();
+    virtual const char* what() const throw();
+};
+
 #endif

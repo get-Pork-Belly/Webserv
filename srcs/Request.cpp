@@ -162,7 +162,7 @@ Request::getReceivedChunkDataLength() const
 }
 
 int
-Request::getIndexOfCRLFInChunkSize() const
+Request::getIndexOfCrlfInChunkSize() const
 {
     return (this->_index_of_crlf_in_chunk_size);
 }
@@ -304,7 +304,7 @@ Request::setReceivedChunkDataLength(const int received_chunk_data_length)
 }
 
 void
-Request::setIndexOfCRLFInChunkSize(const int index_of_crlf_in_chunk_size)
+Request::setIndexOfCrlfInChunkSize(const int index_of_crlf_in_chunk_size)
 {
     this->_index_of_crlf_in_chunk_size = index_of_crlf_in_chunk_size;
 }
