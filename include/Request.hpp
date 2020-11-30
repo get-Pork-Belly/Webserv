@@ -121,7 +121,6 @@ public:
     /* parser */
     void parseRequestLine();
     void parseRequestHeaders();
-    void parseRequestWithoutBody(char* buf, int bytes);
     bool parseHeaders(std::string& req_message);
 
     /* valid check */

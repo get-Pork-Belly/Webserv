@@ -504,38 +504,6 @@ Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& r
 }
 
 void
-Request::parseRequestWithoutBody(char* buf, int bytes)
-{
-    (void)buf;
-    (void)bytes;
-    // Log::trace("> parseRequestWithoutBody", 1);
-    // timeval from;
-    // gettimeofday(&from, NULL);
-
-    // std::string line;
-    // std::string req_message(buf, bytes);
-
-    // if (ft::substr(line, req_message, "\r\n") == false)
-    //     throw (RequestFormatException(*this, "400"));
-    // else
-    // {
-    //     if (this->parseRequestLine(buf, bytes) == false)
-    //         throw (RequestFormatException(*this, "400"));
-    // }
-    // if (ft::substr(line, req_message, "\r\n\r\n") == false)
-    //     throw (RequestFormatException(*this, "400"));
-    // else
-    // {
-    //     if (this->parseHeaders(line) == false)
-    //         throw (RequestFormatException(*this, "400"));
-    // }
-    // this->updateRecvRequest();
-
-    // Log::printTimeDiff(from, 1);
-    // Log::trace("< parseRequestWithoutBody", 1);
-}
-
-void
 Request::parseRequestLine()
 {
     Log::trace("> parseRequestLine", 2);
