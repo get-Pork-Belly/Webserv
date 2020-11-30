@@ -2160,7 +2160,7 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
 
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     if (response.getSendProgress() == SendProgress::READY)
-        throw (InternalServerException(response));
+        throw (InternalServerException(*this, client_fd));
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     response.setReadFdFromCgi(DEFAULT_FD);
     response.setReceiveProgress(ReceiveProgress::FINISH);
