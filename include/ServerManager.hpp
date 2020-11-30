@@ -16,8 +16,10 @@
 # include <vector>
 # include "types.hpp"
 # include "ServerGenerator.hpp"
+# include <signal.h>
 
-const int TIME_OUT_SECOND = 5;
+const int CLIENT_TIME_OUT_SECOND = 5;
+const int CGI_TIME_OUT_SECOND = 60;
 
 class Server;
 
@@ -44,7 +46,7 @@ private:
     std::vector<std::pair<FdType, int>> _fd_table;
     int _fd;
     int _fd_max;
-    std::vector<std::pair<MonitorStatus, timeval>> _last_request_time_of_client;
+    std::vector<std::pair<MonitorStatus, timeval>> _last_update_time_of_fd;
 
 public:
     /* Constructor */
@@ -65,7 +67,7 @@ public:
     void setResourceOnFdTable(int fd, int client_socket);
     void setCgiPipeOnFdTable(int fd, int client_socket);
     void setClosedFdOnFdTable(int fd);
-    void setLastRequestTimeOfClient(int client_fd, MonitorStatus check, timeval* time);
+    void setLastUpdateTimeOfFd(int client_fd, MonitorStatus check, timeval* time);
     /* Exception */
     /* Util */
     bool fdIsCopySet(int fd, FdSet type);
@@ -78,17 +80,21 @@ public:
     /* Manage Server functions */
     void initServers();
     bool runServers();
-    void closeUnresponsiveClient();
+    void closeUnresponsiveFd();
+    void closeUnresponsiveClient(int client_fd);
+    void closeUnresponsiveCgi(int pipe_fd);
     void closeCgiWritePipe(Server& server, int pipe_fd);
     void closeCgiReadPipe(Server& server, int pipe_fd);
     void closeStaticResource(Server& server, int resource_fd);
     //TODO 구현 필요
     // void exitServers();
 
-    bool isClientTimeOut(int fd);
+    bool isFdTimeOut(int fd);
     void monitorTimeOutOff(int fd);
     void monitorTimeOutOn(int fd);
     bool isMonitorTimeOutOn(int fd);
+
+    bool isUnresponsiveFd(int fd);
 };
 
 #endif
