@@ -142,9 +142,9 @@ public:
     void receiveChunkSize(int fd);
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
-    bool isExistCrlfInChunkSize(int fd);
+    bool isExistCrlf(int fd, const RecvRequest recv_request);
     bool isNotYetSetTargetChunkSize(int fd);
-    void findCrlfInChunkSize(int fd, const std::string& buf);
+    void findCrlfAndSetIndexOfCrlf(int fd, const std::string& buf, const RecvRequest recv_request);
     bool isLastSequenceOfParsingChunk(int fd);
     int calculateReceiveTargetSizeOfChunkData(int fd);
     bool isChunkDataAllReceived(int fd);
