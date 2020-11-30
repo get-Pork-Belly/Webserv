@@ -15,11 +15,11 @@ Request::Request()
 _protocol(""), _body(""), _status_code("200"),
 _info(RecvRequest::REQUEST_LINE), _ip_address(""),
 _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
-_received_chunk_data_length(0), _index_of_crlf_in_chunk_size(-1),
+_received_chunk_data_length(0), _index_of_crlf_in_chunk_size(DEFAULT_INDEX_OF_CRLF),
 _received_chunk_size_length(0), _chunk_size(""),
 _received_last_chunk_data_length(0), _last_chunk_data(""), _recv_counts(0),
 _carriege_return_trimmed(false), _temp_buffer(""),
-_received_request_line_length(0), _request_line(""), _index_of_crlf_in_request_line(0)
+_received_request_line_length(0), _request_line(""), _index_of_crlf_in_request_line(DEFAULT_INDEX_OF_CRLF)
  {}
 
 Request::Request(const Request& other)
@@ -738,7 +738,7 @@ Request::init()
     this->_transfered_body_size = 0;
     this->_target_chunk_size = DEFAULT_TARGET_CHUNK_SIZE;
     this->_received_chunk_data_length = 0;
-    this->_index_of_crlf_in_chunk_size = -1;
+    this->_index_of_crlf_in_chunk_size = DEFAULT_INDEX_OF_CRLF;
     this->_received_chunk_size_length = 0;
     this->_chunk_size = "";
     this->_received_last_chunk_data_length = 0;
@@ -748,7 +748,7 @@ Request::init()
     this->_temp_buffer = "";
     this->_received_request_line_length = 0;
     this->_request_line = "";
-    this->_index_of_crlf_in_request_line = 0;
+    this->_index_of_crlf_in_request_line = DEFAULT_INDEX_OF_CRLF;
 }
 
 int
