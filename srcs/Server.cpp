@@ -476,28 +476,6 @@ Server::readBufferUntilRequestLine(int client_fd)
     Log::trace("< readBufferUntilRequestLine", 1);
 }
 
-// int
-// Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
-// {
-//     Log::trace("> readBufferUntilRequestLine", 1);
-//     timeval from;
-//     gettimeofday(&from, NULL);
-
-//     int bytes;
-//     Request& request = this->_requests[client_fd];
-
-//     if ((bytes = read(client_fd, buf, line_end_pos + CRLF_SIZE)) > 0)
-//         buf[bytes] = 0;
-//     else if (bytes == 0)
-//         throw (Request::RequestFormatException(request, "400"));
-//     else
-//         throw (ReadErrorException());
-//     return (bytes);
-
-//     Log::printTimeDiff(from, 1);
-//     Log::trace("< readBufferUntilRequestLine", 1);
-// }
-
 bool
 Server::readBufferUntilHeaders(int client_fd, char* buf, size_t read_target_size)
 {
@@ -586,43 +564,6 @@ Server::receiveRequestLine(int client_fd)
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveRequestLine", 1);
 }
-// void
-// Server::receiveRequestLine(int client_fd)
-// {
-//     Log::trace("> receiveRequestLine", 1);
-//     timeval from;
-//     gettimeofday(&from, NULL);
-
-//     int bytes;
-//     char buf[BUFFER_SIZE + 1];
-//     Request& request = this->_requests[client_fd];
-//     size_t index_of_crlf_in_request_line = request.getIndexOfCrlfInRequestLine();
-
-//     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
-//     {
-//         buf[bytes] = 0;
-//         std::string readed(buf, bytes);
-//         if ((index_of_crlf_in_request_line = readed.find("\r\n")) != std::string::npos)
-//         {
-//             if (index_of_crlf_in_request_line >= BUFFER_SIZE - 2)
-//                 throw (Request::UriTooLongException(request));
-//             bytes = this->readBufferUntilRequestLine(client_fd, buf, index_of_crlf_in_request_line);
-//             request.parseRequestLine(buf, bytes);
-//             request.setRecvRequest(RecvRequest::HEADERS);
-//         }
-//         else
-//             throw (Request::RequestFormatException(request, "400"));
-//     }
-//     else if (bytes == RECV_COUNT_NOT_REACHED)
-//         request.raiseRecvCounts();
-//     else if (bytes == 0)
-//         this->closeClientSocket(client_fd);
-//     else
-//         throw (ReadErrorException());
-
-//     Log::printTimeDiff(from, 1);
-//     Log::trace("< receiveRequestLine", 1);
-// }
 
 void
 Server::receiveRequestHeaders(int client_fd)
