@@ -543,7 +543,7 @@ Request::parseRequestLine()
     gettimeofday(&from, NULL);
 
     std::string req_message = ft::rtrim(this->getTempBuffer(), "\r\n");
-    std::vector<std::string> request_line = ft::split(req_message, " ");
+    std::vector<std::string> request_line = ft::splitOneSpace(req_message, *this);
 
     if (request_line.size() != 3)
         throw (RequestFormatException(*this, "400"));
