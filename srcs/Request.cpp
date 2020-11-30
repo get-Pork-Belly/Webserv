@@ -405,6 +405,18 @@ Request::NotImplementedException::what() const throw()
     return ("[CODE 501] Not Implemented");
 }
 
+Request::RequestHeaderFieldsTooLargeException::RequestHeaderFieldsTooLargeException(Request& req)
+: _req(req)
+{
+    this->_req.setStatusCode("431");
+}
+
+const char*
+Request::RequestHeaderFieldsTooLargeException::what() const throw()
+{
+    return ("[CODE 431] Request Header Fields Too Large");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/
 /*============================================================================*/
@@ -553,6 +565,8 @@ Request::parseRequestHeaders()
 
     if (this->isExistentHostHeader() == false)
         throw (RequestFormatException(*this, "400"));
+    if (this->getHeaders().size() >= LIMIT_HEADERS_LENGTH)
+        throw (RequestHeaderFieldsTooLargeException());
 
     Log::printTimeDiff(from, 2);
     Log::trace("< parseHeaders", 2);

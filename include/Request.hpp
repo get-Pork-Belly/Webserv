@@ -185,6 +185,15 @@ public:
         virtual const char* what() const throw();
     };
 
+    class RequestHeaderFieldsTooLargeException : public SendErrorCodeToClientException
+    {
+    private:
+        Request& _req;
+    public:
+        RequestHeaderFieldsTooLargeException(Request& req);
+        virtual const char* what() const throw();
+    };
+
 };
 
 std::ostream& operator<<(std::ostream& out, Request& object);
