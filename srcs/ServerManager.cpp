@@ -405,14 +405,19 @@ ServerManager::closeUnresponsiveCgi(int pipe_fd)
                 {
                     Response& response = server->getResponse(client_fd);
                     kill(response.getCgiPid(), SIGKILL);
-                    response.setTransmittingBody("0\r\n\r\n");
-                    response.setParseProgress(ParseProgress::FINISH);
-                    if (response.getWriteFdToCgi() != DEFAULT_FD)
-                        this->closeCgiWritePipe(*server, response.getWriteFdToCgi());
-                    if (response.getReadFdFromCgi() != DEFAULT_FD)
-                        this->closeCgiReadPipe(*server, response.getReadFdFromCgi());
-                    if (response.getResourceFd() != DEFAULT_FD)
-                        this->closeStaticResource(*server, response.getResourceFd());
+                    if (response.getSendProgress() == SendProgress::READY)
+                        response.setStatusCode("500");
+                    else
+                    {
+                        response.setTransmittingBody("0\r\n\r\n");
+                        response.setParseProgress(ParseProgress::FINISH);
+                        if (response.getWriteFdToCgi() != DEFAULT_FD)
+                            this->closeCgiWritePipe(*server, response.getWriteFdToCgi());
+                        if (response.getReadFdFromCgi() != DEFAULT_FD)
+                            this->closeCgiReadPipe(*server, response.getReadFdFromCgi());
+                        if (response.getResourceFd() != DEFAULT_FD)
+                            this->closeStaticResource(*server, response.getResourceFd());
+                    }
                 }
             }
             this->fdSet(client_fd, FdSet::WRITE);
