@@ -149,7 +149,7 @@ public:
 
     /* Exception */
 public:
-    class RequestFormatException : public std::exception
+    class RequestFormatException : public SendErrorCodeToClientException
     {
     private:
         std::string _msg;
@@ -159,7 +159,7 @@ public:
         virtual const char* what() const throw();
     };
 
-    class UriTooLongException : public std::exception
+    class UriTooLongException : public SendErrorCodeToClientException
     {
     private:
         Request& _req;
