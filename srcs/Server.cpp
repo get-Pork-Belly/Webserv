@@ -457,8 +457,10 @@ Server::init()
 }
 
 bool
-Server::isExistCrlfInChunkSize(int fd)
+Server::isExistCrlf(int fd, const RecvRequest recv_request)
 {
+    if (recv_request == RecvRequest::REQUEST_LINE)
+        return (this->_requests[fd].getIndexOfCrlfInRequestLine() != DEFAULT_INDEX_OF_CRLF);
     return (this->_requests[fd].getIndexOfCrlfInChunkSize() != DEFAULT_INDEX_OF_CRLF);
 }
 
@@ -469,12 +471,17 @@ Server::isNotYetSetTargetChunkSize(int fd)
 }
 
 void
-Server::findCrlfInChunkSize(int fd, const std::string& buf)
+Server::findCrlfAndSetIndexOfCrlf(int fd, const std::string& buf, const RecvRequest recv_request)
 {
     size_t index_of_crlf;
 
     if ((index_of_crlf = buf.find("\r\n")) != std::string::npos)
-        this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
+    {
+        if (recv_request == RecvRequest::REQUEST_LINE)
+            this->_requests[fd].setIndexOfCrlfInRequestLine(index_of_crlf);
+        else if (recv_request == RecvRequest::CHUNKED_BODY)
+            this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
+    }
     else
         throw (Request::RequestFormatException(this->_requests[fd], "400"));
 }
@@ -509,36 +516,62 @@ void
 Server::prepareToReceiveNextChunkData(int fd)
 {
     this->_requests[fd].setIndexOfCrlfInChunkSize(DEFAULT_INDEX_OF_CRLF);
-    this->_requests[fd].setChunkSize("");
+    this->_requests[fd].setTempBuffer("");
     this->_requests[fd].setReceivedChunkSizeLength(0);
+}
+
+void
+Server::prepareToReceiveHeaders(int fd)
+{
+    this->_requests[fd].setIndexOfCrlfInRequestLine(DEFAULT_INDEX_OF_CRLF);
+    this->_requests[fd].setTempBuffer("");
+    this->_requests[fd].setReceivedRequestLineLength(0);
+    this->_requests[fd].setRecvRequest(RecvRequest::HEADERS);
 }
 
 void
 Server::finishChunkSequence(int fd)
 {
     this->_requests[fd].setRecvRequest(RecvRequest::COMPLETE);
-    this->_requests[fd].setLastChunkData("");
+    this->_requests[fd].setTempBuffer("");
     this->_requests[fd].setReceivedLastChunkDataLength(0);
     this->_requests[fd].setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
 }
 
-int
-Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
+void
+Server::readBufferUntilRequestLine(int client_fd)
 {
+
     Log::trace("> readBufferUntilRequestLine", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
     int bytes;
+    char buf[BUFFER_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    if ((bytes = read(client_fd, buf, line_end_pos + CRLF_SIZE)) > 0)
+    int index_of_crlf = request.getIndexOfCrlfInRequestLine();
+    int received_request_line_length = request.getReceivedRequestLineLength();
+
+    if ((bytes = read(client_fd, buf, index_of_crlf + CRLF_SIZE)) > 0)
+    {
         buf[bytes] = 0;
+        received_request_line_length += bytes;
+        request.setReceivedRequestLineLength(received_request_line_length);
+
+        if (received_request_line_length == static_cast<int>(index_of_crlf) + CRLF_SIZE)
+        {
+            request.appendTempBuffer(buf, bytes);
+            request.parseRequestLine();
+            this->prepareToReceiveHeaders(client_fd);
+        }
+        else
+            request.appendTempBuffer(buf, bytes);
+    }
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
     else
         throw (ReadErrorException(*this, client_fd));
-    return (bytes);
 
     Log::printTimeDiff(from, 1);
     Log::trace("< readBufferUntilRequestLine", 1);
@@ -600,23 +633,19 @@ Server::receiveRequestLine(int client_fd)
 
     int bytes;
     char buf[BUFFER_SIZE + 1];
-    size_t line_end_pos = 0;
     Request& request = this->_requests[client_fd];
 
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        std::string readed(buf, bytes);
-        if ((line_end_pos = readed.find("\r\n")) != std::string::npos)
-        {
-            if (line_end_pos >= BUFFER_SIZE - 2) //NOTE: RFC에는 8000 octets 권장
-                throw (Request::UriTooLongException(request));
-            bytes = this->readBufferUntilRequestLine(client_fd, buf, line_end_pos);
-            request.parseRequestLine(buf, bytes);
-            request.setRecvRequest(RecvRequest::HEADERS);
-        }
+        if (this->isExistCrlf(client_fd, RecvRequest::REQUEST_LINE))
+            this->readBufferUntilRequestLine(client_fd);
         else
-            throw (Request::RequestFormatException(request, "400"));
+        {
+            this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::REQUEST_LINE);
+            if (request.getIndexOfCrlfInRequestLine() >= BUFFER_SIZE - 2)
+                throw (Request::UriTooLongException(request));
+        }
     }
     else if (bytes == RECV_COUNT_NOT_REACHED)
         request.raiseRecvCounts();
@@ -731,12 +760,12 @@ Server::receiveChunkSize(int client_fd)
 
         if (received_chunk_size_length == static_cast<int>(index_of_crlf) + CRLF_SIZE)
         {
-            request.appendChunkSize(buf, bytes);
-            request.parseTargetChunkSize(request.getChunkSize());
+            request.appendTempBuffer(buf, bytes);
+            request.parseTargetChunkSize(request.getTempBuffer());
             this->prepareToReceiveNextChunkData(client_fd);
         }
         else
-            request.appendChunkSize(buf, bytes);
+            request.appendTempBuffer(buf, bytes);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
@@ -796,15 +825,15 @@ Server::receiveLastChunkData(int client_fd)
         request.setReceivedLastChunkDataLength(received_last_chunk_data_length);
 
         if (received_last_chunk_data_length < CRLF_SIZE)
-            request.appendLastChunkData(buf, bytes);
+            request.appendTempBuffer(buf, bytes);
         else if (received_last_chunk_data_length > CRLF_SIZE)
             throw (Request::RequestFormatException(request, "400"));
         else
         {
             if ((is_buffer_left = recv(client_fd, buf, 1, MSG_PEEK)) > 0)
                 throw (Request::RequestFormatException(request, "400"));
-            request.appendLastChunkData(buf, bytes);
-            if (request.getLastChunkData().compare("\r\n") == 0)
+            request.appendTempBuffer(buf, bytes);
+            if (request.getTempBuffer().compare("\r\n") == 0)
                 this->finishChunkSequence(client_fd);
             else
                 throw (Request::RequestFormatException(request, "400"));
@@ -833,10 +862,10 @@ Server::receiveRequestChunkedBody(int client_fd)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        if (this->isExistCrlfInChunkSize(client_fd))
+        if (this->isExistCrlf(client_fd, RecvRequest::CHUNKED_BODY))
             this->receiveChunkSize(client_fd);
         else if (this->isNotYetSetTargetChunkSize(client_fd))
-            this->findCrlfInChunkSize(client_fd, buf);
+            this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::CHUNKED_BODY);
         else if (this->isLastSequenceOfParsingChunk(client_fd))
             this->receiveLastChunkData(client_fd);
         else
@@ -1304,19 +1333,33 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
     Response& response = this->_responses[client_fd];
 
     char buf[BUFFER_SIZE + 1];
+
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
-    received_bytes += bytes;
-    std::cout<<"\033[1;37;41m"<<"receivedDataFromCgi: "<<received_bytes<<"\033[0m"<<std::endl;
     if (bytes > 0)
     {
         buf[bytes] = 0;
-        response.appendBody(buf, bytes);
         if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
-            response.preparseCgiMessage();
-
-        this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
-        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-        response.setReceiveProgress(ReceiveProgress::ON_GOING);
+        {
+            response.appendTempBuffer(buf, bytes);
+            if (response.findEndOfHeaders())
+            {
+                response.preparseCgiMessage();
+                response.setReceiveProgress(ReceiveProgress::ON_GOING);
+                this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
+                this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+            }
+            else
+            {
+                if (response.getTempBuffer().length() >= LIMIT_HEADERS_LENGTH)
+                    throw (InternalServerException(*this, client_fd));
+            }
+        }
+        else
+        {
+            response.appendBody(buf, bytes);
+            this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
+            this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+        }
     }
     else if (bytes == 0)
         this->finishReceiveDataFromCgiPipe(read_fd_from_cgi);

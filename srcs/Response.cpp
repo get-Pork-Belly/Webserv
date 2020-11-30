@@ -23,7 +23,8 @@ _stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT
 _write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extension(""), _transmitting_body(""),
 _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resource_fd(DEFAULT_FD),
-_sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY)
+_sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY),
+_temp_buffer("")
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -44,7 +45,7 @@ _uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_
 _already_encoded_size(other._already_encoded_size), _parse_progress(other._parse_progress),
 _receive_progress(other._receive_progress), _resource_fd(other._resource_fd),
 _sended_response_size(other._sended_response_size), _response_message(other._response_message),
-_send_progress(other._send_progress)
+_send_progress(other._send_progress), _temp_buffer(other._temp_buffer)
 {}
 
 /*============================================================================*/
@@ -90,6 +91,7 @@ Response::operator=(const Response& rhs)
     this->_sended_response_size = rhs._sended_response_size;
     this->_response_message = rhs._response_message;
     this->_send_progress = rhs._send_progress;
+    this->_temp_buffer = rhs._temp_buffer;
     return (*this);
 }
 
@@ -253,6 +255,12 @@ Response::getSendProgress() const
     return (this->_send_progress);
 }
 
+const std::string&
+Response::getTempBuffer() const
+{
+    return (this->_temp_buffer);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -397,6 +405,12 @@ Response::setSendProgress(const SendProgress& send_progress)
     this->_send_progress = send_progress;
 }
 
+void
+Response::setTempBuffer(const std::string& temp_buffer)
+{
+    this->_temp_buffer = temp_buffer;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -458,6 +472,7 @@ Response::init()
     this->_sended_response_size = 0;
     this->_response_message = "";
     this->_send_progress = SendProgress::READY;
+    this->_temp_buffer = "";
     //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
 }
 
@@ -1120,6 +1135,16 @@ Response::getHtmlLangMetaData() const
     return (html_tag_block.substr(lang_meta_data_start + 6, lang_meta_data_end - (lang_meta_data_start + 6)));
 }
 
+bool
+Response::findEndOfHeaders()
+{
+    const std::string& temp_buffer = this->getTempBuffer();
+
+    if (temp_buffer.find("\r\n\r\n") != std::string::npos)
+        return (true);
+    return (false);
+}
+
 void
 Response::preparseCgiMessage()
 {
@@ -1128,7 +1153,7 @@ Response::preparseCgiMessage()
     gettimeofday(&from, NULL);
 
     std::string line;
-    std::string cgi_message(this->getBody());
+    std::string cgi_message(this->getTempBuffer());
 
     if (ft::substr(line, cgi_message, "\r\n\r\n") == false)
         throw (InvalidCgiMessageException(*this));
@@ -1137,6 +1162,7 @@ Response::preparseCgiMessage()
         if (this->parseCgiHeaders(line) == false)
             throw (InvalidCgiMessageException(*this));
     }
+    this->setTempBuffer("");
     this->setBody(cgi_message);
     if (this->getHeaders().find("Status") == this->getHeaders().end())
         throw (InvalidCgiMessageException(*this));
@@ -1255,6 +1281,12 @@ void
 Response::appendBody(char* buf, int bytes)
 {
     this->_body.append(buf, bytes);
+}
+
+void
+Response::appendTempBuffer(char* buf, int bytes)
+{
+    this->_temp_buffer.append(buf, bytes);
 }
 
 bool
