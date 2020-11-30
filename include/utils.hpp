@@ -12,6 +12,8 @@
 # include <algorithm>
 # include "Request.hpp"
 
+class Request;
+
 namespace ft
 {
     std::vector<std::string> split(std::string str, std::string const &token);
