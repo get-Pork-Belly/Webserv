@@ -28,6 +28,7 @@ const int DEFAULT_INDEX_OF_CRLF = -1;
 const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
 const int DEFAULT_FD = -1;
+const int LIMIT_HEADERS_LENGTH = 8192;
 
 class ServerManager;
 class Request;
@@ -94,7 +95,7 @@ public:
     void receiveRequest(int fd);
     void receiveRequestLine(int fd);
     void receiveRequestHeaders(int fd);
-    int  readBufferUntilRequestLine(int fd, char* buf, size_t line_end_pos);
+    void readBufferUntilRequestLine(int fd);
     bool readBufferUntilHeaders(int fd, char* buf, size_t read_target);
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
@@ -142,12 +143,13 @@ public:
     void receiveChunkSize(int fd);
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
-    bool isExistCrlfInChunkSize(int fd);
+    bool isExistCrlf(int fd, const RecvRequest recv_request);
     bool isNotYetSetTargetChunkSize(int fd);
-    void findCrlfInChunkSize(int fd, const std::string& buf);
+    void findCrlfAndSetIndexOfCrlf(int fd, const std::string& buf, const RecvRequest recv_request);
     bool isLastSequenceOfParsingChunk(int fd);
     int calculateReceiveTargetSizeOfChunkData(int fd);
     bool isChunkDataAllReceived(int fd);
+    void prepareToReceiveHeaders(int fd);
     void prepareToReceiveNextChunkSize(int fd);
     void prepareToReceiveNextChunkData(int fd);
     void finishChunkSequence(int fd);
