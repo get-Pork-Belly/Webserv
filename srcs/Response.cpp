@@ -1152,7 +1152,7 @@ Response::preparseCgiMessage()
         if (this->parseCgiHeaders(line) == false)
             throw (InvalidCgiMessageException(*this));
     }
-    // this->setTempBuffer("");
+    this->setTempBuffer("");
     this->setBody(cgi_message);
     if (this->getHeaders().find("Status") == this->getHeaders().end())
         throw (InvalidCgiMessageException(*this));
