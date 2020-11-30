@@ -47,6 +47,8 @@ private:
     std::string _response_message;
     SendProgress _send_progress;
 
+    std::string _temp_buffer;
+
 public:
     /* Constructor */
     Response();
@@ -90,6 +92,7 @@ public:
     int getSendedResponseSize() const;
     const std::string& getResponseMessage() const;
     const SendProgress& getSendProgress() const;
+    const std::string& getTempBuffer() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -116,6 +119,7 @@ public:
     void setSendedResponseSize(const int sended_response_size);
     void setResponseMessage(const std::string& response_message);
     void setSendProgress(const SendProgress& send_progress);
+    void setTempBuffer(const std::string& temp_buffer);
 
     bool isCgiWritePipeNotClosed() const;
     bool isCgiReadPipeNotClosed() const;
@@ -176,6 +180,7 @@ public:
     std::string makeStatusLine();
 
     void appendBody(char* buf, int bytes);
+    void appendTempBuffer(char* buf, int bytes);
 
     /* General header */
     void appendDateHeader(std::string& headers);
