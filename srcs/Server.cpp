@@ -1243,17 +1243,32 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
     Response& response = this->_responses[client_fd];
 
     char buf[BUFFER_SIZE + 1];
-    bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
+    bytes = read(read_fd_from_cgi, buf, 1);
     if (bytes > 0)
     {
         buf[bytes] = 0;
-        response.appendBody(buf, bytes);
         if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
-            response.preparseCgiMessage();
-
-        this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
-        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-        response.setReceiveProgress(ReceiveProgress::ON_GOING);
+        {
+            response.appendTempBuffer(buf, bytes);
+            if (response.findEndOfHeaders())
+            {
+                response.preparseCgiMessage();
+                response.setReceiveProgress(ReceiveProgress::ON_GOING);
+                this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
+                this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+            }
+            else
+            {
+                if (response.getTempBuffer().length() >= LIMIT_HEADERS_LENGTH)
+                    throw (InternalServerException(response));
+            }
+        }
+        else
+        {
+            response.appendBody(buf, bytes);
+            this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
+            this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+        }
     }
     else if (bytes == 0)
         this->finishReceiveDataFromCgiPipe(read_fd_from_cgi);
