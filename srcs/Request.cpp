@@ -18,7 +18,8 @@ _transfered_body_size(0), _target_chunk_size(DEFAULT_TARGET_CHUNK_SIZE),
 _received_chunk_data_length(0), _index_of_crlf_in_chunk_size(-1),
 _received_chunk_size_length(0), _chunk_size(""),
 _received_last_chunk_data_length(0), _last_chunk_data(""), _recv_counts(0),
-_carriege_return_trimmed(false), _temp_buffer("")
+_carriege_return_trimmed(false), _temp_buffer(""),
+_received_request_line_length(0), _request_line(""), _index_of_crlf_in_request_line(0)
  {}
 
 Request::Request(const Request& other)
@@ -32,7 +33,9 @@ _index_of_crlf_in_chunk_size(other._index_of_crlf_in_chunk_size),
 _received_chunk_size_length(other._received_chunk_size_length),
 _chunk_size(other._chunk_size), _received_last_chunk_data_length(other._received_last_chunk_data_length),
 _last_chunk_data(other._last_chunk_data), _recv_counts(other._recv_counts),
-_carriege_return_trimmed(other._carriege_return_trimmed), _temp_buffer(other._temp_buffer)
+_carriege_return_trimmed(other._carriege_return_trimmed), _temp_buffer(other._temp_buffer),
+_received_request_line_length(other._received_request_line_length),
+_request_line(other._request_line), _index_of_crlf_in_request_line(other._index_of_crlf_in_request_line)
 {}
 
 Request&
@@ -58,6 +61,9 @@ Request::operator=(const Request& other)
     this->_recv_counts = other._recv_counts;
     this->_carriege_return_trimmed = other._carriege_return_trimmed;
     this->_temp_buffer = other._temp_buffer;
+    this->_received_request_line_length = other._received_request_line_length;
+    this->_request_line = other._request_line;
+    this->_index_of_crlf_in_request_line = other._index_of_crlf_in_request_line;
     return (*this);
 }
 
@@ -209,6 +215,24 @@ Request::getLastChunkData() const
     return (this->_last_chunk_data);
 }
 
+int
+Request::getReceivedRequestLineLength() const
+{
+    return (this->_received_request_line_length);
+}
+
+const std::string&
+Request::getRequestLine() const
+{
+    return (this->_request_line);
+}
+
+int
+Request::getIndexOfCrlfInRequestLine() const
+{
+    return (this->_index_of_crlf_in_request_line);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -349,6 +373,24 @@ void
 Request::setLastChunkData(const std::string& last_chunk_data)
 {
     this->_last_chunk_data = last_chunk_data;
+}
+
+void
+Request::setReceivedRequestLineLength(const int received_request_line_length)
+{
+    this->_received_request_line_length = received_request_line_length;
+}
+
+void
+Request::setRequestLine(const std::string& request_line)
+{
+    this->_request_line = request_line;
+}
+
+void
+Request::setIndexOfCrlfInRequestLine(const int index_of_crlf_in_request_line)
+{
+    this->_index_of_crlf_in_request_line = index_of_crlf_in_request_line;
 }
 
 /*============================================================================*/
@@ -676,6 +718,12 @@ Request::appendLastChunkData(char* buf, int bytes)
 }
 
 void
+Request::appendRequestLine(char* buf, int bytes)
+{
+    this->_request_line.append(buf, bytes);
+}
+
+void
 Request::init()
 {
     this->_method = "";
@@ -698,6 +746,9 @@ Request::init()
     this->_carriege_return_trimmed = false;
     this->_recv_counts = 0;
     this->_temp_buffer = "";
+    this->_received_request_line_length = 0;
+    this->_request_line = "";
+    this->_index_of_crlf_in_request_line = 0;
 }
 
 int

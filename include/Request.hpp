@@ -39,6 +39,10 @@ private:
     bool _carriege_return_trimmed;
     std::string _temp_buffer;
 
+    int _received_request_line_length;
+    std::string _request_line;
+    int _index_of_crlf_in_request_line;
+
 public:
     /* Constructor */
     Request();
@@ -75,6 +79,10 @@ public:
     int getReceiveCounts() const;
     const std::string& getTempBuffer() const;
 
+    int getReceivedRequestLineLength() const;
+    const std::string& getRequestLine() const;
+    int getIndexOfCrlfInRequestLine() const;
+
     /* Setter */
     void setMethod(const std::string& method);
     void setUri(const std::string& uri);
@@ -100,6 +108,10 @@ public:
     void setReceiveCounts(const int recv_count);
     void setCarriegeReturnTrimmed(const bool trimmed);
     void setTempBuffer(const std::string& temp_buffer);
+
+    void setReceivedRequestLineLength(const int received_request_line_length);
+    void setRequestLine(const std::string& request_line);
+    void setIndexOfCrlfInRequestLine(const int index_of_crlf_in_request_line);
 
     /* Util */
 
@@ -139,6 +151,7 @@ public:
     void appendTempBuffer(char* buf, int bytes);
     void appendChunkSize(char* buf, int bytes);
     void appendLastChunkData(char* buf, int bytes);
+    void appendRequestLine(char* buf, int bytes);
 
     void parseTargetChunkSize(const std::string& chunk_size_line);
     void parseChunkDataAndSetChunkSize(char* buf, size_t bytes, int next_target_chunk_size);
