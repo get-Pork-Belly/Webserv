@@ -1246,7 +1246,7 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
 
     char buf[BUFFER_SIZE + 1];
 
-    bytes = read(read_fd_from_cgi, buf, 1);
+    bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
     if (bytes > 0)
     {
         buf[bytes] = 0;
