@@ -30,6 +30,34 @@ split(std::string str, std::string const &token)
     return (result);
 }
 
+std::vector<std::string>
+splitOneSpace(std::string str, Request& req)
+{
+    std::vector<std::string> result;
+    size_t index;
+    std::string tmp;
+
+    while (str.length())
+    {
+        index = str.find(' ');
+        if (index != std::string::npos)
+        {
+            tmp = str.substr(0, index);
+            if (tmp.length())
+                result.push_back(tmp);
+            str = str.substr(index + 1);
+            if (str[0] == ' ')
+                throw (Request::RequestFormatException(req, "400"));
+        }
+        else
+        {
+            result.push_back(str);
+            str = "";
+        }
+    }
+    return (result);
+}
+
 std::string
 ltrim(const std::string& str, const char *token)
 {
