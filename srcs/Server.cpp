@@ -1199,6 +1199,8 @@ Server::sendDataToCgi(int write_fd_to_cgi)
     Log::trace("< sendDataToCgi", 1);
 }
 
+long long received_bytes;
+
 void
 Server::receiveDataFromCgi(int read_fd_from_cgi)
 {
@@ -1215,6 +1217,8 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
 
     char buf[BUFFER_SIZE + 1];
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
+    received_bytes += bytes;
+    std::cout<<"\033[1;37;41m"<<"receivedDataFromCgi: "<<received_bytes<<"\033[0m"<<std::endl;
     if (bytes > 0)
     {
         buf[bytes] = 0;
