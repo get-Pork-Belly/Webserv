@@ -552,13 +552,13 @@ Request::parseRequestWithoutBody(char* buf, int bytes)
 }
 
 void
-Request::parseRequestLine(char* buf, int bytes)
+Request::parseRequestLine()
 {
     Log::trace("> parseRequestLine", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
-    std::string req_message(buf, bytes - 2);
+    std::string req_message = ft::rtrim(this->getRequestLine(), "\r\n");
     std::vector<std::string> request_line = ft::split(req_message, " ");
 
     if (this->isValidLine(request_line) == false)
