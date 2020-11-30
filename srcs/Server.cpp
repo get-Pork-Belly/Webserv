@@ -1319,11 +1319,7 @@ Server::run(int fd)
                     if (this->isResponseAllSended(fd))
                     {
                         if (this->_responses[fd].getStatusCode()[0] != '2')
-                        {
-                            this->_server_manager->fdClr(fd, FdSet::WRITE);
-                            this->_responses[fd].init();
                             this->closeClientSocket(fd);
-                        }
                         else
                         {
                             this->_server_manager->fdClr(fd, FdSet::WRITE);
