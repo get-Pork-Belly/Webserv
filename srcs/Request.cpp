@@ -553,14 +553,7 @@ Request::parseRequestLine()
     std::string req_message = ft::rtrim(this->getTempBuffer(), "\r\n");
     std::vector<std::string> request_line = this->parseTokensOfRequestLine(req_message);
 
-    if (request_line.size() != 3)
-        throw (RequestFormatException(*this, "400"));
-    if (this->isValidMethod(request_line[0]) == false)
-        throw (NotImplementedException(*this));
-    this->isValidUri(request_line[1]);
-
-    if (this->isValidVersion(request_line[2]) == false)
-        throw (HTTPVersionNotSupportedException(*this));
+    this->isValidRequestLine(request_line);
 
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
@@ -746,7 +739,18 @@ Request::getContentLength() const
 /*****************************  Valid Check  **********************************/
 /*============================================================================*/
 
-bool
+void
+Request::isValidRequestLine(const std::vector<std::string>& request_line)
+{
+    if (request_line.size() != 3)
+        throw (RequestFormatException(*this, "400"));
+
+    this->isValidMethod(request_line[0]);
+    this->isValidUri(request_line[1]);
+    this->isValidVersion(request_line[2]);
+}
+
+void
 Request::isValidMethod(const std::string& method)
 {
     if (method.compare("GET") == 0 ||
@@ -757,8 +761,8 @@ Request::isValidMethod(const std::string& method)
         method.compare("OPTIONS") == 0 ||
         method.compare("TRACE") == 0 ||
         method.compare("CONNECT") == 0)
-        return (true);
-    return (this->updateStatusCodeAndReturn("501", false));
+        return ;
+    throw (NotImplementedException(*this));
 }
 
 void
@@ -771,12 +775,12 @@ Request::isValidUri(const std::string& uri)
     throw (RequestFormatException(*this, "400"));
 }
 
-bool
+void
 Request::isValidVersion(const std::string& version)
 {
     if (version.compare("HTTP/1.1") == 0)
-        return (true);
-    return (this->updateStatusCodeAndReturn("505", false));
+        return ;
+    throw (HTTPVersionNotSupportedException(*this));
 }
 
 bool
