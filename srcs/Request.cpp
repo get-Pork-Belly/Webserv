@@ -9,7 +9,6 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-//TODO: target_chunk_size 상수화 하기
 Request::Request()
 : _method(""), _uri(""), _version(""),
 _protocol(""), _body(""), _status_code("200"),
@@ -592,20 +591,15 @@ Request::parseRequestHeaders()
     Log::trace("< parseHeaders", 2);
 }
 
-// int received;
-
 void
 Request::parseTargetChunkSize(const std::string& chunk_size_line)
 {
     int target_chunk_size;
 
     target_chunk_size = ft::stoiHex(chunk_size_line);
-    
-    // received += target_chunk_size;
-    // std::cout<<"\033[1;30;43m"<<"received: "<<received<<"\033[0m"<<std::endl;
+
     if (target_chunk_size == -1)
     {
-        // std::cout<<"\033[1;31m"<<"chunk_size_line: "<<chunk_size_line<<"\033[0m"<<std::endl;
         std::cout<<"\033[1;31m"<<"In parseTargetChunkSize throw~!"<<"\033[0m"<<std::endl;
         throw (RequestFormatException(*this, "400"));
     }
@@ -615,14 +609,6 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
 void
 Request::parseChunkData(char* buf, size_t bytes)
 {
-    // \r
-    // \n
-    // C
-    // \r\n
-    // C\r
-    // C\r\n
-    // CC\r
-    // CCC
     if (this->isCarriegeReturnTrimmed())
     {
         this->setCarriegeReturnTrimmed(false);
