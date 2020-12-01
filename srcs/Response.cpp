@@ -24,7 +24,7 @@ _write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extensi
 _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resource_fd(DEFAULT_FD),
 _sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY),
-_temp_buffer("")
+_temp_buffer(""), _path_info(""), _script_name(""), _path_translated("")
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -45,7 +45,8 @@ _uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_
 _already_encoded_size(other._already_encoded_size), _parse_progress(other._parse_progress),
 _receive_progress(other._receive_progress), _resource_fd(other._resource_fd),
 _sended_response_size(other._sended_response_size), _response_message(other._response_message),
-_send_progress(other._send_progress), _temp_buffer(other._temp_buffer)
+_send_progress(other._send_progress), _temp_buffer(other._temp_buffer), _path_info(other._path_info),
+_script_name(other._script_name), _path_translated(other._path_translated)
 {}
 
 /*============================================================================*/
@@ -92,6 +93,9 @@ Response::operator=(const Response& rhs)
     this->_response_message = rhs._response_message;
     this->_send_progress = rhs._send_progress;
     this->_temp_buffer = rhs._temp_buffer;
+    this->_path_info = rhs._path_info;
+    this->_script_name = rhs._script_name;
+    this->_path_translated = rhs._path_translated;
     return (*this);
 }
 
@@ -261,6 +265,24 @@ Response::getTempBuffer() const
     return (this->_temp_buffer);
 }
 
+const std::string&
+Response::getScriptName() const
+{
+    return (this->_script_name);
+}
+
+const std::string&
+Response::getPathInfo() const
+{
+    return (this->_path_info);
+}
+
+const std::string&
+Response::getPathTranslated() const
+{
+    return (this->_path_translated);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -411,6 +433,24 @@ Response::setTempBuffer(const std::string& temp_buffer)
     this->_temp_buffer = temp_buffer;
 }
 
+void
+Response::setScriptName(const std::string& script_name)
+{
+    this->_script_name = script_name;
+}
+
+void
+Response::setPathInfo(const std::string& path_info)
+{
+    this->_path_info = path_info;
+}
+
+void
+Response::setPathTranslated(const std::string& path_translated)
+{
+    this->_path_translated = path_translated;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -473,6 +513,9 @@ Response::init()
     this->_response_message = "";
     this->_send_progress = SendProgress::READY;
     this->_temp_buffer = "";
+    this->_script_name = "";
+    this->_path_info = "";
+    this->_path_translated = "";
     //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
 }
 
@@ -1038,6 +1081,24 @@ Response::isExtensionInMimeTypeTable(const std::string& extension) const
 void 
 Response::findAndSetUriExtension()
 {
+    if (this->_location_info.find("cgi") != this->_location_info.end())
+    {
+        std::vector<std::string> cgi_extensions =  ft::split(this->_location_info.at("cgi"), " ");
+
+        const std::string& abs_path = this->getResourceAbsPath();
+        size_t index = std::string::npos;
+        for (std::string& cgi_extension : cgi_extensions)
+        {
+            if ((index = abs_path.find(cgi_extension)) != std::string::npos)
+            {
+                this->setScriptName(abs_path.substr(0, index + cgi_extension.length()));
+                this->setPathInfo(abs_path.substr(index + cgi_extension.length(), abs_path.length()));
+                this->setPathTranslated(this->_location_info.at("root") + this->getPathInfo());
+                this->setUriExtension(cgi_extension);
+                return ;
+            }
+        }
+    }
     size_t dot = this->getResourceAbsPath().rfind(".");
     if (dot == std::string::npos)
         return ;
