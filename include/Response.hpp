@@ -36,6 +36,7 @@ private:
     std::string _uri_path;
     std::string _uri_extension;
     std::string _transmitting_body;
+    std::string _query;
 
     size_t _already_encoded_size;
 
@@ -93,6 +94,7 @@ public:
     const std::string& getResponseMessage() const;
     const SendProgress& getSendProgress() const;
     const std::string& getTempBuffer() const;
+    const std::string& getQuery() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -102,6 +104,7 @@ public:
     void setResourceType(const ResType& resource_type);
     void setBody(const std::string& body);
     void setUriPath(const std::string& path);
+    void setQuery(const std::string& query);
     void setUriExtension(const std::string& extension);
     void setHeaders(const std::string& key, const std::string& value);
 
