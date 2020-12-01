@@ -449,7 +449,7 @@ Request::updateRecvRequest()
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
         this->setRecvRequest(RecvRequest::REQUEST_LINE);
     else if (this->isBodyUnnecessary())
-        throw (RequestFormatException(*this, "400"));
+        this->setRecvRequest(RecvRequest::COMPLETE);
     else if (this->isNormalBody())
         this->setRecvRequest(RecvRequest::NORMAL_BODY);
     else if (this->isChunkedBody())
@@ -515,6 +515,34 @@ Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& r
     return (ret);
 }
 
+std::vector<std::string>
+Request::parseTokensOfRequestLine(std::string request_line)
+{
+    std::vector<std::string> tokens;
+    size_t index;
+    std::string tmp;
+
+    while (request_line.length())
+    {
+        index = request_line.find(' ');
+        if (index != std::string::npos)
+        {
+            tmp = request_line.substr(0, index);
+            if (tmp.length())
+                tokens.push_back(tmp);
+            request_line = request_line.substr(index + 1);
+            if (request_line[0] == ' ')
+                throw (Request::RequestFormatException(*this, "400"));
+        }
+        else
+        {
+            tokens.push_back(request_line);
+            request_line = "";
+        }
+    }
+    return (tokens);
+}
+
 void
 Request::parseRequestLine()
 {
@@ -523,14 +551,14 @@ Request::parseRequestLine()
     gettimeofday(&from, NULL);
 
     std::string req_message = ft::rtrim(this->getTempBuffer(), "\r\n");
-    std::vector<std::string> request_line = ft::splitOneSpace(req_message, *this);
+    std::vector<std::string> request_line = this->parseTokensOfRequestLine(req_message);
 
     if (request_line.size() != 3)
         throw (RequestFormatException(*this, "400"));
     if (this->isValidMethod(request_line[0]) == false)
         throw (NotImplementedException(*this));
-    if (this->isValidUri(request_line[1]) == false)
-        throw (RequestFormatException(*this, "400"));
+    this->isValidUri(request_line[1]);
+
     if (this->isValidVersion(request_line[2]) == false)
         throw (HTTPVersionNotSupportedException(*this));
 
@@ -558,15 +586,14 @@ Request::parseRequestHeaders()
         if (ft::substr(key, line, ":") == false)
             throw (RequestFormatException(*this, "400"));
         value = ft::ltrim(line, " ");
+        if (value.length() >= LIMIT_HEADERS_LENGTH)
+            throw (RequestHeaderFieldsTooLargeException(*this));
         if (this->isValidHeaders(key, value) == false)
             throw (RequestFormatException(*this, "400"));
         this->setHeaders(key, value);
     }
-
-    if (this->isExistentHostHeader() == false)
+    if (this->isValidHostHeader() == false || this->isValidContentLengthHeader() == false)
         throw (RequestFormatException(*this, "400"));
-    if (this->getHeaders().size() >= LIMIT_HEADERS_LENGTH)
-        throw (RequestHeaderFieldsTooLargeException(*this));
 
     Log::printTimeDiff(from, 2);
     Log::trace("< parseHeaders", 2);
@@ -719,8 +746,6 @@ Request::getContentLength() const
 /*****************************  Valid Check  **********************************/
 /*============================================================================*/
 
-
-
 bool
 Request::isValidMethod(const std::string& method)
 {
@@ -736,12 +761,14 @@ Request::isValidMethod(const std::string& method)
     return (this->updateStatusCodeAndReturn("501", false));
 }
 
-bool
+void
 Request::isValidUri(const std::string& uri)
 {
+    if (uri.length() >= BUFFER_SIZE - 2)
+        throw (UriTooLongException(*this));
     if (uri[0] == '/' || (uri.length() == 1 && uri[0] == '*'))
-        return (true);
-    return (this->updateStatusCodeAndReturn("400", false));
+        return ;
+    throw (RequestFormatException(*this, "400"));
 }
 
 bool
@@ -763,16 +790,41 @@ Request::isValidHeaders(std::string& key, std::string& value)
 }
 
 bool
-Request::isExistentHostHeader()
+Request::isValidHostHeader()
 {
     const std::map<std::string, std::string>& headers = this->getHeaders();
+    const std::map<std::string, std::string>::const_iterator it = headers.find("Host");
 
-    if (headers.begin()->first != "Host")
+    if (it == headers.end())
         return (false);
     else
     {
-        if (headers.begin()->second.find('@') != std::string::npos)
+        if (it->second.find('@') != std::string::npos)
             return (false);
+    }
+    return (true);
+}
+
+bool
+Request::isValidContentLengthHeader()
+{
+    const std::map<std::string, std::string>& headers = this->getHeaders();
+    const std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+    int length = 0;
+
+    if (it != headers.end())
+    {
+        try
+        {
+            length = std::stoi(it->second);
+            if (length < 0)
+                return (false);
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+            return (false);
+        }
     }
     return (true);
 }
