@@ -122,7 +122,6 @@ public:
     void parseRequestLine();
     std::vector<std::string> parseTokensOfRequestLine(std::string request_line);
     void parseRequestHeaders();
-    bool parseHeaders(std::string& req_message);
 
     /* valid check */
     void isValidRequestLine(const std::vector<std::string>& request_line);
