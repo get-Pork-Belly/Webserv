@@ -125,9 +125,10 @@ public:
     bool parseHeaders(std::string& req_message);
 
     /* valid check */
-    bool isValidMethod(const std::string& method);
+    void isValidRequestLine(const std::vector<std::string>& request_line);
+    void isValidMethod(const std::string& method);
     void isValidUri(const std::string& uri);
-    bool isValidVersion(const std::string& version);
+    void isValidVersion(const std::string& version);
 
     bool isValidHeaders(std::string& key, std::string& value);
     bool isValidHostHeader();
