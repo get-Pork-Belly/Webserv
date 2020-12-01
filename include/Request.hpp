@@ -124,17 +124,17 @@ public:
     void parseRequestHeaders();
 
     /* valid check */
-    void isValidRequestLine(const std::vector<std::string>& request_line);
-    void isValidMethod(const std::string& method);
-    void isValidUri(const std::string& uri);
-    void isValidVersion(const std::string& version);
+    void checkRequestLineIsValid(const std::vector<std::string>& request_line);
+    void checkMethodIsValid(const std::string& method);
+    void checkUriIsValid(const std::string& uri);
+    void checkVersionIsValid(const std::string& version);
 
-    void isValidHeaders(std::string& key, std::string& value);
-    void isValidHostHeader();
-    void isValidContentLengthHeader();
+    void checkHeadersIsValid(std::string& key, std::string& value);
+    void checkHostHeaderIsValid();
+    void checkContentLengthHeaderIsValid();
 
-    void isValidSpace(std::string& str);
-    void isDuplicatedHeader(std::string& key);
+    void checkSpaceIsValid(std::string& str);
+    void checkHeaderIsDuplicated(std::string& key);
 
     bool isCarriegeReturnTrimmed();
 

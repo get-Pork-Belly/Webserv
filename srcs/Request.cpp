@@ -552,7 +552,7 @@ Request::parseRequestLine()
     std::string req_message = ft::rtrim(this->getTempBuffer(), "\r\n");
     std::vector<std::string> request_line = this->parseTokensOfRequestLine(req_message);
 
-    this->isValidRequestLine(request_line);
+    this->checkRequestLineIsValid(request_line);
 
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
@@ -578,11 +578,11 @@ Request::parseRequestHeaders()
         if (ft::substr(key, line, ":") == false)
             throw (RequestFormatException(*this, "400"));
         value = ft::ltrim(line, " ");
-        this->isValidHeaders(key, value);
+        this->checkHeadersIsValid(key, value);
         this->setHeaders(key, value);
     }
-    this->isValidHostHeader();
-    this->isValidContentLengthHeader();
+    this->checkHostHeaderIsValid();
+    this->checkContentLengthHeaderIsValid();
 
     Log::printTimeDiff(from, 2);
     Log::trace("< parseHeaders", 2);
@@ -723,18 +723,18 @@ Request::getContentLength() const
 /*============================================================================*/
 
 void
-Request::isValidRequestLine(const std::vector<std::string>& request_line)
+Request::checkRequestLineIsValid(const std::vector<std::string>& request_line)
 {
     if (request_line.size() != 3)
         throw (RequestFormatException(*this, "400"));
 
-    this->isValidMethod(request_line[0]);
-    this->isValidUri(request_line[1]);
-    this->isValidVersion(request_line[2]);
+    this->checkMethodIsValid(request_line[0]);
+    this->checkUriIsValid(request_line[1]);
+    this->checkVersionIsValid(request_line[2]);
 }
 
 void
-Request::isValidMethod(const std::string& method)
+Request::checkMethodIsValid(const std::string& method)
 {
     if (method.compare("GET") == 0 ||
         method.compare("POST") == 0 ||
@@ -749,7 +749,7 @@ Request::isValidMethod(const std::string& method)
 }
 
 void
-Request::isValidUri(const std::string& uri)
+Request::checkUriIsValid(const std::string& uri)
 {
     if (uri.length() >= BUFFER_SIZE - 2)
         throw (UriTooLongException(*this));
@@ -759,7 +759,7 @@ Request::isValidUri(const std::string& uri)
 }
 
 void
-Request::isValidVersion(const std::string& version)
+Request::checkVersionIsValid(const std::string& version)
 {
     if (version.compare("HTTP/1.1") == 0)
         return ;
@@ -767,18 +767,18 @@ Request::isValidVersion(const std::string& version)
 }
 
 void
-Request::isValidHeaders(std::string& key, std::string& value)
+Request::checkHeadersIsValid(std::string& key, std::string& value)
 {
     if (value.length() >= LIMIT_HEADERS_LENGTH)
         throw (RequestHeaderFieldsTooLargeException(*this));
     if (key.empty() || value.empty())
         throw (RequestFormatException(*this, "400"));
-    this->isValidSpace(key);
-    this->isDuplicatedHeader(key);
+    this->checkSpaceIsValid(key);
+    this->checkHeaderIsDuplicated(key);
 }
 
 void
-Request::isValidHostHeader()
+Request::checkHostHeaderIsValid()
 {
     const std::map<std::string, std::string>& headers = this->getHeaders();
     const std::map<std::string, std::string>::const_iterator it = headers.find("Host");
@@ -793,7 +793,7 @@ Request::isValidHostHeader()
 }
 
 void
-Request::isValidContentLengthHeader()
+Request::checkContentLengthHeaderIsValid()
 {
     const std::map<std::string, std::string>& headers = this->getHeaders();
     const std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
@@ -816,7 +816,7 @@ Request::isValidContentLengthHeader()
 }
 
 void
-Request::isValidSpace(std::string& str)
+Request::checkSpaceIsValid(std::string& str)
 {
     if (str.find(" ") == std::string::npos)
         return ;
@@ -824,7 +824,7 @@ Request::isValidSpace(std::string& str)
 }
 
 void
-Request::isDuplicatedHeader(std::string& key)
+Request::checkHeaderIsDuplicated(std::string& key)
 {
     if (this->_headers.find(key) == this->_headers.end())
         return ;
