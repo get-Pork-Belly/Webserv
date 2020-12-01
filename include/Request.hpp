@@ -129,12 +129,12 @@ public:
     void isValidUri(const std::string& uri);
     void isValidVersion(const std::string& version);
 
-    bool isValidHeaders(std::string& key, std::string& value);
-    bool isValidHostHeader();
-    bool isValidContentLengthHeader();
+    void isValidHeaders(std::string& key, std::string& value);
+    void isValidHostHeader();
+    void isValidContentLengthHeader();
 
-    bool isValidSpace(std::string& str);
-    bool isDuplicatedHeader(std::string& key);
+    void isValidSpace(std::string& str);
+    void isDuplicatedHeader(std::string& key);
 
     bool isCarriegeReturnTrimmed();
 

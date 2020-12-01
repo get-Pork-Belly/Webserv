@@ -578,14 +578,11 @@ Request::parseRequestHeaders()
         if (ft::substr(key, line, ":") == false)
             throw (RequestFormatException(*this, "400"));
         value = ft::ltrim(line, " ");
-        if (value.length() >= LIMIT_HEADERS_LENGTH)
-            throw (RequestHeaderFieldsTooLargeException(*this));
-        if (this->isValidHeaders(key, value) == false)
-            throw (RequestFormatException(*this, "400"));
+        this->isValidHeaders(key, value);
         this->setHeaders(key, value);
     }
-    if (this->isValidHostHeader() == false || this->isValidContentLengthHeader() == false)
-        throw (RequestFormatException(*this, "400"));
+    this->isValidHostHeader();
+    this->isValidContentLengthHeader();
 
     Log::printTimeDiff(from, 2);
     Log::trace("< parseHeaders", 2);
@@ -769,33 +766,33 @@ Request::isValidVersion(const std::string& version)
     throw (HTTPVersionNotSupportedException(*this));
 }
 
-bool
+void
 Request::isValidHeaders(std::string& key, std::string& value)
 {
-    if (key.empty() || value.empty() ||
-        this->isValidSpace(key) == false ||
-        this->isDuplicatedHeader(key) == false)
-        return (false);
-    return (true);
+    if (value.length() >= LIMIT_HEADERS_LENGTH)
+        throw (RequestHeaderFieldsTooLargeException(*this));
+    if (key.empty() || value.empty())
+        throw (RequestFormatException(*this, "400"));
+    this->isValidSpace(key);
+    this->isDuplicatedHeader(key);
 }
 
-bool
+void
 Request::isValidHostHeader()
 {
     const std::map<std::string, std::string>& headers = this->getHeaders();
     const std::map<std::string, std::string>::const_iterator it = headers.find("Host");
 
     if (it == headers.end())
-        return (false);
+        throw (RequestFormatException(*this, "400"));
     else
     {
         if (it->second.find('@') != std::string::npos)
-            return (false);
+            throw (RequestFormatException(*this, "400"));
     }
-    return (true);
 }
 
-bool
+void
 Request::isValidContentLengthHeader()
 {
     const std::map<std::string, std::string>& headers = this->getHeaders();
@@ -808,31 +805,30 @@ Request::isValidContentLengthHeader()
         {
             length = std::stoi(it->second);
             if (length < 0)
-                return (false);
+                throw (RequestFormatException(*this, "400"));
         }
         catch(const std::exception& e)
         {
             std::cerr << e.what() << '\n';
-            return (false);
+            throw (RequestFormatException(*this, "400"));
         }
     }
-    return (true);
 }
 
-bool
+void
 Request::isValidSpace(std::string& str)
 {
     if (str.find(" ") == std::string::npos)
-        return (true);
-    return (false);
+        return ;
+    throw (RequestFormatException(*this, "400"));
 }
 
-bool
+void
 Request::isDuplicatedHeader(std::string& key)
 {
     if (this->_headers.find(key) == this->_headers.end())
-        return (true);
-    return (false);
+        return ;
+    throw (RequestFormatException(*this, "400"));
 }
 
 bool
