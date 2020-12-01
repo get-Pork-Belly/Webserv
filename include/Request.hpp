@@ -120,16 +120,18 @@ public:
 
     /* parser */
     void parseRequestLine();
+    std::vector<std::string> parseTokensOfRequestLine(std::string request_line);
     void parseRequestHeaders();
     bool parseHeaders(std::string& req_message);
 
     /* valid check */
     bool isValidMethod(const std::string& method);
-    bool isValidUri(const std::string& uri);
+    void isValidUri(const std::string& uri);
     bool isValidVersion(const std::string& version);
 
     bool isValidHeaders(std::string& key, std::string& value);
-    bool isExistentHostHeader();
+    bool isValidHostHeader();
+    bool isValidContentLengthHeader();
 
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
