@@ -17,7 +17,6 @@ class Request;
 namespace ft
 {
     std::vector<std::string> split(std::string str, std::string const &token);
-    std::vector<std::string> splitOneSpace(std::string str, Request& req);
     std::string	ltrim(const std::string& str, char const *token = "\t\n ");
     std::string	rtrim(const std::string& str, char const *token = "\t\n ");
 
