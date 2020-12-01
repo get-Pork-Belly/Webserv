@@ -230,7 +230,10 @@ UriParser::findAndSetQuery(const std::string& path)
         this->setQuery("");
     else
     {
-        this->setQuery(path.substr(index));
+        if (path.length() > index + 1)
+            this->setQuery(path.substr(index + 1));
+        else
+            this->setQuery("");
         this->setPath(path.substr(0, index));
     }
 }
