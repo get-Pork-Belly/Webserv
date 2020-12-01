@@ -134,7 +134,7 @@ public:
     bool isValidHostHeader();
     bool isValidContentLengthHeader();
 
-    bool isValidSP(std::string& str);
+    bool isValidSpace(std::string& str);
     bool isDuplicatedHeader(std::string& key);
 
     bool isCarriegeReturnTrimmed();

@@ -787,7 +787,7 @@ bool
 Request::isValidHeaders(std::string& key, std::string& value)
 {
     if (key.empty() || value.empty() ||
-        this->isValidSP(key) == false ||
+        this->isValidSpace(key) == false ||
         this->isDuplicatedHeader(key) == false)
         return (false);
     return (true);
@@ -834,7 +834,7 @@ Request::isValidContentLengthHeader()
 }
 
 bool
-Request::isValidSP(std::string& str)
+Request::isValidSpace(std::string& str)
 {
     if (str.find(" ") == std::string::npos)
         return (true);
