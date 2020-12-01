@@ -1627,6 +1627,9 @@ Server::findResourceAbsPath(int client_fd)
 
     Response& response = this->_responses[client_fd];
     response.setUriPath(path);
+    // extension 확인해서, cgi에 해당하면
+    //   path_info 분리
+    //   cgi script_name 분리
     response.setRouteAndLocationInfo(path, this);
     std::string root = response.getLocationInfo().at("root");
     // if (response.getRoute() != "/")
@@ -1744,6 +1747,8 @@ Server::checkAndSetResourceType(int client_fd)
     Response& response = this->_responses[client_fd];
     const std::string& method = this->_requests[client_fd].getMethod();
     response.findAndSetUriExtension();
+    std::cout<<"\033[43;1;30m"<<"script_name: "<<this->_responses[client_fd].getScriptName()<<"\033[0m"<<std::endl;
+    std::cout<<"\033[43;1;m"<<"path_info: "<<this->_responses[client_fd].getPathInfo()<<"\033[0m"<<std::endl;
     if (this->isCgiUri(client_fd, response.getUriExtension()))
     {
         this->checkValidOfCgiMethod(client_fd);
@@ -1979,14 +1984,32 @@ Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
 {
     const Response& response = this->_responses[client_fd];
     
-    if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + response.getUriPath())))
+    //     /directory/youpi.bla  /abc/def    ?query=value
+    std::string path_info;
+    std::string path_translated;
+    if (response.getPathInfo().length() == 0)
+    {
+        path_info = response.getUriPath();
+        path_translated = response.getResourceAbsPath();
+    }
+    else
+    {
+        path_info = response.getPathInfo();
+        path_translated = response.getPathTranslated();
+    }
+    // if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + path_info))) // php-cgi
+    if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=/directory/youpi.bla"))) // cgi_tester는 뒤의 /abc 이런거 없이?
         return (false);
-    if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + response.getResourceAbsPath())))
+    if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + path_translated)))
         return (false);
-    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
+    // if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
+    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=/directory/youpi.bla"))) //cgi_tester는 뒤의 /abc 이런거 없이.
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=/directory/youpi.bla")))
         return (false);
     return (true);
 }
+///asdfasdf/youpi.bla/abc/def
 
 bool
 Server::makeEnvpUsingHeaders(char** envp, int client_fd, int* idx)
@@ -2025,14 +2048,9 @@ Server::makeEnvpUsingHeaders(char** envp, int client_fd, int* idx)
 }
 
 bool
-Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
+Server::makeEnvpUsingEtc(char** envp, int* idx)
 {
-    const std::map<std::string, std::string>& location_info =
-        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
-
     if (!(envp[(*idx)++] = ft::strdup("GATEWAY_INTERFACE=Cgi/1.1")))
-        return (false);
-    if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SERVER_NAME=" + this->getHost())))
         return (false);
@@ -2067,7 +2085,7 @@ Server::makeCgiEnvp(int client_fd)
     if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
         !this->makeEnvpUsingResponse(envp, client_fd, &idx) ||
         !this->makeEnvpUsingHeaders(envp, client_fd, &idx) ||
-        !this->makeEnvpUsingEtc(envp, client_fd, &idx))
+        !this->makeEnvpUsingEtc(envp, &idx))
     {
         ft::doubleFree(&envp);
         throw (InternalServerException(*this, client_fd));
@@ -2086,27 +2104,20 @@ Server::makeCgiArgv(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-
     char** argv;
 
     if (!(argv = (char **)malloc(sizeof(char *) * 2)))
         throw (InternalServerException(*this, client_fd));
-    const location_info& location_info =
-            this->getLocationConfig().at(this->_responses[client_fd].getRoute());
     for (int i = 0; i < 2; i++)
         argv[i] = nullptr;
-    location_info::const_iterator it = location_info.find("cgi_path");
-    if (it == location_info.end())
+    // if (!(argv[0] = ft::strdup(this->_responses[client_fd].getResourceAbsPath())))
+    if (!(argv[0] = ft::strdup(this->_responses[client_fd].getScriptName())))
     {
         ft::doubleFree(&argv);
         throw (InternalServerException(*this, client_fd));
     }
-    if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
-    {
-        ft::doubleFree(&argv);
-        throw (InternalServerException(*this, client_fd));
-    }
-    
+
+
     Log::printTimeDiff(from, 2);
     Log::trace("< makeCgiArgv", 2);
     return (argv);
@@ -2147,6 +2158,15 @@ Server::forkAndExecuteCgi(int client_fd)
         ft::doubleFree(&envp);
         throw (InternalServerException(*this, client_fd));
     }
+
+    int i = -1;
+    while (argv[++i])
+        std::cout<<"\033[42;1;97m"<<argv[i]<<"\033[0m"<<std::endl;
+    i = -1;
+    while (envp[++i])
+        std::cout<<"\033[42;1;97m"<<envp[i]<<"\033[0m"<<std::endl;
+
+
     if ((pid = fork()) < 0)
         throw (InternalServerException(*this, client_fd));
     else if (pid == 0)
