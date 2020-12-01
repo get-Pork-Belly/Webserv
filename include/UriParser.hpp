@@ -52,7 +52,8 @@ public:
     /* Exception */
     /* Util */
     void init();
-    void parseUri(const std::string& uri);
+    bool decodingUri(std::string& uri);
+    bool parseUri(const std::string& uri);
     std::string findScheme();
     std::string findPort();
     std::string findHostAndPort();

@@ -155,10 +155,32 @@ UriParser::setQuery(const std::string& query)
 /*********************************  Util  *************************************/
 /*============================================================================*/
 
-void
+bool
+UriParser::decodingUri(std::string& uri)
+{
+    size_t target_index = 0;
+    while ((target_index = uri.find('+', target_index)) != std::string::npos)
+        uri.replace(target_index, 1, " ");
+    target_index = 0;
+    while ((target_index = uri.find('%', target_index)) != std::string::npos)
+    {
+        std::string hex = uri.substr(target_index + 1, 2);
+        int base10 = ft::stoiHex(hex);
+        if (base10 < 31 || base10 >= 127)
+            return (false);
+        uri.replace(target_index, 3, 1, static_cast<unsigned char>(base10));
+        target_index += 1;
+    }
+    return (true);
+}
+
+bool
 UriParser::parseUri(const std::string& uri)
 {
-    this->setUri(uri);
+    std::string parsed_uri(uri);
+    if (this->decodingUri(parsed_uri) == false)
+        return (false);
+    this->setUri(parsed_uri);
     this->setScheme(this->findScheme());
     const std::string& host_port = this->findHostAndPort();
     size_t index = this->getIndex();
@@ -174,6 +196,7 @@ UriParser::parseUri(const std::string& uri)
         this->setPaths();
     }
     this->findAndSetQuery(this->getPath());
+    return (true);
 }
 
 std::string
