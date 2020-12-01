@@ -2088,13 +2088,12 @@ Server::makeCgiArgv(int client_fd)
 
 
     char** argv;
-    Response& response = this->_responses[client_fd];
 
-    if (!(argv = (char **)malloc(sizeof(char *) * 3)))
+    if (!(argv = (char **)malloc(sizeof(char *) * 2)))
         throw (InternalServerException(*this, client_fd));
     const location_info& location_info =
             this->getLocationConfig().at(this->_responses[client_fd].getRoute());
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 2; i++)
         argv[i] = nullptr;
     location_info::const_iterator it = location_info.find("cgi_path");
     if (it == location_info.end())
@@ -2107,12 +2106,6 @@ Server::makeCgiArgv(int client_fd)
         ft::doubleFree(&argv);
         throw (InternalServerException(*this, client_fd));
     }
-    if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
-    {
-        ft::doubleFree(&argv);
-        throw (InternalServerException(*this, client_fd));
-    }
-
     
     Log::printTimeDiff(from, 2);
     Log::trace("< makeCgiArgv", 2);
@@ -2164,8 +2157,12 @@ Server::forkAndExecuteCgi(int client_fd)
             throw (InternalServerException(*this, client_fd));
         if (dup2(stdout_of_cgi, 1) < 0)
             throw (InternalServerException(*this, client_fd));
-        if ((ret = execve(argv[0], argv, envp)) < 0)
-            exit(ret);
+        
+        // if php cgi 면
+        // if ((ret = execve("phpcgi path", argv, envp)) < 0)
+        // else
+            if ((ret = execve(argv[0], argv, envp)) < 0)
+                exit(ret);
         exit(ret);
     }
     else
