@@ -1333,8 +1333,12 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
     Response& response = this->_responses[client_fd];
 
     char buf[BUFFER_SIZE + 1];
-
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
+    std::cout << "\033[1;31m" << "-------------------------" << "\033[0m" << std::endl; 
+    buf[bytes] = 0;
+    std::cout << "\033[1;35m" << buf << "\033[0m" << std::endl;
+    std::cout << "\033[1;31m" << "-------------------------" << "\033[0m" << std::endl; 
+
     if (bytes > 0)
     {
         buf[bytes] = 0;
@@ -1984,7 +1988,6 @@ Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
 {
     const Response& response = this->_responses[client_fd];
     
-    //     /directory/youpi.bla  /abc/def    ?query=value
     std::string path_info;
     std::string path_translated;
     if (response.getPathInfo().length() == 0)
@@ -1997,19 +2000,16 @@ Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
         path_info = response.getPathInfo();
         path_translated = response.getPathTranslated();
     }
-    // if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + path_info))) // php-cgi
-    if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=/directory/youpi.bla"))) // cgi_tester는 뒤의 /abc 이런거 없이?
+    if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + path_info)))
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + path_translated)))
         return (false);
-    // if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
-    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=/directory/youpi.bla"))) //cgi_tester는 뒤의 /abc 이런거 없이.
+    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
         return (false);
-    if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=/directory/youpi.bla")))
+    if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + response.getScriptName())))
         return (false);
     return (true);
 }
-///asdfasdf/youpi.bla/abc/def
 
 bool
 Server::makeEnvpUsingHeaders(char** envp, int client_fd, int* idx)
@@ -2166,7 +2166,6 @@ Server::forkAndExecuteCgi(int client_fd)
     while (envp[++i])
         std::cout<<"\033[42;1;97m"<<envp[i]<<"\033[0m"<<std::endl;
 
-
     if ((pid = fork()) < 0)
         throw (InternalServerException(*this, client_fd));
     else if (pid == 0)
@@ -2178,11 +2177,11 @@ Server::forkAndExecuteCgi(int client_fd)
         if (dup2(stdout_of_cgi, 1) < 0)
             throw (InternalServerException(*this, client_fd));
         
-        // if php cgi 면
-        // if ((ret = execve("phpcgi path", argv, envp)) < 0)
-        // else
-            if ((ret = execve(argv[0], argv, envp)) < 0)
-                exit(ret);
+        if (this->_responses[client_fd].getUriExtension() == ".php" &&
+            (ret = execve("./php-mac/bin/php-cgi", argv, envp)) < 0)
+            exit(ret);
+        if ((ret = execve(argv[0], argv, envp)) < 0)
+            exit(ret);
         exit(ret);
     }
     else
