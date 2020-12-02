@@ -15,9 +15,6 @@ ServerGenerator::ServerGenerator(ServerManager* server_manager)
 : _server_manager(server_manager)
 {
     this->convertFileToStringVector(this->_server_manager->getConfigFilePath());
-    // TODO 구현하기
-    // if (!this->isValidConfigFile())
-    //     throw "config file error"; // throw
 }
 
 /*============================================================================*/
@@ -42,6 +39,17 @@ ServerGenerator::~ServerGenerator()
 
 /*============================================================================*/
 /******************************  Exception  ***********************************/
+
+ServerGenerator::ConfigFileSyntaxError::ConfigFileSyntaxError(std::string msg)
+: _msg(msg)
+{
+}
+
+const char*
+ServerGenerator::ConfigFileSyntaxError::what() const throw()
+{
+    return (this->_msg.c_str());
+}
 
 /*============================================================================*/
 /*============================================================================*/
@@ -116,8 +124,8 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
             this->setDefaultRouteOfServer(locations, server_config);
-            // testServerConfig(server_config);
-            // testLocationConfig(locations);
+            testServerConfig(server_config);
+            testLocationConfig(locations);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
         }
         it++;

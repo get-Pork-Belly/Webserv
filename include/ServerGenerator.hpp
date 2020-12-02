@@ -9,6 +9,7 @@
 # include "utils.hpp"
 # include "Server.hpp"
 # include <iomanip>
+# include "exception"
 
 class ServerManager;
 
@@ -37,6 +38,14 @@ public:
     /* Getter */
     /* Setter */
     /* Exception */
+    class ConfigFileSyntaxError : public ConfigFileErrorException
+    {
+        private:
+            std::string _msg;
+        public:
+            ConfigFileSyntaxError(std::string msg);
+            virtual const char* what() const throw();
+    };
     /* Util */
     void convertFileToStringVector(const char *config_file_path);
     // TODO isValidConfigFile 구현하기
