@@ -30,6 +30,25 @@ ServerManager::ServerManager(const char* config_path)
     this->initServers();
 }
 
+ServerManager&
+ServerManager::operator=(const ServerManager& rhs)
+{
+    this->_config_file_path = rhs._config_file_path;
+    this->_servers = rhs._servers;
+    this->_readfds = rhs._readfds;
+    this->_writefds = rhs._writefds;
+    this->_exceptfds = rhs._exceptfds;
+    this->_copy_readfds = rhs._copy_readfds;
+    this->_copy_writefds = rhs._copy_writefds;
+    this->_copy_exceptfds = rhs._copy_exceptfds;
+    this->_port = rhs._port;
+    this->_fd_table = rhs._fd_table;
+    this->_fd = rhs._fd;
+    this->_fd_max = rhs._fd_max;
+    this->_last_update_time_of_fd = rhs._last_update_time_of_fd;
+    return (*this);
+}
+
 /*============================================================================*/
 /******************************  Destructor  **********************************/
 /*============================================================================*/

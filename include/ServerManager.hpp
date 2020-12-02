@@ -31,7 +31,6 @@ private:
     /* Canonical but not implements */
     ServerManager();
     ServerManager(const ServerManager& other);
-    ServerManager& operator=(const ServerManager& rhs);
 
 private:
     const char*	_config_file_path;
@@ -51,6 +50,7 @@ private:
 public:
     /* Constructor */
     ServerManager(const char *config_path);
+    ServerManager& operator=(const ServerManager& rhs);
     /* Destructor */
     virtual ~ServerManager();
     /* Overload */
