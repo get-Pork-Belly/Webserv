@@ -6,11 +6,6 @@
 #include "Response.hpp"
 #include <iostream>
 
-void exitServers(int signo)
-{
-
-}
-
 int main(int argc, char *argv[])
 {
     if (argc > 2)
