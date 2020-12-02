@@ -162,7 +162,7 @@ ServerGenerator::parseHttpBlock()
                 http_config[key] = value;
             }
             else
-                throw ("Directive must end with a \';\'");
+                throw (ConfigFileSyntaxError(NO_SEMICOLON));
         }
     }
     return (http_config);
@@ -189,7 +189,7 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
         else
         {
             if (directives[1].back() != ';')
-                throw ("Directive must end with a \';\'");
+                throw (ConfigFileSyntaxError(NO_SEMICOLON));
             else
                 directives[1].pop_back();
             server_config[directives[0]] = directives[1];
@@ -215,13 +215,13 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
         else if (directives[0] == "location")
         {
             if (directives.size() != 3)
-                throw (ConfigFileSyntaxError("Location directive needs one arguments"));
+                throw (ConfigFileSyntaxError(INVALID_BLOCK));
             location_config["route"] = directives[1];
         }
         else
         {
             if (directives[directives.size() - 1].back() != ';')
-                throw ("Directive must end with a \';\'");
+                throw (ConfigFileSyntaxError(NO_SEMICOLON));
             else
                 directives[directives.size() - 1].pop_back();
             std::string joined;
