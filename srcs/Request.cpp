@@ -9,7 +9,6 @@
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-//TODO: target_chunk_size 상수화 하기
 Request::Request()
 : _method(""), _uri(""), _version(""),
 _protocol(""), _body(""), _status_code("200"),
@@ -381,6 +380,42 @@ Request::UriTooLongException::what() const throw()
     return ("[CODE 414] Request uri is too long");
 }
 
+Request::HTTPVersionNotSupportedException::HTTPVersionNotSupportedException(Request& req)
+: _req(req)
+{
+    this->_req.setStatusCode("505");
+}
+
+const char*
+Request::HTTPVersionNotSupportedException::what() const throw()
+{
+    return ("[CODE 505] HTTP Version Not Supported");
+}
+
+Request::NotImplementedException::NotImplementedException(Request& req)
+: _req(req)
+{
+    this->_req.setStatusCode("501");
+}
+
+const char*
+Request::NotImplementedException::what() const throw()
+{
+    return ("[CODE 501] Not Implemented");
+}
+
+Request::RequestHeaderFieldsTooLargeException::RequestHeaderFieldsTooLargeException(Request& req)
+: _req(req)
+{
+    this->_req.setStatusCode("431");
+}
+
+const char*
+Request::RequestHeaderFieldsTooLargeException::what() const throw()
+{
+    return ("[CODE 431] Request Header Fields Too Large");
+}
+
 /*============================================================================*/
 /*********************************  Util  *************************************/
 /*============================================================================*/
@@ -413,7 +448,7 @@ Request::updateRecvRequest()
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
         this->setRecvRequest(RecvRequest::REQUEST_LINE);
     else if (this->isBodyUnnecessary())
-        throw (RequestFormatException(*this, "400"));
+        this->setRecvRequest(RecvRequest::COMPLETE);
     else if (this->isNormalBody())
         this->setRecvRequest(RecvRequest::NORMAL_BODY);
     else if (this->isChunkedBody())
@@ -479,36 +514,32 @@ Request::updateStatusCodeAndReturn(const std::string& status_code, const bool& r
     return (ret);
 }
 
-void
-Request::parseRequestWithoutBody(char* buf, int bytes)
+std::vector<std::string>
+Request::parseTokensOfRequestLine(std::string request_line)
 {
-    (void)buf;
-    (void)bytes;
-    // Log::trace("> parseRequestWithoutBody", 1);
-    // timeval from;
-    // gettimeofday(&from, NULL);
+    std::vector<std::string> tokens;
+    size_t index;
+    std::string tmp;
 
-    // std::string line;
-    // std::string req_message(buf, bytes);
-
-    // if (ft::substr(line, req_message, "\r\n") == false)
-    //     throw (RequestFormatException(*this, "400"));
-    // else
-    // {
-    //     if (this->parseRequestLine(buf, bytes) == false)
-    //         throw (RequestFormatException(*this, "400"));
-    // }
-    // if (ft::substr(line, req_message, "\r\n\r\n") == false)
-    //     throw (RequestFormatException(*this, "400"));
-    // else
-    // {
-    //     if (this->parseHeaders(line) == false)
-    //         throw (RequestFormatException(*this, "400"));
-    // }
-    // this->updateRecvRequest();
-
-    // Log::printTimeDiff(from, 1);
-    // Log::trace("< parseRequestWithoutBody", 1);
+    while (request_line.length())
+    {
+        index = request_line.find(' ');
+        if (index != std::string::npos)
+        {
+            tmp = request_line.substr(0, index);
+            if (tmp.length())
+                tokens.push_back(tmp);
+            request_line = request_line.substr(index + 1);
+            if (request_line[0] == ' ')
+                throw (Request::RequestFormatException(*this, "400"));
+        }
+        else
+        {
+            tokens.push_back(request_line);
+            request_line = "";
+        }
+    }
+    return (tokens);
 }
 
 void
@@ -519,10 +550,10 @@ Request::parseRequestLine()
     gettimeofday(&from, NULL);
 
     std::string req_message = ft::rtrim(this->getTempBuffer(), "\r\n");
-    std::vector<std::string> request_line = ft::split(req_message, " ");
+    std::vector<std::string> request_line = this->parseTokensOfRequestLine(req_message);
 
-    if (this->isValidLine(request_line) == false)
-        throw (RequestFormatException(*this, "400"));
+    this->checkRequestLineIsValid(request_line);
+
     this->setMethod(request_line[0]);
     this->setUri(request_line[1]);
     this->setVersion(request_line[2]);
@@ -547,16 +578,15 @@ Request::parseRequestHeaders()
         if (ft::substr(key, line, ":") == false)
             throw (RequestFormatException(*this, "400"));
         value = ft::ltrim(line, " ");
-        if (this->isValidHeaders(key, value) == false)
-            throw (RequestFormatException(*this, "400"));
+        this->checkHeadersIsValid(key, value);
         this->setHeaders(key, value);
     }
+    this->checkHostHeaderIsValid();
+    this->checkContentLengthHeaderIsValid();
 
     Log::printTimeDiff(from, 2);
     Log::trace("< parseHeaders", 2);
 }
-
-// int received;
 
 void
 Request::parseTargetChunkSize(const std::string& chunk_size_line)
@@ -564,12 +594,9 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
     int target_chunk_size;
 
     target_chunk_size = ft::stoiHex(chunk_size_line);
-    
-    // received += target_chunk_size;
-    // std::cout<<"\033[1;30;43m"<<"received: "<<received<<"\033[0m"<<std::endl;
+
     if (target_chunk_size == -1)
     {
-        // std::cout<<"\033[1;31m"<<"chunk_size_line: "<<chunk_size_line<<"\033[0m"<<std::endl;
         std::cout<<"\033[1;31m"<<"In parseTargetChunkSize throw~!"<<"\033[0m"<<std::endl;
         throw (RequestFormatException(*this, "400"));
     }
@@ -579,14 +606,6 @@ Request::parseTargetChunkSize(const std::string& chunk_size_line)
 void
 Request::parseChunkData(char* buf, size_t bytes)
 {
-    // \r
-    // \n
-    // C
-    // \r\n
-    // C\r
-    // C\r\n
-    // CC\r
-    // CCC
     if (this->isCarriegeReturnTrimmed())
     {
         this->setCarriegeReturnTrimmed(false);
@@ -703,19 +722,19 @@ Request::getContentLength() const
 /*****************************  Valid Check  **********************************/
 /*============================================================================*/
 
-bool
-Request::isValidLine(std::vector<std::string>& request_line)
+void
+Request::checkRequestLineIsValid(const std::vector<std::string>& request_line)
 {
-    if (request_line.size() != 3 ||
-        this->isValidMethod(request_line[0]) == false ||
-        this->isValidUri(request_line[1]) == false ||
-        this->isValidVersion(request_line[2]) == false)
-        return (false);
-    return (true);
+    if (request_line.size() != 3)
+        throw (RequestFormatException(*this, "400"));
+
+    this->checkMethodIsValid(request_line[0]);
+    this->checkUriIsValid(request_line[1]);
+    this->checkVersionIsValid(request_line[2]);
 }
 
-bool
-Request::isValidMethod(const std::string& method)
+void
+Request::checkMethodIsValid(const std::string& method)
 {
     if (method.compare("GET") == 0 ||
         method.compare("POST") == 0 ||
@@ -725,51 +744,91 @@ Request::isValidMethod(const std::string& method)
         method.compare("OPTIONS") == 0 ||
         method.compare("TRACE") == 0 ||
         method.compare("CONNECT") == 0)
-        return (true);
-    return (this->updateStatusCodeAndReturn("501", false));
+        return ;
+    throw (NotImplementedException(*this));
 }
 
-//TODO: uri 유효성 검사 부분 더 알아보기.
-bool
-Request::isValidUri(const std::string& uri)
+void
+Request::checkUriIsValid(const std::string& uri)
 {
-    if (uri[0] == '/' || uri[0] == 'w')
-        return (true);
-    return (this->updateStatusCodeAndReturn("400", false));
+    if (uri.length() >= BUFFER_SIZE - 2)
+        throw (UriTooLongException(*this));
+    if (uri[0] == '/' || (uri.length() == 1 && uri[0] == '*'))
+        return ;
+    throw (RequestFormatException(*this, "400"));
 }
 
-bool
-Request::isValidVersion(const std::string& version)
+void
+Request::checkVersionIsValid(const std::string& version)
 {
-    if (version.compare("HTTP/1.1") == 0 || version.compare("HTTP/1.0") == 0)
-        return (true);
-    return (this->updateStatusCodeAndReturn("400", false));
+    if (version.compare("HTTP/1.1") == 0)
+        return ;
+    throw (HTTPVersionNotSupportedException(*this));
 }
 
-bool
-Request::isValidHeaders(std::string& key, std::string& value)
+void
+Request::checkHeadersIsValid(std::string& key, std::string& value)
 {
-    if (key.empty() || value.empty() ||
-        this->isValidSP(key) == false ||
-        this->isDuplicatedHeader(key) == false)
-        return (false);
-    return (true);
+    if (value.length() >= LIMIT_HEADERS_LENGTH)
+        throw (RequestHeaderFieldsTooLargeException(*this));
+    if (key.empty() || value.empty())
+        throw (RequestFormatException(*this, "400"));
+    this->checkSpaceIsValid(key);
+    this->checkHeaderIsDuplicated(key);
 }
 
-bool
-Request::isValidSP(std::string& str)
+void
+Request::checkHostHeaderIsValid()
+{
+    const std::map<std::string, std::string>& headers = this->getHeaders();
+    const std::map<std::string, std::string>::const_iterator it = headers.find("Host");
+
+    if (it == headers.end())
+        throw (RequestFormatException(*this, "400"));
+    else
+    {
+        if (it->second.find('@') != std::string::npos)
+            throw (RequestFormatException(*this, "400"));
+    }
+}
+
+void
+Request::checkContentLengthHeaderIsValid()
+{
+    const std::map<std::string, std::string>& headers = this->getHeaders();
+    const std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+    int length = 0;
+
+    if (it != headers.end())
+    {
+        try
+        {
+            length = std::stoi(it->second);
+            if (length < 0)
+                throw (RequestFormatException(*this, "400"));
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+            throw (RequestFormatException(*this, "400"));
+        }
+    }
+}
+
+void
+Request::checkSpaceIsValid(std::string& str)
 {
     if (str.find(" ") == std::string::npos)
-        return (true);
-    return (false);
+        return ;
+    throw (RequestFormatException(*this, "400"));
 }
 
-bool
-Request::isDuplicatedHeader(std::string& key)
+void
+Request::checkHeaderIsDuplicated(std::string& key)
 {
     if (this->_headers.find(key) == this->_headers.end())
-        return (true);
-    return (false);
+        return ;
+    throw (RequestFormatException(*this, "400"));
 }
 
 bool
