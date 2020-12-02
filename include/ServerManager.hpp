@@ -87,7 +87,8 @@ public:
     void closeCgiReadPipe(Server& server, int pipe_fd);
     void closeStaticResource(Server& server, int resource_fd);
 
-    static void exitServers(int signo);
+    void exitServers(int signo);
+    void clearServers();
 
     bool isFdTimeOut(int fd);
     void monitorTimeOutOff(int fd);

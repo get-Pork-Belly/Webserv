@@ -308,10 +308,12 @@ ServerManager::runServers()
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
 
-        if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, 
+        // if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, 
+        if ((selected_fds = select(-1, &this->_copy_readfds, 
             &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
         {
             std::cerr<<"Error : select"<<std::endl;
+            this->clearServers();
             return (false);
         }
         else if (selected_fds == 0)
@@ -541,7 +543,19 @@ ServerManager::closeStaticResource(Server& server, int resource_fd)
 }
 
 void
+ServerManager::clearServers()
+{
+    for (int fd = 7; fd < this->getFdMax() + 1; fd++)
+        close(fd);
+
+    for (Server* server : this->_servers)
+        delete server;
+}
+
+void
 ServerManager::exitServers(int signo)
 {
-    
+    std::cout << signo << std::endl;
+    std::cout << "EXIT!" << std::endl;
+    exit(0);
 }
