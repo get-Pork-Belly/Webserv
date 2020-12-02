@@ -58,12 +58,6 @@ UriParser::getPath() const
     return (this->_path);
 }
 
-const std::vector<std::string>&
-UriParser::getPaths() const
-{
-    return (this->_paths);
-}
-
 const std::string&
 UriParser::getQuery() const
 {
@@ -247,7 +241,6 @@ UriParser::init()
     this->_port.clear();
     this->_path.clear();
     this->_query.clear();
-    this->_paths.clear();
 }
 
 void
