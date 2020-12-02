@@ -1,34 +1,47 @@
+#include "PageGenerator.hpp"
+#include "Log.hpp"
 #include "ServerManager.hpp"
+#include "Server.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
 #include <iostream>
+
+void exitServers(int signo)
+{
+
+}
 
 int main(int argc, char *argv[])
 {
-
     if (argc > 2)
     {
         //TODO: error message
         return (EXIT_FAILURE);
     }
 
-    const char *default_path = "/default.conf/";
+    const char *default_path = "tests/yohlee_config";
     const char *config_path = (argc == 1) ? default_path : argv[1];
     try
     {
         ServerManager server_manager(config_path);
-        // server_manager 객체가 생성되며, 생성자안에서 serverInit 함수가 실행된다.
-        // server_manager.init();
+        while (true)
+        {
+            if (!server_manager.runServers())
+            {
+                ServerManager new_server_manager(config_path);
+                server_manager = new_server_manager;
+            }
+        }
+        
     }
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
     }
-
-    // if (!server_manager.runServers())
-    // {
-    //     //TODO: error처리코드
-    //     std::cerr<"error"<<std::endl;
-    //     server_manager.exitServers();
-    // }
+    catch(const char *e)
+    {
+        std::cerr<<e<<std::endl;
+    }
+ 
     return (0);
 }
-
