@@ -206,6 +206,7 @@ public:
 
     void appendBody(char* buf, int bytes);
     void appendTempBuffer(char* buf, int bytes);
+    void trimPhpCgiFirstHeadersFromTempBuffer();
 
     /* General header */
     void appendDateHeader(std::string& headers);

@@ -1312,7 +1312,7 @@ Response::preparseCgiMessage()
 bool
 Response::parseCgiHeaders(std::string& cgi_message)
 {
-    Log::trace("> parseHeaders", 1);
+    Log::trace("> parseCgiHeaders", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1337,7 +1337,7 @@ Response::parseCgiHeaders(std::string& cgi_message)
     this->setHeaders(key, value);
 
     Log::printTimeDiff(from, 1);
-    Log::trace("< parseHeaders", 1);
+    Log::trace("< parseCgiHeaders", 1);
     return (true);
 }
 
@@ -1424,6 +1424,13 @@ void
 Response::appendTempBuffer(char* buf, int bytes)
 {
     this->_temp_buffer.append(buf, bytes);
+}
+
+void
+Response::trimPhpCgiFirstHeadersFromTempBuffer()
+{
+    size_t index = this->getTempBuffer().find("\r\n\r\n");
+    this->setTempBuffer(this->getTempBuffer().substr(index + CRLF_SIZE + CRLF_SIZE));
 }
 
 bool
