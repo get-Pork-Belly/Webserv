@@ -20,7 +20,6 @@ private:
     std::string _port;
     std::string _path;
     std::string _query;
-    std::vector<std::string> _paths;
         
 public:
     /* Constructor */
@@ -37,7 +36,6 @@ public:
     const std::string& getHost() const;
     const std::string& getPort() const;
     const std::string& getPath() const;
-    const std::vector<std::string>& getPaths() const;
     const std::string& getQuery() const;
     /* Setter */
     void setIndex(int index);
@@ -52,7 +50,8 @@ public:
     /* Exception */
     /* Util */
     void init();
-    void parseUri(const std::string& uri);
+    bool decodingUri(std::string& uri);
+    bool parseUri(const std::string& uri);
     std::string findScheme();
     std::string findPort();
     std::string findHostAndPort();

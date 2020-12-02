@@ -1624,12 +1624,14 @@ Server::findResourceAbsPath(int client_fd)
 
     
     UriParser parser;
-    parser.parseUri(this->_requests[client_fd].getUri());
+    if (parser.parseUri(this->_requests[client_fd].getUri()) == false)
+        throw (Request::RequestFormatException(this->_requests[client_fd], "400"));
     const std::string& path = parser.getPath();
 
     Response& response = this->_responses[client_fd];
     response.setUriPath(path);
     response.setRouteAndLocationInfo(path, this);
+    response.setQuery(parser.getQuery());
     std::string root = response.getLocationInfo().at("root");
     // if (response.getRoute() != "/")
     //     root.pop_back();
@@ -1981,6 +1983,8 @@ Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
 {
     const Response& response = this->_responses[client_fd];
     
+    if (!(envp[(*idx)++] = ft::strdup("QUERY_STRING=" + response.getQuery())))
+        return (false);
     if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + response.getUriPath())))
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + response.getResourceAbsPath())))
@@ -2044,8 +2048,6 @@ Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
         return (false);
-    if (!(envp[(*idx)++] = ft::strdup("QUERY_STRING=")))
-        return (false);
     return (true);
 }
 
@@ -2074,7 +2076,6 @@ Server::makeCgiEnvp(int client_fd)
         ft::doubleFree(&envp);
         throw (InternalServerException(*this, client_fd));
     }
-
 
     Log::printTimeDiff(from, 2);
     Log::trace("< makeCgiEnvp", 2);
