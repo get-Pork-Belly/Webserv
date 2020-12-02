@@ -275,7 +275,6 @@ ServerManager::updateFdMax(int fd)
 void
 ServerManager::initServers()
 {
-    signal(SIGPIPE, SIG_IGN);
     ServerGenerator server_generator(this);
     server_generator.generateServers(this->_servers);
 }
@@ -285,6 +284,9 @@ ServerManager::runServers()
 {
     int selected_fds;
     struct timeval timeout;
+
+    signal(SIGINT, exitServers);
+    signal(SIGPIPE, SIG_IGN);
 
     timeout.tv_sec = 5;
     timeout.tv_usec = 5;
@@ -538,8 +540,8 @@ ServerManager::closeStaticResource(Server& server, int resource_fd)
     Log::closeFd(FdType::RESOURCE, resource_fd);
 }
 
-// void
-// ServerManager::exitServers()
-// {
+void
+ServerManager::exitServers(int signo)
+{
     
-// }
+}
