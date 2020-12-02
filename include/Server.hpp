@@ -28,6 +28,7 @@ const int DEFAULT_INDEX_OF_CRLF = -1;
 const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
 const int DEFAULT_FD = -1;
+const int LIMIT_HEADERS_LENGTH = 8192;
 
 class ServerManager;
 class Request;
@@ -94,7 +95,7 @@ public:
     void receiveRequest(int fd);
     void receiveRequestLine(int fd);
     void receiveRequestHeaders(int fd);
-    int  readBufferUntilRequestLine(int fd, char* buf, size_t line_end_pos);
+    void readBufferUntilRequestLine(int fd);
     bool readBufferUntilHeaders(int fd, char* buf, size_t read_target);
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
@@ -142,12 +143,13 @@ public:
     void receiveChunkSize(int fd);
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
-    bool isExistCrlfInChunkSize(int fd);
+    bool isExistCrlf(int fd, const RecvRequest recv_request);
     bool isNotYetSetTargetChunkSize(int fd);
-    void findCrlfInChunkSize(int fd, const std::string& buf);
+    void findCrlfAndSetIndexOfCrlf(int fd, const std::string& buf, const RecvRequest recv_request);
     bool isLastSequenceOfParsingChunk(int fd);
     int calculateReceiveTargetSizeOfChunkData(int fd);
     bool isChunkDataAllReceived(int fd);
+    void prepareToReceiveHeaders(int fd);
     void prepareToReceiveNextChunkSize(int fd);
     void prepareToReceiveNextChunkData(int fd);
     void finishChunkSequence(int fd);
@@ -160,78 +162,63 @@ public:
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        PayloadTooLargeException(Response& response);
+        PayloadTooLargeException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
-    class ReadErrorException : public std::exception
+    class ReadErrorException : public SendErrorCodeToClientException
     {
     public:
+        ReadErrorException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
 public:
     class MustRedirectException : public SendErrorCodeToClientException
     {
     private:
-        Response& _res;
         std::string _msg;
     public:
-        MustRedirectException(Response& res);
+        MustRedirectException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class CannotOpenDirectoryException : public SendErrorCodeToClientException
     {
     private:
-        Response& _res;
-        int _error_num;
         std::string _msg;
     public:
-        CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num);
+        CannotOpenDirectoryException(Server& server, int client_fd, const std::string& status_code, int error_num);
         virtual const char* what() const throw();
     };
     class IndexNoExistException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        IndexNoExistException(Response& response);
+        IndexNoExistException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class OpenResourceErrorException : public SendErrorCodeToClientException
     {
     private:
-        Response& _response;
-        int _error_num;
         std::string _msg;
     public:
-        OpenResourceErrorException(Response& response, int error_num);
+        OpenResourceErrorException(Server& server, int client_fd, int error_num);
         virtual const char* what() const throw();
     };
     class CgiMethodErrorException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        CgiMethodErrorException(Response& response);
+        CgiMethodErrorException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class InternalServerException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        InternalServerException(Response& response);
+        InternalServerException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class AuthenticateErrorException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _res;
-        std::string _status_code;
     public:
-        AuthenticateErrorException(Response& res, const std::string& status_code);
+        AuthenticateErrorException(Server& server, int client_fd, const std::string& status_code);
         virtual const char* what() const throw();
     };
     class CannotPutOnDirectoryException : public SendErrorCodeToClientException
@@ -244,28 +231,50 @@ public:
     };
     class TargetResourceConflictException : public SendErrorCodeToClientException
     {
-    private:
-        Response& _response;
     public:
-        TargetResourceConflictException(Response& response);
+        TargetResourceConflictException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class UnchunkedErrorException : public SendErrorCodeToClientException
     {
     public:
+        UnchunkedErrorException(Server& server, int client_fd);
         virtual const char* what() const throw();
     };
     class NotAllowedMethodException : public SendErrorCodeToClientException
     {
-        private:
-            Response& _response;
-        public:
-            NotAllowedMethodException(Response& response);
-            virtual const char* what() const throw();
+    public:
+        NotAllowedMethodException(Server& server, int client_fd);
+        virtual const char* what() const throw();
     };
-    class CannotWriteToClientException : public std::exception
+    class CannotWriteToClientException : public CannotSendErrorCodeToClientException
     {
     public:
+        CannotWriteToClientException(Server& server, int client_fd);
+        virtual const char* what() const throw();
+    };
+   class ReadStaticResourceErrorException: public SendErrorCodeToClientException
+    {
+    public:
+        ReadStaticResourceErrorException(Server& server, int resource_fd);
+        virtual const char* what() const throw();
+    };
+   class ReceiveDataFromCgiPipeErrorException: public SendErrorCodeToClientException
+    {
+    public:
+        ReceiveDataFromCgiPipeErrorException(Server& server, int read_fd_from_cgi);
+        virtual const char* what() const throw();
+    };
+   class SendDataToCgiPipeErrorException: public SendErrorCodeToClientException
+    {
+    public:
+        SendDataToCgiPipeErrorException(Server& server, int write_fd_to_cgi);
+        virtual const char* what() const throw();
+    };
+   class PutFileOnServerErrorException: public SendErrorCodeToClientException
+    {
+    public:
+        PutFileOnServerErrorException(Server& server, int resource_fd);
         virtual const char* what() const throw();
     };
 };

@@ -172,10 +172,10 @@ Server::setAuthenticateRealm()
 /******************************  Exception  ***********************************/
 /*============================================================================*/
 
-Server::PayloadTooLargeException::PayloadTooLargeException(Response& response) 
-: _response(response)
+Server::PayloadTooLargeException::PayloadTooLargeException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("413");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("413");
 }
 
 const char*
@@ -184,16 +184,24 @@ Server::PayloadTooLargeException::what() const throw()
     return ("[CODE 413] Payload Too Large");
 }
 
+Server::ReadErrorException::ReadErrorException(Server& server, int client_fd)
+{
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("500");
+}
+
 const char*
 Server::ReadErrorException::what() const throw()
 {
-    return ("[CODE 900] Read empty buffer or occured reading error");
+    return ("[CODE 500] Read empty buffer or occured reading error");
 }
 
-Server::MustRedirectException::MustRedirectException(Response& res)
-: _res(res), _msg("MustRedirectException: [CODE " + res.getRedirectStatusCode() + "]")
+Server::MustRedirectException::MustRedirectException(Server& server, int client_fd)
+: _msg("MustRedirectException: [CODE " + server._responses[client_fd].getRedirectStatusCode() + "]")
 {
-    this->_res.setStatusCode(res.getRedirectStatusCode());
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    Response& response = server.getResponse(client_fd);
+    response.setStatusCode(response.getRedirectStatusCode());
 }
 
 const char*
@@ -202,10 +210,11 @@ Server::MustRedirectException::what() const throw()
     return (this->_msg.c_str());
 }
 
-Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Response& res, const std::string& status_code, int error_num)
-: _res(res), _error_num(error_num), _msg("CannotOpenDirectoryException: " + std::string(strerror(_error_num)))
+Server::CannotOpenDirectoryException::CannotOpenDirectoryException(Server& server, int client_fd, const std::string& status_code, int error_num)
+:_msg("CannotOpenDirectoryException: " + std::string(strerror(error_num)))
 {
-    this->_res.setStatusCode(status_code);
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode(status_code);
 }
 
 const char*
@@ -214,15 +223,17 @@ Server::CannotOpenDirectoryException::what() const throw()
     return (this->_msg.c_str());
 }
 
-Server::OpenResourceErrorException::OpenResourceErrorException(Response& response, int error_num)
-: _response(response), _error_num(error_num), _msg("OpenResourceErrorException: " + std::string(strerror(this->_error_num)))
+Server::OpenResourceErrorException::OpenResourceErrorException(Server& server, int client_fd, int error_num)
+:_msg("OpenResourceErrorException: " + std::string(strerror(error_num)))
 {
-    if (this->_error_num == EACCES)
-        this->_response.setStatusCode("403");
-    else if (this->_error_num == ENOMEM)
-        this->_response.setStatusCode("500");
+    Response& response = server.getResponse(client_fd);
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    if (error_num == EACCES)
+        response.setStatusCode("403");
+    else if (error_num == ENOMEM)
+        response.setStatusCode("500");
     else
-        this->_response.setStatusCode("404");
+        response.setStatusCode("404");
 }
 
 const char*
@@ -231,10 +242,10 @@ Server::OpenResourceErrorException::what() const throw()
     return (this->_msg.c_str());
 }
 
-Server::IndexNoExistException::IndexNoExistException(Response& response)
-: _response(response)
+Server::IndexNoExistException::IndexNoExistException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("404");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("404");
 }
 
 const char*
@@ -243,10 +254,10 @@ Server::IndexNoExistException::what() const throw()
     return ("[CODE 404] No index & Autoindex off");
 }
 
-Server::CgiMethodErrorException::CgiMethodErrorException(Response& response)
-: _response(response)
+Server::CgiMethodErrorException::CgiMethodErrorException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("400");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("400");
 }
 
 const char*
@@ -255,10 +266,10 @@ Server::CgiMethodErrorException::what() const throw()
     return ("[CODE 400] CGI can handle only GET HEAD POST");
 }
 
-Server::InternalServerException::InternalServerException(Response& response)
-: _response(response)
+Server::InternalServerException::InternalServerException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("500");
 }
 
 const char*
@@ -267,16 +278,16 @@ Server::InternalServerException::what() const throw()
     return ("[CODE 500] Server Internal error");
 }
 
-Server::AuthenticateErrorException::AuthenticateErrorException(Response& res, const std::string& status_code)
-: _res(res), _status_code(status_code)
+Server::AuthenticateErrorException::AuthenticateErrorException(Server& server, int client_fd, const std::string& status_code)
 {
-    this->_res.setStatusCode(this->_status_code);
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode(status_code);
 }
 
 const char*
 Server::AuthenticateErrorException::what() const throw()
 {
-    return ("");
+    return ("Authenticate Error Exception");
 }
 
 Server::CannotPutOnDirectoryException::CannotPutOnDirectoryException(Response& response)
@@ -291,10 +302,10 @@ Server::CannotPutOnDirectoryException::what() const throw()
     return ("[CODE 409] Cannot put on directory exception");
 }
 
-Server::TargetResourceConflictException::TargetResourceConflictException(Response& response)
-: _response(response)
+Server::TargetResourceConflictException::TargetResourceConflictException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("409");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+    server._responses[client_fd].setStatusCode("409");
 }
 
 const char*
@@ -303,16 +314,22 @@ Server::TargetResourceConflictException::what() const throw()
     return ("[CODE 409] Target resource conflict exception");
 }
 
+Server::UnchunkedErrorException::UnchunkedErrorException(Server& server, int client_fd)
+{
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
 const char*
 Server::UnchunkedErrorException::what() const throw()
 {
-    return ("[CODE 902] Chunked request couldn't receive or Receive error");
+    return ("[CODE 500] Chunked request couldn't receive or Receive error");
 }
 
-Server::NotAllowedMethodException::NotAllowedMethodException(Response& response)
-: _response(response)
+Server::NotAllowedMethodException::NotAllowedMethodException(Server& server, int client_fd)
 {
-    this->_response.setStatusCode("405");
+    server._responses[client_fd].setStatusCode("405");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
 }
 
 const char*
@@ -321,10 +338,81 @@ Server::NotAllowedMethodException::what() const throw()
     return ("[CODE 405] Not Allowed Method");
 }
 
+Server::ReadStaticResourceErrorException::ReadStaticResourceErrorException(Server& server, int resource_fd)
+{
+    int client_fd = server._server_manager->getLinkedFdFromFdTable(resource_fd);
+    server._server_manager->closeStaticResource(server, resource_fd);
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+const char*
+Server::ReadStaticResourceErrorException::what() const throw()
+{
+    return ("[CODE 500] Read Static Resource exception");
+}
+
+Server::CannotWriteToClientException::CannotWriteToClientException(Server& server, int client_fd)
+{
+    server.closeClientSocket(client_fd);
+    server._responses[client_fd].init();
+    server._requests[client_fd].init();
+}
+
 const char*
 Server::CannotWriteToClientException::what() const throw()
 {
     return ("[CODE 901] Cannot write to client");
+}
+
+Server::ReceiveDataFromCgiPipeErrorException::ReceiveDataFromCgiPipeErrorException(Server& server, int read_fd_from_cgi)
+{
+    int client_fd = server._server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
+    int write_fd_to_cgi = server._responses[client_fd].getWriteFdToCgi();
+
+    kill(server._responses[client_fd].getCgiPid(), SIGKILL);
+    server._server_manager->closeCgiWritePipe(server, write_fd_to_cgi);
+    server._server_manager->closeCgiReadPipe(server, read_fd_from_cgi);
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+const char*
+Server::ReceiveDataFromCgiPipeErrorException::what() const throw()
+{
+    return ("[CODE 500] Receive data from cgi error exception");
+}
+
+Server::SendDataToCgiPipeErrorException::SendDataToCgiPipeErrorException(Server& server, int write_fd_to_cgi)
+{
+    int client_fd = server._server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
+    int read_fd_from_cgi= server._responses[client_fd].getReadFdFromCgi();
+
+    kill(server._responses[client_fd].getCgiPid(), SIGKILL);
+    server._server_manager->closeCgiWritePipe(server, write_fd_to_cgi);
+    server._server_manager->closeCgiReadPipe(server, read_fd_from_cgi);
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+const char*
+Server::SendDataToCgiPipeErrorException::what() const throw()
+{
+    return ("[CODE 500] Send data to cgi error exception");
+}
+
+Server::PutFileOnServerErrorException::PutFileOnServerErrorException(Server& server, int resource_fd)
+{
+    int client_fd = server._server_manager->getLinkedFdFromFdTable(resource_fd);
+    server._server_manager->closeStaticResource(server, resource_fd);
+    server._responses[client_fd].setStatusCode("500");
+    server._server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+const char*
+Server::PutFileOnServerErrorException::what() const throw()
+{
+    return ("[CODE 500] Put file on server error exception");
 }
 
 /*============================================================================*/
@@ -369,8 +457,10 @@ Server::init()
 }
 
 bool
-Server::isExistCrlfInChunkSize(int fd)
+Server::isExistCrlf(int fd, const RecvRequest recv_request)
 {
+    if (recv_request == RecvRequest::REQUEST_LINE)
+        return (this->_requests[fd].getIndexOfCrlfInRequestLine() != DEFAULT_INDEX_OF_CRLF);
     return (this->_requests[fd].getIndexOfCrlfInChunkSize() != DEFAULT_INDEX_OF_CRLF);
 }
 
@@ -381,12 +471,17 @@ Server::isNotYetSetTargetChunkSize(int fd)
 }
 
 void
-Server::findCrlfInChunkSize(int fd, const std::string& buf)
+Server::findCrlfAndSetIndexOfCrlf(int fd, const std::string& buf, const RecvRequest recv_request)
 {
     size_t index_of_crlf;
 
     if ((index_of_crlf = buf.find("\r\n")) != std::string::npos)
-        this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
+    {
+        if (recv_request == RecvRequest::REQUEST_LINE)
+            this->_requests[fd].setIndexOfCrlfInRequestLine(index_of_crlf);
+        else if (recv_request == RecvRequest::CHUNKED_BODY)
+            this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
+    }
     else
         throw (Request::RequestFormatException(this->_requests[fd], "400"));
 }
@@ -421,36 +516,62 @@ void
 Server::prepareToReceiveNextChunkData(int fd)
 {
     this->_requests[fd].setIndexOfCrlfInChunkSize(DEFAULT_INDEX_OF_CRLF);
-    this->_requests[fd].setChunkSize("");
+    this->_requests[fd].setTempBuffer("");
     this->_requests[fd].setReceivedChunkSizeLength(0);
+}
+
+void
+Server::prepareToReceiveHeaders(int fd)
+{
+    this->_requests[fd].setIndexOfCrlfInRequestLine(DEFAULT_INDEX_OF_CRLF);
+    this->_requests[fd].setTempBuffer("");
+    this->_requests[fd].setReceivedRequestLineLength(0);
+    this->_requests[fd].setRecvRequest(RecvRequest::HEADERS);
 }
 
 void
 Server::finishChunkSequence(int fd)
 {
     this->_requests[fd].setRecvRequest(RecvRequest::COMPLETE);
-    this->_requests[fd].setLastChunkData("");
+    this->_requests[fd].setTempBuffer("");
     this->_requests[fd].setReceivedLastChunkDataLength(0);
     this->_requests[fd].setTargetChunkSize(DEFAULT_TARGET_CHUNK_SIZE);
 }
 
-int
-Server::readBufferUntilRequestLine(int client_fd, char* buf, size_t line_end_pos)
+void
+Server::readBufferUntilRequestLine(int client_fd)
 {
+
     Log::trace("> readBufferUntilRequestLine", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
     int bytes;
+    char buf[BUFFER_SIZE + 1];
     Request& request = this->_requests[client_fd];
 
-    if ((bytes = read(client_fd, buf, line_end_pos + CRLF_SIZE)) > 0)
+    int index_of_crlf = request.getIndexOfCrlfInRequestLine();
+    int received_request_line_length = request.getReceivedRequestLineLength();
+
+    if ((bytes = read(client_fd, buf, index_of_crlf + CRLF_SIZE)) > 0)
+    {
         buf[bytes] = 0;
+        received_request_line_length += bytes;
+        request.setReceivedRequestLineLength(received_request_line_length);
+
+        if (received_request_line_length == static_cast<int>(index_of_crlf) + CRLF_SIZE)
+        {
+            request.appendTempBuffer(buf, bytes);
+            request.parseRequestLine();
+            this->prepareToReceiveHeaders(client_fd);
+        }
+        else
+            request.appendTempBuffer(buf, bytes);
+    }
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
     else
-        throw (ReadErrorException());
-    return (bytes);
+        throw (ReadErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< readBufferUntilRequestLine", 1);
@@ -474,7 +595,7 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t read_target_size
     else if (bytes == 0)
         throw (Request::RequestFormatException(request, "400"));
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
     return (true);
 
     Log::printTimeDiff(from, 1);
@@ -494,12 +615,12 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_messag
         {
             buf[bytes] = 0;
             if (bytes != CRLF_SIZE)
-                throw (ReadErrorException());
+                throw (ReadErrorException(*this, client_fd));
         }
         else if (bytes == 0)
-            throw (ReadErrorException());
+            throw (ReadErrorException(*this, client_fd));
         else
-            throw (ReadErrorException());
+            throw (ReadErrorException(*this, client_fd));
     }
 }
 
@@ -512,30 +633,26 @@ Server::receiveRequestLine(int client_fd)
 
     int bytes;
     char buf[BUFFER_SIZE + 1];
-    size_t line_end_pos = 0;
     Request& request = this->_requests[client_fd];
 
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        std::string readed(buf, bytes);
-        if ((line_end_pos = readed.find("\r\n")) != std::string::npos)
-        {
-            if (line_end_pos >= BUFFER_SIZE - 2)
-                throw (Request::UriTooLongException(request));
-            bytes = this->readBufferUntilRequestLine(client_fd, buf, line_end_pos);
-            request.parseRequestLine(buf, bytes);
-            request.setRecvRequest(RecvRequest::HEADERS);
-        }
+        if (this->isExistCrlf(client_fd, RecvRequest::REQUEST_LINE))
+            this->readBufferUntilRequestLine(client_fd);
         else
-            throw (Request::RequestFormatException(request, "400"));
+        {
+            this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::REQUEST_LINE);
+            if (request.getIndexOfCrlfInRequestLine() >= BUFFER_SIZE - 2)
+                throw (Request::UriTooLongException(request));
+        }
     }
     else if (bytes == RECV_COUNT_NOT_REACHED)
         request.raiseRecvCounts();
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveRequestLine", 1);
@@ -577,7 +694,7 @@ Server::receiveRequestHeaders(int client_fd)
     else if (peeked_bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
 
     
     Log::printTimeDiff(from, 1);
@@ -596,7 +713,7 @@ Server::receiveRequestNormalBody(int client_fd)
 
     int content_length = request.getContentLength();
     if (content_length > this->_limit_client_body_size)
-        throw (PayloadTooLargeException(this->_responses[client_fd]));
+        throw (PayloadTooLargeException(*this, client_fd));
 
     char buf[BUFFER_SIZE + 1];
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
@@ -608,14 +725,14 @@ Server::receiveRequestNormalBody(int client_fd)
         else if (request.getBody().length() == static_cast<size_t>(content_length))
             request.setRecvRequest(RecvRequest::COMPLETE);
         else
-            throw (PayloadTooLargeException(this->_responses[client_fd]));
+            throw (PayloadTooLargeException(*this, client_fd));
         if (bytes < BUFFER_SIZE)
             request.setRecvRequest(RecvRequest::COMPLETE);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (ReadErrorException());
+        throw (ReadErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveRequestNormalBody", 1);
@@ -643,17 +760,17 @@ Server::receiveChunkSize(int client_fd)
 
         if (received_chunk_size_length == static_cast<int>(index_of_crlf) + CRLF_SIZE)
         {
-            request.appendChunkSize(buf, bytes);
-            request.parseTargetChunkSize(request.getChunkSize());
+            request.appendTempBuffer(buf, bytes);
+            request.parseTargetChunkSize(request.getTempBuffer());
             this->prepareToReceiveNextChunkData(client_fd);
         }
         else
-            request.appendChunkSize(buf, bytes);
+            request.appendTempBuffer(buf, bytes);
     }
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (UnchunkedErrorException());
+        throw (UnchunkedErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkSize", 1);
@@ -680,7 +797,7 @@ Server::receiveChunkData(int client_fd, int receive_size)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (UnchunkedErrorException());
+        throw (UnchunkedErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveChunkData", 1);
@@ -708,15 +825,15 @@ Server::receiveLastChunkData(int client_fd)
         request.setReceivedLastChunkDataLength(received_last_chunk_data_length);
 
         if (received_last_chunk_data_length < CRLF_SIZE)
-            request.appendLastChunkData(buf, bytes);
+            request.appendTempBuffer(buf, bytes);
         else if (received_last_chunk_data_length > CRLF_SIZE)
             throw (Request::RequestFormatException(request, "400"));
         else
         {
             if ((is_buffer_left = recv(client_fd, buf, 1, MSG_PEEK)) > 0)
                 throw (Request::RequestFormatException(request, "400"));
-            request.appendLastChunkData(buf, bytes);
-            if (request.getLastChunkData().compare("\r\n") == 0)
+            request.appendTempBuffer(buf, bytes);
+            if (request.getTempBuffer().compare("\r\n") == 0)
                 this->finishChunkSequence(client_fd);
             else
                 throw (Request::RequestFormatException(request, "400"));
@@ -725,7 +842,7 @@ Server::receiveLastChunkData(int client_fd)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (UnchunkedErrorException());
+        throw (UnchunkedErrorException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveLastChunkData", 1);
@@ -745,10 +862,10 @@ Server::receiveRequestChunkedBody(int client_fd)
     if ((bytes = request.peekMessageFromClient(client_fd, buf)) > 0)
     {
         buf[bytes] = 0;
-        if (this->isExistCrlfInChunkSize(client_fd))
+        if (this->isExistCrlf(client_fd, RecvRequest::CHUNKED_BODY))
             this->receiveChunkSize(client_fd);
         else if (this->isNotYetSetTargetChunkSize(client_fd))
-            this->findCrlfInChunkSize(client_fd, buf);
+            this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::CHUNKED_BODY);
         else if (this->isLastSequenceOfParsingChunk(client_fd))
             this->receiveLastChunkData(client_fd);
         else
@@ -764,7 +881,7 @@ Server::receiveRequestChunkedBody(int client_fd)
     else if (bytes == 0)
         this->closeClientSocket(client_fd);
     else
-        throw (UnchunkedErrorException());
+        throw (UnchunkedErrorException(*this, client_fd));
         
         
     Log::printTimeDiff(from, 1);
@@ -915,9 +1032,9 @@ Server::sendResponse(int client_fd)
             response.setSendProgress(SendProgress::SENDING);
     }
     else if (bytes == 0)
-        throw (CannotWriteToClientException());
+        throw (CannotWriteToClientException(*this, client_fd));
     else
-        throw (CannotWriteToClientException());
+        throw (CannotWriteToClientException(*this, client_fd));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< sendResponse", 1);
@@ -1193,7 +1310,7 @@ Server::sendDataToCgi(int write_fd_to_cgi)
     else if (bytes == 0)
         this->finishSendDataToCgiPipe(write_fd_to_cgi);
     else
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (SendDataToCgiPipeErrorException(*this, write_fd_to_cgi));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< sendDataToCgi", 1);
@@ -1216,24 +1333,38 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
     Response& response = this->_responses[client_fd];
 
     char buf[BUFFER_SIZE + 1];
+
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
-    received_bytes += bytes;
-    std::cout<<"\033[1;37;41m"<<"receivedDataFromCgi: "<<received_bytes<<"\033[0m"<<std::endl;
     if (bytes > 0)
     {
         buf[bytes] = 0;
-        response.appendBody(buf, bytes);
         if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
-            response.preparseCgiMessage();
-
-        this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
-        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-        response.setReceiveProgress(ReceiveProgress::ON_GOING);
+        {
+            response.appendTempBuffer(buf, bytes);
+            if (response.findEndOfHeaders())
+            {
+                response.preparseCgiMessage();
+                response.setReceiveProgress(ReceiveProgress::ON_GOING);
+                this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
+                this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+            }
+            else
+            {
+                if (response.getTempBuffer().length() >= LIMIT_HEADERS_LENGTH)
+                    throw (InternalServerException(*this, client_fd));
+            }
+        }
+        else
+        {
+            response.appendBody(buf, bytes);
+            this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
+            this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+        }
     }
     else if (bytes == 0)
         this->finishReceiveDataFromCgiPipe(read_fd_from_cgi);
     else
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (ReceiveDataFromCgiPipeErrorException(*this, read_fd_from_cgi));
 
     Log::printTimeDiff(from, 1);
     Log::trace("< receiveDataFromCgi", 1);
@@ -1262,7 +1393,7 @@ Server::putFileOnServer(int resource_fd)
         else if (bytes == 0)
             this->finishPutFileOnServer(resource_fd);
         else
-            throw (InternalServerException(this->_responses[resource_fd]));
+            throw (PutFileOnServerErrorException(*this, resource_fd));
     }
     else
     {
@@ -1275,10 +1406,10 @@ Server::putFileOnServer(int resource_fd)
         else if (bytes == 0)
         {
             if (remained > 0)
-                throw (InternalServerException(this->_responses[resource_fd]));
+                throw (PutFileOnServerErrorException(*this, resource_fd));
         }
         else
-            throw (InternalServerException(this->_responses[resource_fd]));
+            throw (PutFileOnServerErrorException(*this, resource_fd));
     }
 }
 
@@ -1337,32 +1468,11 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
-                if (this->isCgiWritePipe(fd))
-                {
-                    int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    this->closeFdAndSetFd(this->_responses[client_fd].getWriteFdToCgi(), FdSet::WRITE, client_fd, FdSet::WRITE);
-                    this->closeFdAndUpdateFdTable(this->_responses[client_fd].getReadFdFromCgi(), FdSet::READ);
-                }
-                else if (this->isClientSocket(fd))
-                {
-                }
-                else
-                {
-                    int client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    //TODO 
-                    this->closeFdAndSetFd(fd, FdSet::WRITE, client_fd, FdSet::WRITE);
-                    this->closeFdAndUpdateFdTable(fd, FdSet::READ);
-                }
                 std::cerr << e.what() << '\n';
             }
-            catch(const std::exception& e)
+            catch(const CannotSendErrorCodeToClientException& e)
             {
-                this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
-            }
-            catch(const char* e)
-            {
-                std::cerr << e << '\n';
             }
         }
         else if (this->_server_manager->fdIsCopySet(fd, FdSet::READ))
@@ -1386,34 +1496,11 @@ Server::run(int fd)
             }
             catch(const SendErrorCodeToClientException& e)
             {
-                std::cerr << e.what() << '\n';
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-                // 수정이 필요하다. isCgiPipe
-                if (this->_responses[fd].getWriteFdToCgi() != DEFAULT_FD ||
-                        this->_responses[fd].getReadFdFromCgi() != DEFAULT_FD)
+                if (this->isClientSocket(fd) && this->_requests[fd].getStatusCode().front() != '2')
                 {
-                    Response& response = this->_responses[fd];
-                    this->closeFdAndUpdateFdTable(response.getReadFdFromCgi(), FdSet::READ);
-                    this->closeFdAndUpdateFdTable(response.getWriteFdToCgi(), FdSet::WRITE);
+                    this->_server_manager->fdSet(fd, FdSet::WRITE);
+                    this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
                 }
-                //TODO: static resource 추가
-                // else if (this->_)
-            }
-            catch(const Request::RequestFormatException& e)
-            {
-                std::cerr << e.what() << '\n';
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
-            }
-            catch(const Request::UriTooLongException& e)
-            {
-                std::cerr << e.what() << '\n';
-                this->_server_manager->fdSet(fd, FdSet::WRITE);
-                this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
-            }
-            catch(const std::exception& e)
-            {
-                this->closeClientSocket(fd);
                 std::cerr << e.what() << '\n';
             }
         }
@@ -1510,14 +1597,14 @@ Server::checkAuthenticate(int client_fd)
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
     it = headers.find("Authorization");
     if (it == headers.end())
-        throw (AuthenticateErrorException(this->_responses[client_fd], "401"));
+        throw (AuthenticateErrorException(*this, client_fd, "401"));
     std::vector<std::string> authenticate_info = ft::split(it->second, " ");
     if (authenticate_info[0] != "Basic")
-        throw (AuthenticateErrorException(this->_responses[client_fd], "401"));
+        throw (AuthenticateErrorException(*this, client_fd, "401"));
     before_decode = authenticate_info[1];
     Base64::decode(before_decode, after_decode);
     if (id_password != after_decode)
-        throw (AuthenticateErrorException(this->_responses[client_fd], "403"));
+        throw (AuthenticateErrorException(*this, client_fd, "403"));
     request.setAuthType(authenticate_info[0]);
     size_t pos = after_decode.find(":");
     request.setRemoteUser(after_decode.substr(0, pos));
@@ -1581,11 +1668,7 @@ Server::readStaticResource(int resource_fd)
     else if (bytes == 0)
         this->finishReadStaticResource(resource_fd);
     else
-    {
-        //TODO: exception 손보기
-        this->closeFdAndSetFd(resource_fd, FdSet::READ, client_socket, FdSet::WRITE);
-        throw (InternalServerException(this->_responses[client_socket]));
-    }
+        throw (ReadStaticResourceErrorException(*this, resource_fd));
 
     
     Log::printTimeDiff(from, 1);
@@ -1608,7 +1691,7 @@ Server::openStaticResource(int client_fd)
     {
         resource_fd = open(path.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);
         if (resource_fd < 0)
-            throw InternalServerException(this->_responses[client_fd]);
+            throw (InternalServerException(*this, client_fd));
         // resource_fd = open("/Users/sanam/Desktop/Webserv/abcd", O_CREAT | O_RDWR, 0666);
         // 여기서 파일이 오픈되지 않는다는 건 상위 폴더 자체가 없다는 것.
         // 409 에러를 보내줄 수 있게 만들자
@@ -1618,7 +1701,7 @@ Server::openStaticResource(int client_fd)
         this->_responses[client_fd].setResourceFd(resource_fd);
         this->_server_manager->updateFdMax(resource_fd);
         if ((fstat(resource_fd, &tmp)) == -1)
-            throw OpenResourceErrorException(this->_responses[client_fd], errno);
+            throw OpenResourceErrorException(*this, client_fd, errno);
         this->_responses[client_fd].setFileInfo(tmp);
     }
     else if ((resource_fd = open(path.c_str(), O_RDWR, 0644)) > 0)
@@ -1629,12 +1712,12 @@ Server::openStaticResource(int client_fd)
         this->_responses[client_fd].setResourceFd(resource_fd);
         this->_server_manager->updateFdMax(resource_fd);
         if ((fstat(resource_fd, &tmp)) == -1)
-            throw OpenResourceErrorException(this->_responses[client_fd], errno);
+            throw OpenResourceErrorException(*this, client_fd, errno);
         this->_responses[client_fd].setFileInfo(tmp);
         Log::openFd(*this, client_fd, FdType::RESOURCE, resource_fd);
     }
     else
-        throw OpenResourceErrorException(this->_responses[client_fd], errno);
+        throw OpenResourceErrorException(*this, client_fd, errno);
 
         
     Log::printTimeDiff(from, 1);
@@ -1647,7 +1730,7 @@ Server::checkValidOfCgiMethod(int client_fd)
     const Request& request = this->_requests[client_fd];
     const std::string& method = request.getMethod();
     if (method != "GET" && method != "POST" && method != "HEAD")
-        throw (CgiMethodErrorException(this->_responses[client_fd]));
+        throw (CgiMethodErrorException(*this, client_fd));
 }
 
 void
@@ -1684,7 +1767,7 @@ Server::checkAndSetResourceType(int client_fd)
             if (this->isAutoIndexOn(client_fd))
                 response.setResourceType(ResType::AUTO_INDEX);
             else
-                throw (IndexNoExistException(this->_responses[client_fd]));
+                throw (IndexNoExistException(*this, client_fd));
         }
     }
     else
@@ -1696,7 +1779,7 @@ Server::checkAndSetResourceType(int client_fd)
             response.setResourceType(ResType::STATIC_RESOURCE);
         }
         else if (errno == EACCES)
-            throw (CannotOpenDirectoryException(this->_responses[client_fd], "403", errno));
+            throw (CannotOpenDirectoryException(*this, client_fd, "403", errno));
         else if (errno == ENOENT)
         {
             if (method == "PUT")
@@ -1705,7 +1788,7 @@ Server::checkAndSetResourceType(int client_fd)
                 response.setStatusCode("201");
                 return ;
             }
-            throw (CannotOpenDirectoryException(this->_responses[client_fd], "404", errno));
+            throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
         }
     }
 
@@ -1754,7 +1837,7 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
     if ((dir_ptr = opendir(path.c_str())) != NULL)
     {
         if (path.back() != '/')
-            throw (CannotOpenDirectoryException(response, "409", errno));
+            throw (CannotOpenDirectoryException(*this, client_fd, "409", errno));
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
         std::vector<std::string> directory_entry = ft::split(response.getDirectoryEntry(), " ");
@@ -1764,17 +1847,17 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
                 this->deleteResourceOfUri(client_fd, path + entry);
         }
         if (rmdir(path.c_str()) == -1)
-            throw (InternalServerException(response));
+            throw (InternalServerException(*this, client_fd));
     }
     else
     {
         if (errno == ENOTDIR) // dicrectory가 아니다ㅏ. -> unlink
         {
             if (unlink(path.c_str()) == -1)
-                throw (TargetResourceConflictException(response));
+                throw (TargetResourceConflictException(*this, client_fd));
         }
         else
-            throw (CannotOpenDirectoryException(response, "404", errno));
+            throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
     }
     response.setStatusCode("204");
 
@@ -1796,16 +1879,16 @@ Server::processResponseBody(int client_fd)
     if (location_info.find("limit_client_body_size") != location_info.end())
     {
         if (this->_requests[client_fd].getBody().length() > static_cast<unsigned int>(std::stoi(location_info.at("limit_client_body_size"))))
-            throw (PayloadTooLargeException(this->_responses[client_fd]));
+            throw (PayloadTooLargeException(*this, client_fd));
     }
 
     this->checkAuthenticate(client_fd);
     if (this->_responses[client_fd].isLimitExceptInLocation() && 
         !(this->_responses[client_fd].isAllowedMethod(this->_requests[client_fd].getMethod())))
-            throw (NotAllowedMethodException(this->_responses[client_fd]));
+            throw (NotAllowedMethodException(*this, client_fd));
     
     if (this->_responses[client_fd].isLocationToBeRedirected())
-        throw (MustRedirectException(this->_responses[client_fd]));
+        throw (MustRedirectException(*this, client_fd));
     if (this->_requests[client_fd].getMethod().compare("DELETE") == 0)
     {
         this->deleteResourceOfUri(client_fd, this->_responses[client_fd].getResourceAbsPath());
@@ -1839,9 +1922,13 @@ Server::openCgiPipe(int client_fd)
     int pipe2[2];
 
     if (pipe(pipe1) < 0)
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     if (pipe(pipe2) < 0)
-        throw (InternalServerException(this->_responses[client_fd]));
+    {
+        close(pipe1[0]);
+        close(pipe1[1]);
+        throw (InternalServerException(*this, client_fd));
+    }
 
     int stdin_of_cgi = pipe1[0];
     int stdout_of_cgi = pipe2[1];
@@ -1974,7 +2061,7 @@ Server::makeCgiEnvp(int client_fd)
 
     num_of_envp = NUM_OF_META_VARIABLES + this->_requests[client_fd].getHeaders().size();
     if (!(envp = (char **)malloc(sizeof(char *) * num_of_envp)))
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     for (int i = 0; i < num_of_envp; i++)
         envp[i] = nullptr;
     if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
@@ -1983,7 +2070,7 @@ Server::makeCgiEnvp(int client_fd)
         !this->makeEnvpUsingEtc(envp, client_fd, &idx))
     {
         ft::doubleFree(&envp);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
 
 
@@ -2004,7 +2091,7 @@ Server::makeCgiArgv(int client_fd)
     Response& response = this->_responses[client_fd];
 
     if (!(argv = (char **)malloc(sizeof(char *) * 3)))
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     const location_info& location_info =
             this->getLocationConfig().at(this->_responses[client_fd].getRoute());
     for (int i = 0; i < 3; i++)
@@ -2013,17 +2100,17 @@ Server::makeCgiArgv(int client_fd)
     if (it == location_info.end())
     {
         ft::doubleFree(&argv);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
     if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
     {
         ft::doubleFree(&argv);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
     if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
     {
         ft::doubleFree(&argv);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
 
     
@@ -2059,24 +2146,24 @@ Server::forkAndExecuteCgi(int client_fd)
     if (!(argv = this->makeCgiArgv(client_fd)))
     {
         ft::doubleFree(&argv);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
     if (!(envp = this->makeCgiEnvp(client_fd)))
     {
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     }
     if ((pid = fork()) < 0)
-        throw (InternalServerException(this->_responses[client_fd]));
+        throw (InternalServerException(*this, client_fd));
     else if (pid == 0)
     {
         close(response.getWriteFdToCgi());
         close(response.getReadFdFromCgi());
         if (dup2(stdin_of_cgi, 0) < 0)
-            throw (InternalServerException(this->_responses[client_fd]));
+            throw (InternalServerException(*this, client_fd));
         if (dup2(stdout_of_cgi, 1) < 0)
-            throw (InternalServerException(this->_responses[client_fd]));
+            throw (InternalServerException(*this, client_fd));
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
         exit(ret);
@@ -2116,7 +2203,7 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
 
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     if (response.getSendProgress() == SendProgress::READY)
-        throw (InternalServerException(response));
+        throw (InternalServerException(*this, client_fd));
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     response.setReadFdFromCgi(DEFAULT_FD);
     response.setReceiveProgress(ReceiveProgress::FINISH);
