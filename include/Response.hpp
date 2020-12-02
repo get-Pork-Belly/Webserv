@@ -193,13 +193,13 @@ public:
     /* Entity header */
     void appendAllowHeader(std::string& headers);
     void appendContentLanguageHeader(std::string& headers);
-    void appendContentLengthHeader(std::string& headers);
+    void appendContentLengthHeader(std::string& headers, const std::string& method);
     void appendContentLocationHeader(std::string& headers);
     void appendContentTypeHeader(std::string& headers);
     void appendLastModifiedHeader(std::string& headers);
     void appendLocationHeader(std::string& headers, const Request& request);
     void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
-    void appendTransferEncodingHeader(std::string& headers);
+    void appendTransferEncodingHeader(std::string& headers, const std::string& method);
     void appendAuthenticateHeader(std::string& headers);
 
 };
