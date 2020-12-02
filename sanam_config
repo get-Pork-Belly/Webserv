@@ -27,7 +27,7 @@ http {
         location /directory { 
             limit_except GET POST;
             index youpi.bad_extension;
-            cgi .bla;
+            cgi .bla .php;
             cgi_path /Users/sanam/Desktop/Webserv/cgi_tester;
             root /Users/sanam/Desktop/Webserv/YoupiBanane;
         }
