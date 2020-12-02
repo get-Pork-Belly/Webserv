@@ -1337,18 +1337,21 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
     char buf[BUFFER_SIZE + 1];
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
     buf[bytes] = 0;
-    // std::cout << "\033[1;31m" << "-------------------------" << "\033[0m" << std::endl; 
-    // std::cout << "\033[1;35m" << buf << "\033[0m" << std::endl;
-    // std::cout << "\033[1;31m" << "-------------------------" << "\033[0m" << std::endl; 
 
     if (bytes > 0)
     {
         buf[bytes] = 0;
-        if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
+        if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN ||
+            response.getReceiveProgress() == ReceiveProgress::PHP_CGI_BEGIN)
         {
             response.appendTempBuffer(buf, bytes);
             if (response.findEndOfHeaders())
             {
+                if (response.getReceiveProgress() == ReceiveProgress::PHP_CGI_BEGIN)
+                {
+                    response.trimPhpCgiFirstHeadersFromTempBuffer();
+                    response.setReceiveProgress(ReceiveProgress::CGI_BEGIN);
+                }
                 response.preparseCgiMessage();
                 response.setReceiveProgress(ReceiveProgress::ON_GOING);
                 this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
@@ -1826,7 +1829,10 @@ Server::preprocessResponseBody(int client_fd, ResType& res_type)
     case ResType::CGI:
         this->openCgiPipe(client_fd);
         this->forkAndExecuteCgi(client_fd);
-        this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
+        if (this->_responses[client_fd].getUriExtension() == ".php")
+            this->_responses[client_fd].setReceiveProgress(ReceiveProgress::PHP_CGI_BEGIN);
+        else
+            this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
         break ;
     default:
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
@@ -2172,7 +2178,7 @@ Server::forkAndExecuteCgi(int client_fd)
             throw (InternalServerException(*this, client_fd));
         
         if (this->_responses[client_fd].getUriExtension() == ".php" &&
-            (ret = execve(PHP_CGI_PATH, argv, envp)) < 0)
+            (ret = execve(PHP_CGI_PATH.c_str(), argv, envp)) < 0)
             exit(ret);
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);

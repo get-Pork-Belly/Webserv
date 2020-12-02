@@ -95,6 +95,7 @@ enum class ReceiveProgress
 {
     DEFAULT,
     CGI_BEGIN,
+    PHP_CGI_BEGIN,
     ON_GOING,
     FINISH,
 };
