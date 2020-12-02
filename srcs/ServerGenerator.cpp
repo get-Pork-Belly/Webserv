@@ -148,18 +148,25 @@ ServerGenerator::parseHttpBlock()
             break ;
         it++;
     }
-    while (it != ite)
+    while (++it != ite)
     {
-        if ((*it).back() == ';')
-        {
-            size_t pos = (*it).find(" ");
-            std::string key = (*it).substr(0, pos);
-            std::string value = ft::ltrim(ft::rtrim((*it).substr(pos), "; "), " ");
-            http_config[key] = value;
-        }
-        else if (*it == "server {")
+        if (*it == "server {")
             (*this.*skipServerBlock)(it, skip_server, skip_locations);
-        it++;
+        else if (*it != "}")
+        {
+            if ((*it).back() == ';')
+            {
+                size_t pos = (*it).find(" ");
+                std::string key = (*it).substr(0, pos);
+                std::string value = ft::ltrim(ft::rtrim((*it).substr(pos), "; "), " ");
+                http_config[key] = value;
+            }
+            else
+            {
+                std::cout << "\033[1;31m" << "it: " << *it << "\033[0m" << std::endl; 
+                throw ("ab");
+            }
+        }
     }
     return (http_config);
 }
@@ -171,20 +178,25 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
 
     while (it != this->_configfile_lines.end())
     {
-        directives = ft::split(*it, " ");
-        if (directives[0] == "location")
+        directives = ft::split(ft::ltrim(ft::rtrim(*it, " \t"), " \t"), " ");
+        if (directives.size() == 0)
+            it++;
+        else if (directives.size() == 1 && directives[0] == "}")
+            return ;
+        else if (directives[0] == "location")
         {
             location_info location_config = this->parseLocationBlock(it, server_config);
             locations[location_config["route"]] = location_config;
             continue ;
         }
-        if (directives[0] == "}")
-            return ;
-        std::string temp = ft::rtrim(directives[1], ";");
-        directives[1] = temp;
-        server_config[directives[0]] = directives[1];
-        directives.clear();
-        it++;
+        else
+        {
+            std::string temp = ft::rtrim(directives[1], ";");
+            directives[1] = temp;
+            server_config[directives[0]] = directives[1];
+            directives.clear();
+            it++;
+        }
     }
 }
 
@@ -197,36 +209,36 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
     this->initLocationConfig(location_config, server_config);
     while (it != this->_configfile_lines.end())
     {
-        directives = ft::split(*it, " ");
-        if (directives[0] == "location")
-        {
-            location_config["route"] = directives[1];
-            it++;
+        directives = ft::split(ft::ltrim(ft::rtrim(*it++, " \t"), " \t"), " ");
+        if (directives.size() == 0)
             continue ;
-        }
-        if (directives[0] == "}")
-        {
-            it++;
+        else if (directives[0] == "}")
             return (location_config);
-        }
-        std::string joined;
-        if (directives.size() > 2)
+        else if (directives[0] == "location")
         {
-            for (size_t i = 1; i < directives.size(); ++i)
-            {
-                joined += directives[i];
-                joined += " ";
-            }
-            joined = ft::rtrim(joined, "; ");
-            location_config[directives[0]] = joined;
+            if (directives.size() != 3)
+                throw (ConfigFileSyntaxError("Location directive needs one arguments"));
+            location_config["route"] = directives[1];
         }
         else
         {
-            std::string temp = ft::rtrim(directives[1], ";");
-            location_config[directives[0]] = temp;
+            std::string joined;
+            if (directives.size() > 2)
+            {
+                for (size_t i = 1; i < directives.size(); ++i)
+                {
+                    joined += directives[i];
+                    joined += " ";
+                }
+                joined = ft::rtrim(joined, "; ");
+                location_config[directives[0]] = joined;
+            }
+            else
+            {
+                std::string temp = ft::rtrim(directives[1], ";");
+                location_config[directives[0]] = temp;
+            }
         }
-        directives.clear();
-        it++;
     }
     return (location_config);
 }
