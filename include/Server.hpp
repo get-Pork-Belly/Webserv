@@ -29,6 +29,7 @@ const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
 const int DEFAULT_FD = -1;
 const int LIMIT_HEADERS_LENGTH = 8192;
+# define PHP_CGI_PATH "./php-mac/bin/php-cgi"
 
 class ServerManager;
 class Request;

@@ -1334,10 +1334,10 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
 
     char buf[BUFFER_SIZE + 1];
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
-    std::cout << "\033[1;31m" << "-------------------------" << "\033[0m" << std::endl; 
     buf[bytes] = 0;
-    std::cout << "\033[1;35m" << buf << "\033[0m" << std::endl;
-    std::cout << "\033[1;31m" << "-------------------------" << "\033[0m" << std::endl; 
+    // std::cout << "\033[1;31m" << "-------------------------" << "\033[0m" << std::endl; 
+    // std::cout << "\033[1;35m" << buf << "\033[0m" << std::endl;
+    // std::cout << "\033[1;31m" << "-------------------------" << "\033[0m" << std::endl; 
 
     if (bytes > 0)
     {
@@ -1751,12 +1751,11 @@ Server::checkAndSetResourceType(int client_fd)
     Response& response = this->_responses[client_fd];
     const std::string& method = this->_requests[client_fd].getMethod();
     response.findAndSetUriExtension();
-    std::cout<<"\033[43;1;30m"<<"script_name: "<<this->_responses[client_fd].getScriptName()<<"\033[0m"<<std::endl;
-    std::cout<<"\033[43;1;m"<<"path_info: "<<this->_responses[client_fd].getPathInfo()<<"\033[0m"<<std::endl;
     if (this->isCgiUri(client_fd, response.getUriExtension()))
     {
         this->checkValidOfCgiMethod(client_fd);
         response.setResourceType(ResType::CGI);
+        response.setCgiEnvpValues();
         return ;
     }
     DIR* dir_ptr;
@@ -2004,7 +2003,7 @@ Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + path_translated)))
         return (false);
-    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
+    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getRequestUriForCgi())))
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + response.getScriptName())))
         return (false);
@@ -2178,7 +2177,7 @@ Server::forkAndExecuteCgi(int client_fd)
             throw (InternalServerException(*this, client_fd));
         
         if (this->_responses[client_fd].getUriExtension() == ".php" &&
-            (ret = execve("./php-mac/bin/php-cgi", argv, envp)) < 0)
+            (ret = execve(PHP_CGI_PATH, argv, envp)) < 0)
             exit(ret);
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
