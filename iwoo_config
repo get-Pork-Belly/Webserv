@@ -28,7 +28,7 @@ http {
             limit_except GET POST;
             index youpi.bad_extension;
             cgi .bla .php;
-            cgi_path /Users/iwoo/Documents/Webserv/cgi_tester;
+            cgi_path /Users/iwoo/Documents/Webserv/YoupiBanane/youpi.bad_extension;
             root /Users/iwoo/Documents/Webserv/YoupiBanane;
         }
     }
