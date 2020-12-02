@@ -51,6 +51,7 @@ private:
     std::string _path_info;
     std::string _script_name;
     std::string _path_translated;
+    std::string _request_uri_for_cgi;
 public:
     /* Constructor */
     Response();
@@ -98,6 +99,7 @@ public:
     const std::string& getPathInfo() const;
     const std::string& getScriptName() const;
     const std::string& getPathTranslated() const;
+    const std::string& getRequestUriForCgi() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -128,6 +130,9 @@ public:
     void setPathInfo(const std::string& path_info);
     void setScriptName(const std::string& script_name);
     void setPathTranslated(const std::string& path_translated);
+    void setRequestUriForCgi(const std::string& request_uri_for_cgi);
+
+    void setCgiEnvpValues();
 
     bool isCgiWritePipeNotClosed() const;
     bool isCgiReadPipeNotClosed() const;
@@ -136,6 +141,14 @@ public:
 
     /* Exception */
 public:
+    class CannotSetCgiScriptNameException: public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        CannotSetCgiScriptNameException(Response& response);
+        virtual const char* what() const throw();
+    };
     class CannotOpenCgiPipeException : public SendErrorCodeToClientException
     {
     private:
