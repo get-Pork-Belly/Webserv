@@ -36,6 +36,7 @@ private:
     std::string _uri_path;
     std::string _uri_extension;
     std::string _transmitting_body;
+    std::string _query;
 
     size_t _already_encoded_size;
 
@@ -100,6 +101,7 @@ public:
     const std::string& getScriptName() const;
     const std::string& getPathTranslated() const;
     const std::string& getRequestUriForCgi() const;
+    const std::string& getQuery() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -109,6 +111,7 @@ public:
     void setResourceType(const ResType& resource_type);
     void setBody(const std::string& body);
     void setUriPath(const std::string& path);
+    void setQuery(const std::string& query);
     void setUriExtension(const std::string& extension);
     void setHeaders(const std::string& key, const std::string& value);
 
@@ -211,13 +214,13 @@ public:
     /* Entity header */
     void appendAllowHeader(std::string& headers);
     void appendContentLanguageHeader(std::string& headers);
-    void appendContentLengthHeader(std::string& headers);
+    void appendContentLengthHeader(std::string& headers, const std::string& method);
     void appendContentLocationHeader(std::string& headers);
     void appendContentTypeHeader(std::string& headers);
     void appendLastModifiedHeader(std::string& headers);
     void appendLocationHeader(std::string& headers, const Request& request);
     void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
-    void appendTransferEncodingHeader(std::string& headers);
+    void appendTransferEncodingHeader(std::string& headers, const std::string& method);
     void appendAuthenticateHeader(std::string& headers);
 
 };

@@ -21,7 +21,7 @@ _location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT_FD),
 _write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extension(""), _transmitting_body(""),
-_already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
+_query(""), _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resource_fd(DEFAULT_FD),
 _sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY),
 _temp_buffer(""), _path_info(""), _script_name(""), _path_translated(""),
@@ -42,7 +42,8 @@ _file_info(other._file_info), _resource_type(other._resource_type),
 _body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
 _stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
 _write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
-_uri_path(other._uri_path), _uri_extension(other._uri_extension), _transmitting_body(other._transmitting_body),
+_uri_path(other._uri_path), _uri_extension(other._uri_extension),
+_transmitting_body(other._transmitting_body), _query(other._query), 
 _already_encoded_size(other._already_encoded_size), _parse_progress(other._parse_progress),
 _receive_progress(other._receive_progress), _resource_fd(other._resource_fd),
 _sended_response_size(other._sended_response_size), _response_message(other._response_message),
@@ -87,6 +88,7 @@ Response::operator=(const Response& rhs)
     this->_uri_path = rhs._uri_path;
     this->_uri_extension = rhs._uri_extension;
     this->_transmitting_body = rhs._transmitting_body;
+    this->_query = rhs._query;
     this->_already_encoded_size = rhs._already_encoded_size;
     this->_parse_progress = rhs._parse_progress;
     this->_receive_progress = rhs._receive_progress;
@@ -218,6 +220,12 @@ const std::string&
 Response::getTransmittingBody() const
 {
     return (this->_transmitting_body);
+}
+
+const std::string&
+Response::getQuery() const
+{
+    return (this->_query);
 }
 
 const ParseProgress&
@@ -386,6 +394,12 @@ void
 Response::setTransmittingBody(const std::string& transmitting_body)
 {
     this->_transmitting_body = transmitting_body;
+}
+
+void
+Response::setQuery(const std::string& query)
+{
+    this->_query = query;
 }
 
 void
@@ -565,6 +579,7 @@ Response::init()
     this->_uri_path = "";
     this->_uri_extension = "";
     this->_transmitting_body = "";
+    this->_query = "";
     this->_already_encoded_size = 0;
     this->_parse_progress = ParseProgress::DEFAULT;
     this->_receive_progress = ReceiveProgress::DEFAULT;
@@ -852,9 +867,13 @@ Response::appendContentLanguageHeader(std::string& headers)
 }
 
 void
-Response::appendContentLengthHeader(std::string& headers)
+Response::appendContentLengthHeader(std::string& headers, const std::string& method)
 {
     headers += "Content-Length: ";
+    if (this->getStatusCode() == "204" ||
+        this->getStatusCode().front() == '1' ||
+        (method == "CONNECT" && this->getStatusCode().front() == '2'))
+        return ;
     headers += std::to_string(this->getTransmittingBody().length());
     headers += "\r\n";
 }
@@ -956,12 +975,18 @@ Response::appendRetryAfterHeader(std::string& headers, const std::string& status
 }
 
 void
-Response::appendTransferEncodingHeader(std::string& headers)
+Response::appendTransferEncodingHeader(std::string& headers, const std::string& method)
 {
     Log::trace("> appendTransferEncodingHeader", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
+    //NOTE: 204 코드일 때와 1로 시작하는 상태코드, 
+    //NOTE: CONNECT 메서드이면서 2로 시작하는 상태코드일 때 Transfer-Encoding을 붙여서는 안됨
+    if (this->getStatusCode() == "204" ||
+        this->getStatusCode().front() == '1' ||
+        (method == "CONNECT" && this->getStatusCode().front() == '2'))
+        return ;
     headers += "Transfer-Encoding: chunked\r\n";
 
     Log::printTimeDiff(from, 2);
@@ -1006,9 +1031,9 @@ Response::makeHeaders(Request& request)
         this->appendContentLanguageHeader(headers);
         this->appendContentTypeHeader(headers);
         if (this->isNeedToBeChunkedBody(request))
-            this->appendTransferEncodingHeader(headers);
+            this->appendTransferEncodingHeader(headers, method);
         else
-            this->appendContentLengthHeader(headers);
+            this->appendContentLengthHeader(headers, method);
     }
 
     // Log::printLocationInfo(this->_location_info);

@@ -483,7 +483,12 @@ Server::findCrlfAndSetIndexOfCrlf(int fd, const std::string& buf, const RecvRequ
             this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
     }
     else
-        throw (Request::RequestFormatException(this->_requests[fd], "400"));
+    {
+        if (buf.length() >= BUFFER_SIZE - 2)
+            throw (Request::UriTooLongException(this->_requests[fd]));
+        else if (recv_request == RecvRequest::CHUNKED_BODY)
+            throw (Request::RequestFormatException(this->_requests[fd], "400"));
+    }
 }
 
 bool
@@ -589,6 +594,7 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t read_target_size
 
     if ((bytes = read(client_fd, buf, read_target_size)) > 0)
     {
+        buf[bytes] = 0;
         request.appendTempBuffer(buf, bytes); // bytes 가 peeked보다 작을 수 있다.
         return (static_cast<size_t>(bytes) == read_target_size);
     }
@@ -641,11 +647,7 @@ Server::receiveRequestLine(int client_fd)
         if (this->isExistCrlf(client_fd, RecvRequest::REQUEST_LINE))
             this->readBufferUntilRequestLine(client_fd);
         else
-        {
             this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::REQUEST_LINE);
-            if (request.getIndexOfCrlfInRequestLine() >= BUFFER_SIZE - 2)
-                throw (Request::UriTooLongException(request));
-        }
     }
     else if (bytes == RECV_COUNT_NOT_REACHED)
         request.raiseRecvCounts();
@@ -1626,7 +1628,8 @@ Server::findResourceAbsPath(int client_fd)
 
     
     UriParser parser;
-    parser.parseUri(this->_requests[client_fd].getUri());
+    if (parser.parseUri(this->_requests[client_fd].getUri()) == false)
+        throw (Request::RequestFormatException(this->_requests[client_fd], "400"));
     const std::string& path = parser.getPath();
 
     Response& response = this->_responses[client_fd];
@@ -1635,6 +1638,7 @@ Server::findResourceAbsPath(int client_fd)
     //   path_info 분리
     //   cgi script_name 분리
     response.setRouteAndLocationInfo(path, this);
+    response.setQuery(parser.getQuery());
     std::string root = response.getLocationInfo().at("root");
     // if (response.getRoute() != "/")
     //     root.pop_back();
@@ -2007,6 +2011,8 @@ Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + response.getScriptName())))
         return (false);
+    if (!(envp[(*idx)++] = ft::strdup("QUERY_STRING=" + response.getQuery())))
+        return (false);
     return (true);
 }
 
@@ -2059,8 +2065,6 @@ Server::makeEnvpUsingEtc(char** envp, int* idx)
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SERVER_SOFTWARE=GET_POLAR_BEAR/2.0")))
         return (false);
-    if (!(envp[(*idx)++] = ft::strdup("QUERY_STRING=")))
-        return (false);
     return (true);
 }
 
@@ -2090,7 +2094,6 @@ Server::makeCgiEnvp(int client_fd)
         throw (InternalServerException(*this, client_fd));
     }
 
-
     Log::printTimeDiff(from, 2);
     Log::trace("< makeCgiEnvp", 2);
     return (envp);
@@ -2109,7 +2112,6 @@ Server::makeCgiArgv(int client_fd)
         throw (InternalServerException(*this, client_fd));
     for (int i = 0; i < 2; i++)
         argv[i] = nullptr;
-    // if (!(argv[0] = ft::strdup(this->_responses[client_fd].getResourceAbsPath())))
     if (!(argv[0] = ft::strdup(this->_responses[client_fd].getScriptName())))
     {
         ft::doubleFree(&argv);
@@ -2157,13 +2159,6 @@ Server::forkAndExecuteCgi(int client_fd)
         ft::doubleFree(&envp);
         throw (InternalServerException(*this, client_fd));
     }
-
-    int i = -1;
-    while (argv[++i])
-        std::cout<<"\033[42;1;97m"<<argv[i]<<"\033[0m"<<std::endl;
-    i = -1;
-    while (envp[++i])
-        std::cout<<"\033[42;1;97m"<<envp[i]<<"\033[0m"<<std::endl;
 
     if ((pid = fork()) < 0)
         throw (InternalServerException(*this, client_fd));

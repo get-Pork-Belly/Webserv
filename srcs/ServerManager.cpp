@@ -485,6 +485,7 @@ ServerManager::closeCgiWritePipe(Server& server, int write_fd_to_cgi)
     this->setClosedFdOnFdTable(write_fd_to_cgi);
     close(write_fd_to_cgi);
     this->updateFdMax(write_fd_to_cgi);
+    this->monitorTimeOutOff(write_fd_to_cgi);
     Log::closeFd(FdType::PIPE, write_fd_to_cgi);
 }
 
@@ -497,6 +498,7 @@ ServerManager::closeCgiReadPipe(Server& server, int read_fd_from_cgi)
     this->fdClr(read_fd_from_cgi, FdSet::WRITE);
     this->setClosedFdOnFdTable(read_fd_from_cgi);
     close(read_fd_from_cgi);
+    this->monitorTimeOutOff(read_fd_from_cgi);
     this->updateFdMax(read_fd_from_cgi);
     Log::closeFd(FdType::PIPE, read_fd_from_cgi);
 }
@@ -510,6 +512,7 @@ ServerManager::closeStaticResource(Server& server, int resource_fd)
     this->fdClr(resource_fd, FdSet::WRITE);
     this->setClosedFdOnFdTable(resource_fd);
     close(resource_fd);
+    this->monitorTimeOutOff(resource_fd);
     this->updateFdMax(resource_fd);
     Log::closeFd(FdType::RESOURCE, resource_fd);
 }

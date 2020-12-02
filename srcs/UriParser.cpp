@@ -58,12 +58,6 @@ UriParser::getPath() const
     return (this->_path);
 }
 
-const std::vector<std::string>&
-UriParser::getPaths() const
-{
-    return (this->_paths);
-}
-
 const std::string&
 UriParser::getQuery() const
 {
@@ -126,22 +120,6 @@ UriParser::setHostAndPort(const std::string& host_port)
 }
 
 void
-UriParser::setPaths()
-{
-    size_t i = 0;
-    if (this->_path == "/")
-    {
-        this->_paths.push_back("/");
-        return ;
-    }
-    this->_paths = ft::split(this->_path, "/");
-    for (; i < this->_paths.size() - 1; i++)
-        this->_paths[i].append("/");
-    if (this->_uri.back() == '/')
-        this->_paths[i].append("/");
-}
-
-void
 UriParser::setQuery(const std::string& query)
 {
     this->_query = query;
@@ -155,25 +133,42 @@ UriParser::setQuery(const std::string& query)
 /*********************************  Util  *************************************/
 /*============================================================================*/
 
-void
+bool
+UriParser::decodingUri(std::string& uri)
+{
+    size_t target_index = 0;
+    while ((target_index = uri.find('+', target_index)) != std::string::npos)
+        uri.replace(target_index, 1, " ");
+    target_index = 0;
+    while ((target_index = uri.find('%', target_index)) != std::string::npos)
+    {
+        std::string hex = uri.substr(target_index + 1, 2);
+        int base10 = ft::stoiHex(hex);
+        if (base10 < 31 || base10 >= 127)
+            return (false);
+        uri.replace(target_index, 3, 1, static_cast<unsigned char>(base10));
+        target_index += 1;
+    }
+    return (true);
+}
+
+bool
 UriParser::parseUri(const std::string& uri)
 {
-    this->setUri(uri);
+    std::string parsed_uri(uri);
+    if (this->decodingUri(parsed_uri) == false)
+        return (false);
+    this->setUri(parsed_uri);
     this->setScheme(this->findScheme());
     const std::string& host_port = this->findHostAndPort();
     size_t index = this->getIndex();
     this->setHostAndPort(host_port);
     if (index == std::string::npos || this->_uri.size() == index)
-    {
         this->setPath("/");
-        this->setPaths();
-    }
     else
-    {
         this->setPath(this->findPath());
-        this->setPaths();
-    }
     this->findAndSetQuery(this->getPath());
+    return (true);
 }
 
 std::string
@@ -198,8 +193,7 @@ UriParser::findHostAndPort()
 
     if (this->_uri[this->_index] == '/')
     {
-        // this->setIndex(this->_index + 1); // NOTE
-        this->setIndex(this->_index); // NOTE
+        this->setIndex(this->_index);
         return ("");
     }
     found = this->_uri.find("/", this->_index);
@@ -208,8 +202,7 @@ UriParser::findHostAndPort()
         this->setIndex(found);
         return (this->_uri.substr(temp_index));
     }
-    // this->setIndex(found + 1); // NOTE
-    this->setIndex(found); // NOTE
+    this->setIndex(found);
     return (this->_uri.substr(temp_index, found - temp_index));
 }
 
@@ -230,7 +223,10 @@ UriParser::findAndSetQuery(const std::string& path)
         this->setQuery("");
     else
     {
-        this->setQuery(path.substr(index));
+        if (path.length() > index + 1)
+            this->setQuery(path.substr(index + 1));
+        else
+            this->setQuery("");
         this->setPath(path.substr(0, index));
     }
 }
@@ -245,7 +241,6 @@ UriParser::init()
     this->_port.clear();
     this->_path.clear();
     this->_query.clear();
-    this->_paths.clear();
 }
 
 void
