@@ -162,10 +162,7 @@ ServerGenerator::parseHttpBlock()
                 http_config[key] = value;
             }
             else
-            {
-                std::cout << "\033[1;31m" << "it: " << *it << "\033[0m" << std::endl; 
-                throw ("ab");
-            }
+                throw ("Directive must end with a \';\'");
         }
     }
     return (http_config);
@@ -191,10 +188,11 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
         }
         else
         {
-            std::string temp = ft::rtrim(directives[1], ";");
-            directives[1] = temp;
+            if (directives[1].back() != ';')
+                throw ("Directive must end with a \';\'");
+            else
+                directives[1].pop_back();
             server_config[directives[0]] = directives[1];
-            directives.clear();
             it++;
         }
     }
@@ -222,6 +220,10 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
         }
         else
         {
+            if (directives[directives.size() - 1].back() != ';')
+                throw ("Directive must end with a \';\'");
+            else
+                directives[directives.size() - 1].pop_back();
             std::string joined;
             if (directives.size() > 2)
             {
@@ -230,14 +232,10 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
                     joined += directives[i];
                     joined += " ";
                 }
-                joined = ft::rtrim(joined, "; ");
                 location_config[directives[0]] = joined;
             }
             else
-            {
-                std::string temp = ft::rtrim(directives[1], ";");
-                location_config[directives[0]] = temp;
-            }
+                location_config[directives[0]] = directives[1];
         }
     }
     return (location_config);
