@@ -483,7 +483,12 @@ Server::findCrlfAndSetIndexOfCrlf(int fd, const std::string& buf, const RecvRequ
             this->_requests[fd].setIndexOfCrlfInChunkSize(index_of_crlf);
     }
     else
-        throw (Request::RequestFormatException(this->_requests[fd], "400"));
+    {
+        if (buf.length() >= BUFFER_SIZE - 2)
+            throw (Request::UriTooLongException(this->_requests[fd]));
+        else if (recv_request == RecvRequest::CHUNKED_BODY)
+            throw (Request::RequestFormatException(this->_requests[fd], "400"));
+    }
 }
 
 bool
@@ -589,6 +594,7 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t read_target_size
 
     if ((bytes = read(client_fd, buf, read_target_size)) > 0)
     {
+        buf[bytes] = 0;
         request.appendTempBuffer(buf, bytes); // bytes 가 peeked보다 작을 수 있다.
         return (static_cast<size_t>(bytes) == read_target_size);
     }
@@ -641,11 +647,7 @@ Server::receiveRequestLine(int client_fd)
         if (this->isExistCrlf(client_fd, RecvRequest::REQUEST_LINE))
             this->readBufferUntilRequestLine(client_fd);
         else
-        {
             this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::REQUEST_LINE);
-            if (request.getIndexOfCrlfInRequestLine() >= BUFFER_SIZE - 2)
-                throw (Request::UriTooLongException(request));
-        }
     }
     else if (bytes == RECV_COUNT_NOT_REACHED)
         request.raiseRecvCounts();

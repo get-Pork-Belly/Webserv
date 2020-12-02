@@ -10,6 +10,9 @@
 # include <unistd.h>
 # include <map>
 # include <algorithm>
+# include "Request.hpp"
+
+class Request;
 
 namespace ft
 {

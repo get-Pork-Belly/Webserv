@@ -120,20 +120,21 @@ public:
 
     /* parser */
     void parseRequestLine();
+    std::vector<std::string> parseTokensOfRequestLine(std::string request_line);
     void parseRequestHeaders();
-    void parseRequestWithoutBody(char* buf, int bytes);
-    bool parseHeaders(std::string& req_message);
 
     /* valid check */
-    bool isValidLine(std::vector<std::string>& request_line);
-    bool isValidMethod(const std::string& method);
-    bool isValidUri(const std::string& uri);
-    bool isValidVersion(const std::string& version);
+    void checkRequestLineIsValid(const std::vector<std::string>& request_line);
+    void checkMethodIsValid(const std::string& method);
+    void checkUriIsValid(const std::string& uri);
+    void checkVersionIsValid(const std::string& version);
 
-    bool isValidHeaders(std::string& key, std::string& value);
-    bool isValidHeaderFields(std::string& key);
-    bool isValidSP(std::string& str);
-    bool isDuplicatedHeader(std::string& key);
+    void checkHeadersIsValid(std::string& key, std::string& value);
+    void checkHostHeaderIsValid();
+    void checkContentLengthHeaderIsValid();
+
+    void checkSpaceIsValid(std::string& str);
+    void checkHeaderIsDuplicated(std::string& key);
 
     bool isCarriegeReturnTrimmed();
 
@@ -165,6 +166,33 @@ public:
         Request& _req;
     public:
         UriTooLongException(Request& req);
+        virtual const char* what() const throw();
+    };
+
+    class HTTPVersionNotSupportedException : public SendErrorCodeToClientException
+    {
+    private:
+        Request& _req;
+    public:
+        HTTPVersionNotSupportedException(Request& req);
+        virtual const char* what() const throw();
+    };
+
+    class NotImplementedException : public SendErrorCodeToClientException
+    {
+    private:
+        Request& _req;
+    public:
+        NotImplementedException(Request& req);
+        virtual const char* what() const throw();
+    };
+
+    class RequestHeaderFieldsTooLargeException : public SendErrorCodeToClientException
+    {
+    private:
+        Request& _req;
+    public:
+        RequestHeaderFieldsTooLargeException(Request& req);
         virtual const char* what() const throw();
     };
 
