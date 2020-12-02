@@ -175,6 +175,11 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
 
     while (it != this->_configfile_lines.end())
     {
+        if (*it == "server {")
+        {
+            it++;
+            continue ;
+        }
         directives = ft::split(ft::ltrim(ft::rtrim(*it, " \t"), " \t"), " ");
         if (directives.size() == 0)
             it++;
