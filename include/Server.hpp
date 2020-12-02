@@ -134,7 +134,7 @@ public:
     bool makeEnvpUsingRequest(char** envp, int fd, int* idx);
     bool makeEnvpUsingResponse(char** envp, int fd, int* idx);
     bool makeEnvpUsingHeaders(char** envp, int fd, int* idx);
-    bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
+    bool makeEnvpUsingEtc(char** envp, int* idx);
     bool isResponseAllSended(int fd) const;
 
     bool isCgiReadPipe(int fd) const;

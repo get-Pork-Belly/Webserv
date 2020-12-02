@@ -48,7 +48,9 @@ private:
     SendProgress _send_progress;
 
     std::string _temp_buffer;
-
+    std::string _path_info;
+    std::string _script_name;
+    std::string _path_translated;
 public:
     /* Constructor */
     Response();
@@ -93,6 +95,9 @@ public:
     const std::string& getResponseMessage() const;
     const SendProgress& getSendProgress() const;
     const std::string& getTempBuffer() const;
+    const std::string& getPathInfo() const;
+    const std::string& getScriptName() const;
+    const std::string& getPathTranslated() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -120,6 +125,9 @@ public:
     void setResponseMessage(const std::string& response_message);
     void setSendProgress(const SendProgress& send_progress);
     void setTempBuffer(const std::string& temp_buffer);
+    void setPathInfo(const std::string& path_info);
+    void setScriptName(const std::string& script_name);
+    void setPathTranslated(const std::string& path_translated);
 
     bool isCgiWritePipeNotClosed() const;
     bool isCgiReadPipeNotClosed() const;
