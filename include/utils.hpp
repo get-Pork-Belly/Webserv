@@ -10,9 +10,7 @@
 # include <unistd.h>
 # include <map>
 # include <algorithm>
-# include "Request.hpp"
-
-class Request;
+# include <dirent.h>
 
 namespace ft
 {
@@ -44,6 +42,8 @@ namespace ft
     void doubleFree(char*** target);
     std::string itosHex(unsigned int n);
     bool IsPrintable(char ch);
+
+    bool fileExists(std::string& file_path);
 }
 
 #endif

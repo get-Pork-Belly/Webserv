@@ -29,6 +29,7 @@ const int CRLF_SIZE = 2;
 const int NUM_OF_META_VARIABLES = 18;
 const int DEFAULT_FD = -1;
 const int LIMIT_HEADERS_LENGTH = 8192;
+const std::string PHP_CGI_PATH("./php-mac/bin/php-cgi");
 
 class ServerManager;
 class Request;
@@ -134,7 +135,7 @@ public:
     bool makeEnvpUsingRequest(char** envp, int fd, int* idx);
     bool makeEnvpUsingResponse(char** envp, int fd, int* idx);
     bool makeEnvpUsingHeaders(char** envp, int fd, int* idx);
-    bool makeEnvpUsingEtc(char** envp, int fd, int* idx);
+    bool makeEnvpUsingEtc(char** envp, int* idx);
     bool isResponseAllSended(int fd) const;
 
     bool isCgiReadPipe(int fd) const;
