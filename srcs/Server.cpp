@@ -1875,7 +1875,6 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
         else
             throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
     }
-    response.setStatusCode("204");
 
     Log::printTimeDiff(from, 2);
     Log::trace("< deleteResourceOfUri", 2);
