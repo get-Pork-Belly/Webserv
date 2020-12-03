@@ -14,8 +14,6 @@ class Response
 private:
     std::string _status_code;
     std::map<std::string, std::string> _headers;
-    std::string _transfer_type;
-    std::string _clients;
     std::map<std::string, std::string> _status_code_table;
     std::map<std::string, std::string> _mime_type_table;
     location_info _location_info;
@@ -24,6 +22,8 @@ private:
     std::vector<std::string> _directory_entry;
     struct stat _file_info;
     ResType _resource_type;
+    ParseProgress _parse_progress;
+    ReceiveProgress _receive_progress;
     std::string _body;
 
     int _stdin_of_cgi;
@@ -39,9 +39,6 @@ private:
     std::string _query;
 
     size_t _already_encoded_size;
-
-    ParseProgress _parse_progress;
-    ReceiveProgress _receive_progress;
 
     int _resource_fd;
     int _sended_response_size;
@@ -67,9 +64,6 @@ public:
     const std::string& getStatusCode() const;
     const std::string& getStatusMessage(const std::string& code);
     const std::string& getRoute() const;
-    // std::string getHeaders() const;
-    // std::string getTransferType() const;
-    // std::string getClients() const;
     const location_info& getLocationInfo() const;
     const std::string& getResourceAbsPath() const;
     const std::vector<std::string>& getDirectoryEntry() const;
@@ -77,7 +71,6 @@ public:
     const ResType& getResourceType() const;
     const std::string& getBody() const;
     const std::string& getUriPath() const;
-    // int getCgiPipeFd() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
     int getStdinOfCgi() const;
@@ -171,11 +164,10 @@ public:
         virtual const char* what() const throw();
     };
     /* Util */
-    // bool isLocationUri(const std::string& uri, Server* server);
     bool setRouteAndLocationInfo(const std::string& uri, Server* server);
     bool isLimitExceptInLocation();
     bool isAllowedMethod(const std::string& method);
-    bool isExtensionExist(const std::string& extension) const;
+    bool ExtensionExists(const std::string& extension) const;
     bool isExtensionInMimeTypeTable(const std::string& extension) const;
     void findAndSetUriExtension();
     bool isNeedToBeChunkedBody(const Request& request) const;
@@ -199,11 +191,12 @@ public:
     void init();
     void initStatusCodeTable();
     void initMimeTypeTable();
+
+    std::string makeStatusLine();
+    std::string makeHeaders(Request& request);
     void makeBody(Request& request);
     void makeTraceBody(const Request& request);
     void makeOptionBody();
-    std::string makeHeaders(Request& request);
-    std::string makeStatusLine();
 
     void appendBody(char* buf, int bytes);
     void appendTempBuffer(char* buf, int bytes);

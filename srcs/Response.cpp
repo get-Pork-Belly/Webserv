@@ -16,7 +16,7 @@
 */
 
 Response::Response()
-: _status_code("200"), _headers(), _transfer_type(""), _clients(""),
+: _status_code("200"), _headers(),
 _location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT_FD),
@@ -34,7 +34,6 @@ _request_uri_for_cgi("")
 
 Response::Response(const Response& other)
 : _status_code(other._status_code), _headers(other._headers),
-_transfer_type(other._transfer_type), _clients(other._clients),
 _status_code_table(other._status_code_table), _mime_type_table(other._mime_type_table),
 _location_info(other._location_info), _resource_abs_path(other._resource_abs_path),
 _route(other._route), _directory_entry(other._directory_entry),
@@ -69,8 +68,6 @@ Response::operator=(const Response& rhs)
 {
     this->_status_code = rhs._status_code;
     this->_headers = rhs._headers;
-    this->_transfer_type = rhs._transfer_type;
-    this->_clients = rhs._clients;
     this->_status_code_table = rhs._status_code_table;
     this->_mime_type_table = rhs._mime_type_table;
     this->_location_info = rhs._location_info;
@@ -562,8 +559,6 @@ Response::init()
 {
     this->_status_code = "200";
     this->_headers = {};
-    this->_transfer_type = "";
-    this->_clients = "";
     this->_location_info = {};
     this->_resource_abs_path = "";
     this->_route = "";
@@ -826,10 +821,10 @@ Response::appendAllowHeader(std::string& headers)
         "HEAD",
         "PUT",
         "DELETE",
-        "CONNECT",
+        // "CONNECT", not implemented
         "OPTIONS",
         "TRACE",
-        "PATCH",
+        // "PATCH", not implemented
     };
 
     headers += "Allow:";
@@ -861,7 +856,7 @@ Response::appendContentLanguageHeader(std::string& headers)
     // NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면, 
     //       굳이 메타데이터를 추출하지 않도록 구현되어있음.
     std::string extension = this->getUriExtension();
-    if (!(this->isExtensionExist(extension) 
+    if (!(this->ExtensionExists(extension) 
             && this->isExtensionInMimeTypeTable(extension)
             && this->getMimeTypeTable().at(extension).compare("text/html") == 0))
         return ;
@@ -912,7 +907,7 @@ Response::appendContentTypeHeader(std::string& headers)
         std::string extension = this->getUriExtension();
         if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::ERROR_HTML)
             headers += "text/html";
-        else if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
+        else if (this->ExtensionExists(extension) && this->isExtensionInMimeTypeTable(extension))
             headers += this->getMimeTypeTable().at(extension);
         else
             headers += "application/octet-stream";
@@ -1151,7 +1146,7 @@ Response::isAllowedMethod(const std::string& method)
 }
 
 bool
-Response::isExtensionExist(const std::string& extension) const
+Response::ExtensionExists(const std::string& extension) const
 {
     return (extension != "");
 }
