@@ -1603,12 +1603,10 @@ Server::checkAuthenticate(int client_fd)
     request.setRemoteIdent(after_decode.substr(pos + 1));
 }
 
-//TODO: 함수명이 기능을 담지 못함, 수정 필요함!
-//NOTE: 1. 
 void
-Server::findResourceAbsPath(int client_fd)
+Server::parseUriAndSetResponse(int client_fd)
 {
-    Log::trace("> findResourceAbsPath", 2);
+    Log::trace("> parseUriAndSetResponse", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1628,7 +1626,7 @@ Server::findResourceAbsPath(int client_fd)
 
     
     Log::printTimeDiff(from, 2);
-    Log::trace("< findResourceAbsPath", 2);
+    Log::trace("< parseUriAndSetResponse", 2);
 }
 
 void 
@@ -1866,8 +1864,7 @@ Server::processResponseBody(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-    //NOTE: 수정 필요함
-    this->findResourceAbsPath(client_fd);
+    this->parseUriAndSetResponse(client_fd);
 
     const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     if (location_info.find("limit_client_body_size") != location_info.end())
