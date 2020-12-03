@@ -124,8 +124,6 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
             this->setDefaultRouteOfServer(locations, server_config);
-            testServerConfig(server_config);
-            testLocationConfig(locations);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
         }
         it++;
