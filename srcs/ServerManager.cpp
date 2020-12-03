@@ -570,7 +570,7 @@ ServerManager::exitServers(int signo)
     {
         for (size_t i = 0; i < g_child_process_ids.size(); i++)
         {
-            kill(g_child_process_ids[i], SIGINT);
+            kill(g_child_process_ids[i], SIGKILL);
             if (g_child_process_ids[i] != 0)
                 std::cout<<"server killed pid["<<g_child_process_ids[i]<<"] before exit"<<std::endl;
         }
