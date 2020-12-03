@@ -418,6 +418,7 @@ Server::PutFileOnServerErrorException::what() const throw()
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
 
+//TODO: take care init errors
 void
 Server::init()
 {
