@@ -49,7 +49,10 @@ private:
     SendProgress _send_progress;
 
     std::string _temp_buffer;
-
+    std::string _path_info;
+    std::string _script_name;
+    std::string _path_translated;
+    std::string _request_uri_for_cgi;
 public:
     /* Constructor */
     Response();
@@ -94,6 +97,10 @@ public:
     const std::string& getResponseMessage() const;
     const SendProgress& getSendProgress() const;
     const std::string& getTempBuffer() const;
+    const std::string& getPathInfo() const;
+    const std::string& getScriptName() const;
+    const std::string& getPathTranslated() const;
+    const std::string& getRequestUriForCgi() const;
     const std::string& getQuery() const;
 
     /* Setter */
@@ -123,6 +130,12 @@ public:
     void setResponseMessage(const std::string& response_message);
     void setSendProgress(const SendProgress& send_progress);
     void setTempBuffer(const std::string& temp_buffer);
+    void setPathInfo(const std::string& path_info);
+    void setScriptName(const std::string& script_name);
+    void setPathTranslated(const std::string& path_translated);
+    void setRequestUriForCgi(const std::string& request_uri_for_cgi);
+
+    void setCgiEnvpValues();
 
     bool isCgiWritePipeNotClosed() const;
     bool isCgiReadPipeNotClosed() const;
@@ -131,6 +144,14 @@ public:
 
     /* Exception */
 public:
+    class CannotSetCgiScriptNameException: public SendErrorCodeToClientException
+    {
+    private:
+        Response& _response;
+    public:
+        CannotSetCgiScriptNameException(Response& response);
+        virtual const char* what() const throw();
+    };
     class CannotOpenCgiPipeException : public SendErrorCodeToClientException
     {
     private:
@@ -185,6 +206,7 @@ public:
 
     void appendBody(char* buf, int bytes);
     void appendTempBuffer(char* buf, int bytes);
+    void trimPhpCgiFirstHeadersFromTempBuffer();
 
     /* General header */
     void appendDateHeader(std::string& headers);

@@ -24,7 +24,8 @@ _write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extensi
 _query(""), _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resource_fd(DEFAULT_FD),
 _sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY),
-_temp_buffer("")
+_temp_buffer(""), _path_info(""), _script_name(""), _path_translated(""),
+_request_uri_for_cgi("")
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
@@ -46,7 +47,9 @@ _transmitting_body(other._transmitting_body), _query(other._query),
 _already_encoded_size(other._already_encoded_size), _parse_progress(other._parse_progress),
 _receive_progress(other._receive_progress), _resource_fd(other._resource_fd),
 _sended_response_size(other._sended_response_size), _response_message(other._response_message),
-_send_progress(other._send_progress), _temp_buffer(other._temp_buffer)
+_send_progress(other._send_progress), _temp_buffer(other._temp_buffer), _path_info(other._path_info),
+_script_name(other._script_name), _path_translated(other._path_translated), 
+_request_uri_for_cgi(other._request_uri_for_cgi)
 {}
 
 /*============================================================================*/
@@ -94,6 +97,10 @@ Response::operator=(const Response& rhs)
     this->_response_message = rhs._response_message;
     this->_send_progress = rhs._send_progress;
     this->_temp_buffer = rhs._temp_buffer;
+    this->_path_info = rhs._path_info;
+    this->_script_name = rhs._script_name;
+    this->_path_translated = rhs._path_translated;
+    this->_request_uri_for_cgi = rhs._request_uri_for_cgi;
     return (*this);
 }
 
@@ -269,6 +276,30 @@ Response::getTempBuffer() const
     return (this->_temp_buffer);
 }
 
+const std::string&
+Response::getScriptName() const
+{
+    return (this->_script_name);
+}
+
+const std::string&
+Response::getPathInfo() const
+{
+    return (this->_path_info);
+}
+
+const std::string&
+Response::getPathTranslated() const
+{
+    return (this->_path_translated);
+}
+
+const std::string&
+Response::getRequestUriForCgi() const
+{
+    return (this->_request_uri_for_cgi);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -425,9 +456,78 @@ Response::setTempBuffer(const std::string& temp_buffer)
     this->_temp_buffer = temp_buffer;
 }
 
+void
+Response::setScriptName(const std::string& script_name)
+{
+    this->_script_name = script_name;
+}
+
+void
+Response::setPathInfo(const std::string& path_info)
+{
+    this->_path_info = path_info;
+}
+
+void
+Response::setPathTranslated(const std::string& path_translated)
+{
+    this->_path_translated = path_translated;
+}
+
+void
+Response::setRequestUriForCgi(const std::string& request_uri_for_cgi)
+{
+    this->_request_uri_for_cgi = request_uri_for_cgi;
+}
+
+void
+Response::setCgiEnvpValues()
+{
+    const std::string& abs_path = this->getResourceAbsPath();
+    const std::string& cgi_extension = this->getUriExtension();
+    size_t index;
+    if ((index = abs_path.find(cgi_extension)) != std::string::npos)
+    {
+        std::string script_name = this->getResourceAbsPath().substr(0, index + cgi_extension.length());
+        if (ft::fileExists(script_name))
+        {
+            this->setScriptName(script_name);
+            this->setPathInfo(abs_path.substr(index + cgi_extension.length(), abs_path.length()));
+            this->setPathTranslated(this->getLocationInfo().at("root") + this->getPathInfo());
+            this->setRequestUriForCgi(this->getUriPath());
+        }
+        else
+        {
+            if (this->_location_info.find("cgi_path") != this->_location_info.end())
+                script_name = this->_location_info.at("cgi_path");
+            else
+                throw (CannotSetCgiScriptNameException(*this));
+            //NOTE: to deal with 42 cgi tester
+            this->setScriptName(script_name);
+            this->setPathInfo(script_name);
+            this->setPathTranslated(script_name);
+            this->setRequestUriForCgi(script_name);
+        }
+    }
+}
+
+
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
+
+Response::CannotSetCgiScriptNameException::CannotSetCgiScriptNameException(Response& response)
+: _response(response)
+{
+    this->_response.setStatusCode("500");
+}
+
+const char*
+Response::CannotSetCgiScriptNameException::what() const throw()
+{
+    return ("[CODE 500] Cannot Set script name. check config file's 'cgi_path'!");
+}
 
 Response::CannotOpenCgiPipeException::CannotOpenCgiPipeException(Response& response)
 : _response(response)
@@ -488,6 +588,10 @@ Response::init()
     this->_response_message = "";
     this->_send_progress = SendProgress::READY;
     this->_temp_buffer = "";
+    this->_script_name = "";
+    this->_path_info = "";
+    this->_path_translated = "";
+    this->_request_uri_for_cgi = "";
     //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
 }
 
@@ -1063,6 +1167,24 @@ Response::isExtensionInMimeTypeTable(const std::string& extension) const
 void 
 Response::findAndSetUriExtension()
 {
+    if (this->_location_info.find("cgi") != this->_location_info.end())
+    {
+        std::vector<std::string> cgi_extensions =  ft::split(this->_location_info.at("cgi"), " ");
+
+        const std::string& abs_path = this->getResourceAbsPath();
+        size_t index = std::string::npos;
+        for (std::string& cgi_extension : cgi_extensions)
+        {
+            if ((index = abs_path.find(cgi_extension)) != std::string::npos)
+            {
+                // this->setScriptName(abs_path.substr(0, index + cgi_extension.length()));
+                // this->setPathInfo(abs_path.substr(index + cgi_extension.length(), abs_path.length()));
+                // this->setPathTranslated(this->_location_info.at("root") + this->getPathInfo());
+                this->setUriExtension(cgi_extension);
+                return ;
+            }
+        }
+    }
     size_t dot = this->getResourceAbsPath().rfind(".");
     if (dot == std::string::npos)
         return ;
@@ -1190,7 +1312,7 @@ Response::preparseCgiMessage()
 bool
 Response::parseCgiHeaders(std::string& cgi_message)
 {
-    Log::trace("> parseHeaders", 1);
+    Log::trace("> parseCgiHeaders", 1);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1215,7 +1337,7 @@ Response::parseCgiHeaders(std::string& cgi_message)
     this->setHeaders(key, value);
 
     Log::printTimeDiff(from, 1);
-    Log::trace("< parseHeaders", 1);
+    Log::trace("< parseCgiHeaders", 1);
     return (true);
 }
 
@@ -1302,6 +1424,13 @@ void
 Response::appendTempBuffer(char* buf, int bytes)
 {
     this->_temp_buffer.append(buf, bytes);
+}
+
+void
+Response::trimPhpCgiFirstHeadersFromTempBuffer()
+{
+    size_t index = this->getTempBuffer().find("\r\n\r\n");
+    this->setTempBuffer(this->getTempBuffer().substr(index + CRLF_SIZE + CRLF_SIZE));
 }
 
 bool
