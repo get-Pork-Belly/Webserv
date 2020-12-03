@@ -116,7 +116,7 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
 
     while (it != ite)
     {
-        if ( *it == "server {")
+        if ( *it++ == "server {")
         {
             server_info server_config;
             this->initServerConfig(server_config, http_config);
@@ -126,7 +126,6 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             this->setDefaultRouteOfServer(locations, server_config);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
         }
-        it++;
     }
 }
 
@@ -146,8 +145,15 @@ ServerGenerator::parseHttpBlock()
             break ;
         it++;
     }
-    while (++it != ite)
+    if (it == ite)
+        throw (ConfigFileSyntaxError("There must be http block in Config file"));
+
+    while (it++ != ite)
     {
+        if (it == ite)
+            throw (ConfigFileSyntaxError(BRACKET_ERROR));
+        if (*it == "}")
+            break ;
         if (*it == "server {")
             (*this.*skipServerBlock)(it, skip_server, skip_locations);
         else if (*it != "}")
@@ -163,6 +169,8 @@ ServerGenerator::parseHttpBlock()
                 throw (ConfigFileSyntaxError(NO_SEMICOLON));
         }
     }
+    if (it != ite && *it != "}")
+        throw (ConfigFileSyntaxError(BRACKET_ERROR));
     return (http_config);
 }
 
@@ -199,6 +207,8 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
             it++;
         }
     }
+    if (it == this->_configfile_lines.end())
+        throw (ConfigFileSyntaxError(BRACKET_ERROR));
 }
 
 location_info
@@ -208,6 +218,10 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
     location_info location_config;
 
     this->initLocationConfig(location_config, server_config);
+    directives = ft::split(ft::ltrim(ft::rtrim(*it++, " \t"), " \t"), " ");
+    if (directives.size() != 3 || directives[2] != "{")
+        throw (ConfigFileSyntaxError(INVALID_BLOCK));
+    location_config["route"] = directives[1];
     while (it != this->_configfile_lines.end())
     {
         directives = ft::split(ft::ltrim(ft::rtrim(*it++, " \t"), " \t"), " ");
@@ -216,11 +230,7 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
         else if (directives[0] == "}")
             return (location_config);
         else if (directives[0] == "location")
-        {
-            if (directives.size() != 3)
-                throw (ConfigFileSyntaxError(INVALID_BLOCK));
-            location_config["route"] = directives[1];
-        }
+            throw (ConfigFileSyntaxError(BRACKET_ERROR));
         else
         {
             if (directives[directives.size() - 1].back() != ';')
@@ -241,6 +251,8 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
                 location_config[directives[0]] = directives[1];
         }
     }
+    if (it == this->_configfile_lines.end())
+        throw (ConfigFileSyntaxError(BRACKET_ERROR));
     return (location_config);
 }
 
