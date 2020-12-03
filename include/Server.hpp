@@ -46,11 +46,8 @@ private:
     ServerManager* _server_manager;
     std::map<std::string, std::string> _server_config;
     int _server_socket;
-    std::string _server_name;
     std::string _host;
     std::string _port;
-    int _request_uri_limit_size;
-    int _request_header_limit_size;
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
@@ -101,10 +98,11 @@ public:
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
     void makeResponseMessage(int fd);
+    void setResponseMessageAccordingToTheParseProgress(int client_fd, std::string& status_line, std::string& headers);
     void sendResponse(int fd);
     bool isClientOfServer(int fd) const;
     bool isIndexFileExist(int fd);
-    void findResourceAbsPath(int fd);
+    void parseUriAndSetResponse(int fd);
     bool isAutoIndexOn(int fd);
     bool isCgiUri(int fd, const std::string& extension);
     void checkAndSetResourceType(int fd);

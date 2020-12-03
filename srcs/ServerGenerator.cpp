@@ -169,6 +169,7 @@ ServerGenerator::checkValidationOfServerConfig(server_info& server)
     }
 }
 
+//TODO: server generate 중 에러 발생시 catch 해줄 것.
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
