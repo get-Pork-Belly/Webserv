@@ -304,4 +304,23 @@ IsPrintable(char ch)
 	return (false);
 }
 
+bool
+fileExists(std::string& file_path)
+{
+    DIR* dir_ptr;
+    if ((dir_ptr = opendir(file_path.c_str())) != NULL)
+    {
+        //NOTE: file exists but directory
+        closedir(dir_ptr);
+        return (true);
+    }
+    else
+    {
+        if (errno == ENOENT)
+            return (false);
+    }
+    return (true);
+}
+
+
 }
