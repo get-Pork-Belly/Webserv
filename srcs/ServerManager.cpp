@@ -426,8 +426,7 @@ ServerManager::closeUnresponsiveCgi(int pipe_fd)
                 return ;
             Response& response = server->getResponse(client_fd);
             kill(response.getCgiPid(), SIGKILL);
-            g_child_process_ids.erase(std::remove(g_child_process_ids.begin(), g_child_process_ids.end(),
-                                        response.getCgiPid()), g_child_process_ids.end());
+            g_child_process_ids[client_fd] = 0;
             if (response.getSendProgress() == SendProgress::READY)
                 response.setStatusCode("500");
             else
@@ -570,7 +569,11 @@ ServerManager::exitServers(int signo)
     if (signo == SIGINT)
     {
         for (size_t i = 0; i < g_child_process_ids.size(); i++)
+        {
             kill(g_child_process_ids[i], SIGINT);
+            if (g_child_process_ids[i] != 0)
+                std::cout<<"server killed pid["<<g_child_process_ids[i]<<"] before exit"<<std::endl;
+        }
         exit(EXIT_SUCCESS);
     }
 }
