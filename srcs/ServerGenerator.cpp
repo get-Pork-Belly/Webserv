@@ -143,6 +143,26 @@ ServerGenerator::validCheckOfLocations(std::map<std::string, location_info>& loc
     }
 }
 
+void
+ServerGenerator::validCheckOfServer(server_info& server)
+{
+    std::vector<std::string> list =
+    {"autoindex", "auth_basic", "auth_basic_user_file", "index",
+     "retry_after_sec", "route", "root", "limit_except", "listen",
+     "limit_client_body_size", "server_name"};
+    for (auto& directive : server)
+    {
+        std::vector<std::string> arguments;
+        std::vector<std::string>::iterator it = std::find(list.begin(), list.end(), directive.first);
+        if (it == list.end())
+        {
+            std::cerr << directive.first << " ";
+            throw (ConfigFileSyntaxError(NOT_VALID_DIRECTIVE));
+        }
+    }
+    testServerConfig(server);
+}
+
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
@@ -161,10 +181,9 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             this->initServerConfig(server_config, http_config);
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
+            this->validCheckOfServer(server_config);
             this->validCheckOfLocations(locations);
             this->setDefaultRouteOfServer(locations, server_config);
-            testServerConfig(server_config);
-            testLocationConfig(locations);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
         }
     }
@@ -332,7 +351,6 @@ ServerGenerator::initServerConfig(server_info& server_config, server_info& http_
     const std::map<std::string, std::string>::iterator& ite = http_config.end();
 
     server_config["listen"] = std::to_string(8080);
-    server_config["client_max_body_size"] = std::string("1m");
     if (http_config.find("root") != ite)
         server_config["root"] = http_config["root"];
     if (http_config.find("index") != ite)

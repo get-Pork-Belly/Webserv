@@ -88,6 +88,7 @@ public:
     bool isEmptyLine(const std::string& line);
     void setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive);
     void validCheckOfLocations(std::map<std::string, location_info>& locations);
+    void validCheckOfServer(server_info& server);
 
 };
 
