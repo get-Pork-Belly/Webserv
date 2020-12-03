@@ -114,6 +114,7 @@ public:
     bool isBodyUnnecessary() const;
     bool isNormalBody() const;
     bool isChunkedBody() const;
+    bool isConnectionHeaderClose() const;
 
     int peekMessageFromClient(int client_fd, char* buf);
     void raiseRecvCounts();

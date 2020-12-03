@@ -488,6 +488,14 @@ Request::isChunkedBody() const
     return (!isNormalBody());
 }
 
+bool
+Request::isConnectionHeaderClose() const
+{
+    if (this->_headers.find("Connection") == this->_headers.end())
+        return (false);
+    return (this->_headers.at("Connection") == "close");
+}
+
 int
 Request::peekMessageFromClient(int client_fd, char* buf)
 {
