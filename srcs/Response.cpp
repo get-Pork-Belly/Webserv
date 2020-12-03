@@ -18,7 +18,7 @@
 Response::Response()
 : _status_code("200"), _headers(), _transfer_type(""), _clients(""),
 _location_info(), _resource_abs_path(""), _route(""),
-_directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
+_directory_entry(), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT_FD),
 _write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extension(""), _transmitting_body(""),
 _query(""), _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
@@ -131,7 +131,7 @@ Response::getResourceAbsPath() const
     return (this->_resource_abs_path);
 }
 
-const std::string&
+const std::vector<std::string>&
 Response::getDirectoryEntry() const
 {
     return (this->_directory_entry);
@@ -288,14 +288,13 @@ Response::setResourceAbsPath(const std::string& path)
 void
 Response::setDirectoryEntry(DIR* dir_ptr)
 {
-    this->_directory_entry = "";
     struct dirent* entry = NULL;
     while ((entry = readdir(dir_ptr)) != NULL)
     {
-        this->_directory_entry += entry->d_name;
+        std::string file_path(entry->d_name);
         if (entry->d_type == 4)
-            this->_directory_entry += "/";
-        this->_directory_entry += " ";
+            file_path += "/";
+        this->_directory_entry.push_back(file_path);
     }
 }
 
@@ -467,7 +466,7 @@ Response::init()
     this->_location_info = {};
     this->_resource_abs_path = "";
     this->_route = "";
-    this->_directory_entry = "";
+    this->_directory_entry = {};
     this->_resource_type = ResType::NOT_YET_CHECKED;
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->_body = "";
@@ -1242,6 +1241,17 @@ Response::isDuplicatedHeader(std::string& key)
 {
     if (this->_headers.find(key) == this->_headers.end())
         return (true);
+    return (false);
+}
+
+bool
+Response::isFileInDirEntry(std::string& index)
+{
+    for (const std::string& entry : this->_directory_entry)
+    {
+        if (entry == index)
+            return (true);
+    }
     return (false);
 }
 

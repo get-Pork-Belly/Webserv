@@ -100,14 +100,13 @@ void
 Server::setResourceAbsPathAsIndex(int fd)
 {
     Response& response = this->_responses[fd];
-    const std::string& dir_entry = response.getDirectoryEntry();
     const location_info& location_info = response.getLocationInfo();
     std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
 
     const std::string& path = response.getResourceAbsPath();
     for (std::string& index : indexs)
     {
-        if (dir_entry.find(index) != std::string::npos)
+        if (response.isFileInDirEntry(index))
         {
             response.setResourceType(ResType::STATIC_RESOURCE);
             if (path.back() == '/')
@@ -1180,12 +1179,11 @@ Server::isCgiReadPipe(int fd) const
 bool
 Server::isIndexFileExist(int client_fd)
 {
-    const std::string& dir_entry = this->_responses[client_fd].getDirectoryEntry();
     const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
     for (std::string& index : indexs)
     {
-        if (dir_entry.find(index) != std::string::npos)
+        if (this->_responses[client_fd].isFileInDirEntry(index))
             return (true);
     }
     return (false);
@@ -1844,8 +1842,8 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
             throw (CannotOpenDirectoryException(*this, client_fd, "409", errno));
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
-        std::vector<std::string> directory_entry = ft::split(response.getDirectoryEntry(), " ");
-        for (std::string& entry : directory_entry)
+        const std::vector<std::string>& directory_entry = response.getDirectoryEntry();
+        for (const std::string& entry : directory_entry)
         {
             if (entry != "./" && entry != "../")
                 this->deleteResourceOfUri(client_fd, path + entry);

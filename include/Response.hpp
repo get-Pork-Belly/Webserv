@@ -21,7 +21,7 @@ private:
     location_info _location_info;
     std::string _resource_abs_path;
     std::string _route;
-    std::string _directory_entry;
+    std::vector<std::string> _directory_entry;
     struct stat _file_info;
     ResType _resource_type;
     std::string _body;
@@ -69,7 +69,7 @@ public:
     // std::string getClients() const;
     const location_info& getLocationInfo() const;
     const std::string& getResourceAbsPath() const;
-    const std::string& getDirectoryEntry() const;
+    const std::vector<std::string>& getDirectoryEntry() const;
     const struct stat& getFileInfo() const;
     const ResType& getResourceType() const;
     const std::string& getBody() const;
@@ -170,6 +170,7 @@ public:
     bool isValidHeaders(std::string& key, std::string& value);
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
+    bool isFileInDirEntry(std::string& index);
 
     void setTransmittingBody(const std::string& chunked_body);
     void encodeChunkedBody();
