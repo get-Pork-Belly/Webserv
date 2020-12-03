@@ -15,7 +15,7 @@ class ServerManager;
 
 const int BUF_SIZE = 4096;
 const std::string NO_SEMICOLON = "Directive must end with a \';\'";
-const std::string INVALID_BLOCK = "Block directive needs one arguments";
+const std::string INVALID_BLOCK = "Block directive's syntax error";
 
 class ServerGenerator
 {
