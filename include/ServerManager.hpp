@@ -31,7 +31,6 @@ private:
     /* Canonical but not implements */
     ServerManager();
     ServerManager(const ServerManager& other);
-    ServerManager& operator=(const ServerManager& rhs);
 
 private:
     const char*	_config_file_path;
@@ -51,6 +50,7 @@ private:
 public:
     /* Constructor */
     ServerManager(const char *config_path);
+    ServerManager& operator=(const ServerManager& rhs);
     /* Destructor */
     virtual ~ServerManager();
     /* Overload */
@@ -86,8 +86,9 @@ public:
     void closeCgiWritePipe(Server& server, int pipe_fd);
     void closeCgiReadPipe(Server& server, int pipe_fd);
     void closeStaticResource(Server& server, int resource_fd);
-    //TODO 구현 필요
-    // void exitServers();
+
+    static void exitServers(int signo);
+    void clearServers();
 
     bool isFdTimeOut(int fd);
     void monitorTimeOutOff(int fd);
