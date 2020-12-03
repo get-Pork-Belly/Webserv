@@ -73,8 +73,8 @@ Log::serverIsCreated(Server& server)
     int server_fd = server.getServerSocket();
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
-    line = ("SERVER(" + std::to_string(server_fd) +
-            ") HAS CREATED\n");
+    line = ("SERVER(" + std::to_string(server_fd) + ")" + "[" +
+            server.getHost() + "] HAS CREATED\n");
     Log::timeLog(fd);
     write(fd, line.c_str(), line.length());
 }
@@ -89,8 +89,8 @@ Log::newClient(Server& server, int client_fd)
     int server_fd = server.getServerSocket();
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
-    line = ("SERVER(" + std::to_string(server_fd) +
-            ") HAS NEW CLIENT: " +
+    line = ("SERVER(" + std::to_string(server_fd) +  ")[" +
+            server.getHost() + "] HAS NEW CLIENT: " +
             std::to_string(client_fd) + "\n");
     Log::timeLog(fd);
     write(fd, line.c_str(), line.length());

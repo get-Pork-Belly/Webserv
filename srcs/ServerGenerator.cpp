@@ -96,6 +96,7 @@ ServerGenerator::setDefaultRouteOfServer(std::map<std::string, location_info>& l
     }
 }
 
+//TODO: server generate 중 에러 발생시 catch 해줄 것.
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {

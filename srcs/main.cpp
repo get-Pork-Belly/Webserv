@@ -31,7 +31,6 @@ int main(int argc, char* argv[])
                 server_manager = new_server_manager;
             }
         }
-        
     }
     catch(const std::exception& e)
     {

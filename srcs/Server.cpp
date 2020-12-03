@@ -20,8 +20,7 @@ std::vector<int> g_child_process_ids(1024, 0);
 
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
-_server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
-_request_uri_limit_size(0), _request_header_limit_size(0), 
+_server_socket(-1), _host(server_config["server_name"]), _port(""),
 _location_config(location_config)
 {
     try
@@ -419,12 +418,13 @@ Server::PutFileOnServerErrorException::what() const throw()
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
 
+//TODO: take care init errors
 void
 Server::init()
 {
     for (auto& conf: this->_server_config)
     {
-        if (conf.first == "host")
+        if (conf.first == "server_name")
             this->_host = conf.second;
         else if (conf.first == "listen")
             this->_port = conf.second;
@@ -926,6 +926,33 @@ Server::receiveRequest(int client_fd)
 }
 
 void
+Server::setResponseMessageAccordingToTheParseProgress(int client_fd, std::string& status_line, std::string& headers)
+{
+    Request& request = this->_requests[client_fd];
+    Response& response = this->_responses[client_fd];
+    const std::string& method = request.getMethod();
+    switch (response.getParseProgress())
+    {
+    case ParseProgress::DEFAULT:
+        response.setParseProgress(ParseProgress::FINISH);
+        if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
+            response.setResponseMessage(status_line + headers);
+        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
+        break;
+    case ParseProgress::CHUNK_START:
+        if (request.getMethod() == "HEAD")
+            response.setResponseMessage(status_line + headers);
+        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
+        break;
+    default: //NOTE: PraseProgress::CHUNK_PROGRESS or ParseProgress::FINISH
+        if (request.getMethod() == "HEAD")
+            response.setResponseMessage("");
+        response.setResponseMessage(response.getTransmittingBody());
+        break;
+    }
+}
+
+void
 Server::makeResponseMessage(int client_fd)
 {
     Log::trace("> makeResponseMessage", 1);
@@ -934,10 +961,6 @@ Server::makeResponseMessage(int client_fd)
 
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
-    const std::string& method = request.getMethod();
-
-    std::string status_line;
-    std::string headers;
 
     if (response.getStatusCode().front() != '2')
         response.setResourceType(ResType::ERROR_HTML);
@@ -945,55 +968,19 @@ Server::makeResponseMessage(int client_fd)
     if (response.isRedirection(response.getStatusCode()) == false)
         response.makeBody(request);
 
-    const SendProgress& send_progress = response.getSendProgress();
-    if (send_progress == SendProgress::READY)
+    std::string status_line;
+    std::string headers;
+    if (response.getSendProgress() == SendProgress::READY)
     {
         headers = response.makeHeaders(request);
         status_line = response.makeStatusLine();
     }
 
-    //TODO: refactoring
-    const ParseProgress& parse_progress = response.getParseProgress();
-    switch (parse_progress)
-    {
-    case ParseProgress::FINISH:
-        if (method == "HEAD")
-            response.setResponseMessage("");
+    this->setResponseMessageAccordingToTheParseProgress(client_fd, status_line, headers);
 
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        response.setResponseMessage(response.getTransmittingBody());
-        break;
-    case ParseProgress::DEFAULT:
-        response.setParseProgress(ParseProgress::FINISH);
-        if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
-            response.setResponseMessage(status_line + headers);
+    Log::printTimeDiff(from, 1);
+    Log::trace("< makeResponseMessage", 1);
 
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
-        break;
-    case ParseProgress::CHUNK_START:
-        if (request.getMethod() == "HEAD")
-            response.setResponseMessage(status_line + headers);
-            
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
-        break;
-    case ParseProgress::CHUNK_PROGRESS:
-        if (request.getMethod() == "HEAD")
-            response.setResponseMessage("");
-
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        response.setResponseMessage(response.getTransmittingBody());
-        break;
-    default:
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        break;
-    }
 }
 
 long long sended_bytes;
@@ -1616,12 +1603,10 @@ Server::checkAuthenticate(int client_fd)
     request.setRemoteIdent(after_decode.substr(pos + 1));
 }
 
-//TODO: 함수명이 기능을 담지 못함, 수정 필요함!
-//NOTE: 1. 
 void
-Server::findResourceAbsPath(int client_fd)
+Server::parseUriAndSetResponse(int client_fd)
 {
-    Log::trace("> findResourceAbsPath", 2);
+    Log::trace("> parseUriAndSetResponse", 2);
     timeval from;
     gettimeofday(&from, NULL);
 
@@ -1641,7 +1626,7 @@ Server::findResourceAbsPath(int client_fd)
 
     
     Log::printTimeDiff(from, 2);
-    Log::trace("< findResourceAbsPath", 2);
+    Log::trace("< parseUriAndSetResponse", 2);
 }
 
 void 
@@ -1859,7 +1844,7 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
     }
     else
     {
-        if (errno == ENOTDIR) // dicrectory가 아니다ㅏ. -> unlink
+        if (errno == ENOTDIR)
         {
             if (unlink(path.c_str()) == -1)
                 throw (TargetResourceConflictException(*this, client_fd));
@@ -1879,8 +1864,7 @@ Server::processResponseBody(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-    //NOTE: 수정 필요함
-    this->findResourceAbsPath(client_fd);
+    this->parseUriAndSetResponse(client_fd);
 
     const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     if (location_info.find("limit_client_body_size") != location_info.end())
