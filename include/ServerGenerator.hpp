@@ -19,6 +19,8 @@ const std::string INVALID_BLOCK = "Block directive's syntax error";
 const std::string BRACKET_ERROR = "Unexpected end of file, expecting \"}\"";
 const std::string NO_HTTP_BLOCK = "There must be http block in config file";
 const std::string NO_ARGUMENT = "Simple directive have at least one arguments";
+const std::string INVALID_ARGUMENTS = "Invalid arguments at Simple directive";
+const std::string NOT_VALID_DIRECTIVE = "is not a valid Directive";
 
 class ServerGenerator
 {
@@ -85,6 +87,7 @@ public:
     void checkHttpBlock(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite);
     bool isEmptyLine(const std::string& line);
     void setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive);
+    void validCheckOfLocations(std::map<std::string, location_info>& locations);
 
 };
 

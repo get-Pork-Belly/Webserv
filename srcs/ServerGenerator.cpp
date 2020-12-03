@@ -104,6 +104,45 @@ ServerGenerator::setDefaultRouteOfServer(std::map<std::string, location_info>& l
     }
 }
 
+void
+ServerGenerator::validCheckOfLocations(std::map<std::string, location_info>& locations)
+{
+    std::vector<std::string> list =
+    {"autoindex", "auth_basic", "auth_basic_user_file", "cgi", "cgi_path",
+     "index", "return","retry_after_sec", "route", "root", "limit_except",
+     "limit_client_body_size"};
+    for (auto& location : locations)
+    {
+        for (auto info : location.second)
+        {
+            std::vector<std::string>::iterator it = std::find(list.begin(), list.end(), info.first);
+            std::vector<std::string> arguments;
+            if (it == list.end())
+            {
+                std::cerr << info.first << " ";
+                throw (ConfigFileSyntaxError(NOT_VALID_DIRECTIVE));
+            }
+            if (info.first == "return")
+            {
+                arguments = ft::split(info.second, " ");
+                if (arguments.size() != 2)
+                    throw (ConfigFileSyntaxError(INVALID_ARGUMENTS));
+                if (arguments[0].length() != 3 || arguments[0].front() != '3')
+                    throw (ConfigFileSyntaxError(INVALID_ARGUMENTS));
+            }
+            else if (info.first == "cgi")
+            {
+                arguments = ft::split(info.second, " ");
+                for (auto& arg : arguments)
+                {
+                    if (arg.front() != '.')
+                        throw (ConfigFileSyntaxError(INVALID_ARGUMENTS));
+                }
+            }
+        }
+    }
+}
+
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
@@ -122,6 +161,7 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             this->initServerConfig(server_config, http_config);
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
+            this->validCheckOfLocations(locations);
             this->setDefaultRouteOfServer(locations, server_config);
             testServerConfig(server_config);
             testLocationConfig(locations);
