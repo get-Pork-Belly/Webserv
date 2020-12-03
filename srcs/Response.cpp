@@ -809,6 +809,18 @@ Response::appendServerHeader(std::string& headers)
 }
 
 void
+Response::appendConnectionHeader(std::string& headers, Request& request)
+{
+    //NOTE: 아래 경우를 제외하고는 keep-alive
+    //      1. status code가 200이 아닌 경우.
+    //      2. Request에 포함된 Connection header 값이 close인 경우.
+    if (this->getStatusCode() != "200" || request.isConnectionHeaderClose())
+        headers += "Connection: close\r\n";
+    else
+        headers += "Connection: keep-alive\r\n";
+}
+
+void
 Response::appendAllowHeader(std::string& headers)
 {
     const std::vector<const std::string> implemented_methods = {
@@ -1007,6 +1019,16 @@ Response::appendAuthenticateHeader(std::string& headers)
     headers += "\r\n";
 }
 
+void
+Response::appendGeneralHeaders(std::string& headers, Request& request)
+{
+    this->appendDateHeader(headers);
+    this->appendServerHeader(headers);
+    if (request.getVersion() != "HTTP/2.0")
+        this->appendConnectionHeader(headers, request);
+}
+
+
 std::string
 Response::makeHeaders(Request& request)
 {
@@ -1018,12 +1040,12 @@ Response::makeHeaders(Request& request)
     const std::string& method = request.getMethod();
     
     headers.reserve(400);
-    // General headers
-    this->appendDateHeader(headers);
-    this->appendServerHeader(headers);
+    this->appendGeneralHeaders(headers, request);
+    // this->appendEntityHeaders(headers);
+    // this->appendResponseHeaders(headers);
 
     // Entity headers
-    if (method == "PUT" && this->getStatusCode().front() == '2')
+    if ((method == "PUT" || method == "DELETE") && this->getStatusCode().front() == '2')
         headers += "Content-Length: 0\r\n";
     else
     {
@@ -1050,28 +1072,12 @@ Response::makeHeaders(Request& request)
     else if (status_code.compare("405") == 0)
         this->appendAllowHeader(headers);
     else if (status_code.compare("401") == 0)
-    {
         this->appendAuthenticateHeader(headers);
-    }
-    // else if (status_code.compare("403") == 0)
-    // {
-
-    // }
     else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
         this->appendLocationHeader(headers, request);
     else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
             || status_code.compare("301") == 0)
-    {
         this->appendRetryAfterHeader(headers, status_code);
-    }
-    
-    //NOTE: error code를 응답하는 경우를 제외하고는 keep-alive
-    //TODO: 인증헤더 관련하여서도 keep-alive인지 확인할 것.
-    //TODO: request의 헤더가 close이면 close로 처리시킬 것.
-    if (status_code != "200") // || isRequestConnectionClose())
-        headers += "Connection: close\r\n";
-    else
-        headers += "Connection: keep-alive\r\n";
     headers += "\r\n";
 
     Log::printTimeDiff(from, 2);

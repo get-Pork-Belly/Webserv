@@ -210,8 +210,10 @@ public:
     void trimPhpCgiFirstHeadersFromTempBuffer();
 
     /* General header */
+    void appendGeneralHeaders(std::string& headers, Request& request);
     void appendDateHeader(std::string& headers);
     void appendServerHeader(std::string& headers);
+    void appendConnectionHeader(std::string& headers, Request& request);
 
     /* Entity header */
     void appendAllowHeader(std::string& headers);
