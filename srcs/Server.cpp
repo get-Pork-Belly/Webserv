@@ -714,7 +714,7 @@ Server::receiveRequestNormalBody(int client_fd)
     Request& request = this->_requests[client_fd];
 
     int content_length = request.getContentLength();
-    if (content_length < DEFAULT_LIMIT_CLIENT_BODY_LENGTH)
+    if (content_length > DEFAULT_LIMIT_CLIENT_BODY_LENGTH)
         throw (PayloadTooLargeException(*this, client_fd));
     char buf[BUFFER_SIZE + 1];
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
