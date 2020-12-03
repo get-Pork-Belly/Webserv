@@ -905,7 +905,7 @@ Server::receiveRequest(int client_fd)
 
     case RecvRequest::HEADERS:
         this->receiveRequestHeaders(client_fd);
-        //NOTE: this->processResponseBody()
+        //TODO: this->processResponseBody()
         break ;
 
     case RecvRequest::NORMAL_BODY:
