@@ -174,7 +174,6 @@ void
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
     server_info http_config;
-    std::vector<std::string> directives;
     
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
@@ -190,7 +189,17 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             this->parseServerBlock(it, server_config, locations);
             this->checkValidationOfConfigs(server_config, locations);
             this->setDefaultRouteOfServer(locations, server_config);
-            servers.push_back(new Server(this->_server_manager, server_config, locations));
+            try
+            {
+                Server* server = new Server(this->_server_manager, server_config, locations);
+                servers.push_back(server);
+            }
+            catch (std::bad_alloc& e)
+            {
+                for (auto& s : servers)
+                    delete s;
+                throw ("new Failed");
+            }
         }
     }
 }
