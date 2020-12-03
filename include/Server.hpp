@@ -23,6 +23,7 @@ const int SHOULD_RECEIVE_MORE = -3;
 const int RECEIVE_SOCKET_STREAM_SIZE = 65536;
 const int SEND_PIPE_STREAM_SIZE = 65536;
 const int CHUNKED_LINE_LENGTH = 65536;
+const int DEFAULT_LIMIT_CLIENT_BODY_LENGTH = 2147483647;
 const int DEFAULT_TARGET_CHUNK_SIZE = -2;
 const int DEFAULT_INDEX_OF_CRLF = -1;
 const int CRLF_SIZE = 2;
@@ -50,7 +51,6 @@ private:
     std::string _port;
     int _request_uri_limit_size;
     int _request_header_limit_size;
-    int _limit_client_body_size;
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;

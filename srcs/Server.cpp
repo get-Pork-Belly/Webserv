@@ -18,12 +18,11 @@ std::vector<int> g_child_process_ids(1024, 0);
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-//TODO: _limit_client_body_size -> ServerGenerator에서 만들어 주도록 변경할 것.
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
 _request_uri_limit_size(0), _request_header_limit_size(0), 
-_limit_client_body_size(150000000), _location_config(location_config)
+_location_config(location_config)
 {
     try
     {
@@ -715,9 +714,8 @@ Server::receiveRequestNormalBody(int client_fd)
     Request& request = this->_requests[client_fd];
 
     int content_length = request.getContentLength();
-    if (content_length > this->_limit_client_body_size)
+    if (content_length < DEFAULT_LIMIT_CLIENT_BODY_LENGTH)
         throw (PayloadTooLargeException(*this, client_fd));
-
     char buf[BUFFER_SIZE + 1];
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
