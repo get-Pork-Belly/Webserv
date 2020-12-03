@@ -595,7 +595,7 @@ Server::readBufferUntilHeaders(int client_fd, char* buf, size_t read_target_size
     if ((bytes = read(client_fd, buf, read_target_size)) > 0)
     {
         buf[bytes] = 0;
-        request.appendTempBuffer(buf, bytes); // bytes 가 peeked보다 작을 수 있다.
+        request.appendTempBuffer(buf, bytes);
         return (static_cast<size_t>(bytes) == read_target_size);
     }
     else if (bytes == 0)
@@ -681,7 +681,7 @@ Server::receiveRequestHeaders(int client_fd)
             if (this->readBufferUntilHeaders(client_fd, buf, read_target_size))
             {
                 request.parseRequestHeaders();
-                if (peeked_bytes == read_target_size) // header까지 다읽었는데 버퍼에 남은게 없다.
+                if (peeked_bytes == read_target_size)
                 {
                     if (request.isBodyUnnecessary() ||
                         (request.isNormalBody() && request.getHeaders().at("Content-Length") == "0"))
@@ -905,7 +905,7 @@ Server::receiveRequest(int client_fd)
 
     case RecvRequest::HEADERS:
         this->receiveRequestHeaders(client_fd);
-        // this->processResponseBody()
+        //TODO: this->processResponseBody()
         break ;
 
     case RecvRequest::NORMAL_BODY:
@@ -1303,8 +1303,6 @@ Server::sendDataToCgi(int write_fd_to_cgi)
         {
             this->_server_manager->fdSet(response.getReadFdFromCgi(), FdSet::READ);
             this->_server_manager->fdClr(write_fd_to_cgi, FdSet::WRITE);
-            //TODO: client_fd를 클리어해줘야하는지 체크 안해줘도 될 것 같은데?
-            // this->_server_manager->fdClr(client_fd, FdSet::READ);
         }
     }
     else if (bytes == 0)
@@ -1519,7 +1517,7 @@ Server::closeClientSocket(int client_fd)
 {
     Response& response = this->_responses[client_fd];
     this->_server_manager->fdClr(client_fd, FdSet::READ);
-    this->_server_manager->fdClr(client_fd, FdSet::WRITE);  //new
+    this->_server_manager->fdClr(client_fd, FdSet::WRITE);
     this->_server_manager->setClosedFdOnFdTable(client_fd);
     this->_server_manager->updateFdMax(client_fd);
 
@@ -1635,17 +1633,11 @@ Server::findResourceAbsPath(int client_fd)
 
     Response& response = this->_responses[client_fd];
     response.setUriPath(path);
-    // extension 확인해서, cgi에 해당하면
-    //   path_info 분리
-    //   cgi script_name 분리
     response.setRouteAndLocationInfo(path, this);
     response.setQuery(parser.getQuery());
     std::string root = response.getLocationInfo().at("root");
-    // if (response.getRoute() != "/")
-    //     root.pop_back();
     std::string file_path = path.substr(response.getRoute().length());
     response.setResourceAbsPath(root + file_path);
-    // /Users/iwoo/Documents/Webserv/YoupiBanane/youpi.bad_extension
 
     
     Log::printTimeDiff(from, 2);

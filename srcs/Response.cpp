@@ -719,7 +719,6 @@ Response::initMimeTypeTable()
     };
 }
 
-//NOTE
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
@@ -729,8 +728,6 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
-
-    // Log::printLocationConfig(location_config);
 
     if (uri.length() == 1)
     {
@@ -861,8 +858,8 @@ Response::appendAllowHeader(std::string& headers)
 void
 Response::appendContentLanguageHeader(std::string& headers)
 {
-    //TODO html 외 다른 파일들의 메타데이터는 어찌 처리할지 결정할 것.
-    //NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면 생략한다.
+    // NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면, 
+    //       굳이 메타데이터를 추출하지 않도록 구현되어있음.
     std::string extension = this->getUriExtension();
     if (!(this->isExtensionExist(extension) 
             && this->isExtensionInMimeTypeTable(extension)
@@ -988,8 +985,6 @@ Response::appendTransferEncodingHeader(std::string& headers, const std::string& 
     timeval from;
     gettimeofday(&from, NULL);
 
-    //NOTE: 204 코드일 때와 1로 시작하는 상태코드, 
-    //NOTE: CONNECT 메서드이면서 2로 시작하는 상태코드일 때 Transfer-Encoding을 붙여서는 안됨
     if (this->getStatusCode() == "204" ||
         this->getStatusCode().front() == '1' ||
         (method == "CONNECT" && this->getStatusCode().front() == '2'))
@@ -1182,9 +1177,6 @@ Response::findAndSetUriExtension()
         {
             if ((index = abs_path.find(cgi_extension)) != std::string::npos)
             {
-                // this->setScriptName(abs_path.substr(0, index + cgi_extension.length()));
-                // this->setPathInfo(abs_path.substr(index + cgi_extension.length(), abs_path.length()));
-                // this->setPathTranslated(this->_location_info.at("root") + this->getPathInfo());
                 this->setUriExtension(cgi_extension);
                 return ;
             }
@@ -1205,7 +1197,6 @@ Response::isNeedToBeChunkedBody(const Request& request) const
     if (request.getVersion().compare("HTTP/1.1") != 0 && request.getVersion().compare("HTTP/2.0") != 0)
         return (false);
 
-    //NOTE: 아래 기준은 임의로 정한 것임.
     if (this->_file_info.st_size > BUFFER_SIZE && request.getMethod() != "PUT")
         return (true);
     if (this->getResourceType() == ResType::CGI)
@@ -1240,8 +1231,9 @@ Response::getRedirectUri(const Request& request) const
     Log::trace("> getRedirectUri", 2);
     timeval from;
     gettimeofday(&from, NULL);
-    //TODO: find 실패하지 않도록 invalid 여부는 처음 서버 만들 때 잘 확인할 것.
 
+    if (this->_location_info.find("return") == this->_location_info.end())
+        return ("/");
     const std::string& redirection_info = this->_location_info.at("return");
     std::string redirect_route = redirection_info.substr(redirection_info.find(" "));
     std::string requested_uri = request.getUri();
@@ -1390,7 +1382,7 @@ Response::encodeChunkedBody()
     timeval from;
     gettimeofday(&from, NULL);
 
-    const std::string& raw_body = this->getBody(); // raw_body
+    const std::string& raw_body = this->getBody();
     size_t already_encoded_size = this->getAlreadyEncodedSize(); // 지금까지 인코딩한 사이즈
     std::string chunked_body; // 청크처리되어 이번에 송신될 body.
     size_t target_size; // 이번 청크처리에서 청크처리할 사이즈.
