@@ -7,6 +7,8 @@
 /****************************  Static variables  ******************************/
 /*============================================================================*/
 
+extern std::vector<int> g_child_process_ids;
+
 /*============================================================================*/
 /******************************  Constructor  *********************************/
 /*============================================================================*/
@@ -308,11 +310,9 @@ ServerManager::runServers()
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
 
-        // if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, 
-        if ((selected_fds = select(-1, &this->_copy_readfds, 
+        if ((selected_fds = select(this->getFdMax() + 1, &this->_copy_readfds, 
             &this->_copy_writefds, &this->_copy_exceptfds, &timeout)) == -1)
         {
-            std::cerr<<"Error : select"<<std::endl;
             this->clearServers();
             return (false);
         }
@@ -427,6 +427,8 @@ ServerManager::closeUnresponsiveCgi(int pipe_fd)
                 return ;
             Response& response = server->getResponse(client_fd);
             kill(response.getCgiPid(), SIGKILL);
+            g_child_process_ids.erase(std::remove(g_child_process_ids.begin(), g_child_process_ids.end(),
+                                        response.getCgiPid()), g_child_process_ids.end());
             if (response.getSendProgress() == SendProgress::READY)
                 response.setStatusCode("500");
             else
@@ -545,17 +547,31 @@ ServerManager::closeStaticResource(Server& server, int resource_fd)
 void
 ServerManager::clearServers()
 {
-    for (int fd = 7; fd < this->getFdMax() + 1; fd++)
-        close(fd);
+    int status;
 
     for (Server* server : this->_servers)
+    {
+        for (int fd = 3; fd < this->getFdMax() + 1; fd++)
+        {
+            if (this->getFdTable()[fd].first == FdType::CLIENT_SOCKET)
+            {
+                kill(server->getResponse(fd).getCgiPid(), SIGKILL);
+                waitpid(server->getResponse(fd).getCgiPid(), &status, WNOHANG);
+            }
+            close(fd);
+            std::cout << "close fd: " << fd << std::endl;
+        }
         delete server;
+    }
 }
 
 void
 ServerManager::exitServers(int signo)
 {
-    std::cout << signo << std::endl;
-    std::cout << "EXIT!" << std::endl;
-    exit(0);
+    if (signo == SIGINT)
+    {
+        for (size_t i = 0; i < g_child_process_ids.size(); i++)
+            kill(g_child_process_ids[i], SIGINT);
+        exit(EXIT_SUCCESS);
+    }
 }
