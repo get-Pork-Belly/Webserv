@@ -21,8 +21,7 @@ PageGenerator::makeAutoIndex(Response& res)
 {
     std::string temp;
     std::string body;
-    const std::string& dir_ent = res.getDirectoryEntry();
-    std::vector<std::string> files = ft::split(dir_ent, " ");
+    const std::vector<std::string>& files = res.getDirectoryEntry();
 
     body.reserve(300);
     body += "<html>\n\t<head>\n\t\t<title>Index of " + res.getRoute() +

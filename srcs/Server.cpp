@@ -18,12 +18,11 @@ std::vector<int> g_child_process_ids(1024, 0);
 /******************************  Constructor  *********************************/
 /*============================================================================*/
 
-//TODO: _limit_client_body_size -> ServerGenerator에서 만들어 주도록 변경할 것.
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
 _server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
 _request_uri_limit_size(0), _request_header_limit_size(0), 
-_limit_client_body_size(150000000), _location_config(location_config)
+_location_config(location_config)
 {
     try
     {
@@ -102,14 +101,13 @@ void
 Server::setResourceAbsPathAsIndex(int fd)
 {
     Response& response = this->_responses[fd];
-    const std::string& dir_entry = response.getDirectoryEntry();
     const location_info& location_info = response.getLocationInfo();
     std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
 
     const std::string& path = response.getResourceAbsPath();
     for (std::string& index : indexs)
     {
-        if (dir_entry.find(index) != std::string::npos)
+        if (response.isFileInDirEntry(index))
         {
             response.setResourceType(ResType::STATIC_RESOURCE);
             if (path.back() == '/')
@@ -372,7 +370,7 @@ Server::ReceiveDataFromCgiPipeErrorException::ReceiveDataFromCgiPipeErrorExcepti
     int client_fd = server._server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     int write_fd_to_cgi = server._responses[client_fd].getWriteFdToCgi();
 
-    kill(server._responses[client_fd].getCgiPid(), SIGKILL);
+    kill(server._responses[client_fd].getCgiPid(), SIGTERM);
     server._server_manager->closeCgiWritePipe(server, write_fd_to_cgi);
     server._server_manager->closeCgiReadPipe(server, read_fd_from_cgi);
     server._responses[client_fd].setStatusCode("500");
@@ -390,7 +388,7 @@ Server::SendDataToCgiPipeErrorException::SendDataToCgiPipeErrorException(Server&
     int client_fd = server._server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     int read_fd_from_cgi= server._responses[client_fd].getReadFdFromCgi();
 
-    kill(server._responses[client_fd].getCgiPid(), SIGKILL);
+    kill(server._responses[client_fd].getCgiPid(), SIGTERM);
     server._server_manager->closeCgiWritePipe(server, write_fd_to_cgi);
     server._server_manager->closeCgiReadPipe(server, read_fd_from_cgi);
     server._responses[client_fd].setStatusCode("500");
@@ -716,9 +714,8 @@ Server::receiveRequestNormalBody(int client_fd)
     Request& request = this->_requests[client_fd];
 
     int content_length = request.getContentLength();
-    if (content_length > this->_limit_client_body_size)
+    if (content_length > DEFAULT_LIMIT_CLIENT_BODY_LENGTH)
         throw (PayloadTooLargeException(*this, client_fd));
-
     char buf[BUFFER_SIZE + 1];
     if ((bytes = recv(client_fd, buf, BUFFER_SIZE, 0)) > 0)
     {
@@ -1182,12 +1179,11 @@ Server::isCgiReadPipe(int fd) const
 bool
 Server::isIndexFileExist(int client_fd)
 {
-    const std::string& dir_entry = this->_responses[client_fd].getDirectoryEntry();
     const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     std::vector<std::string> indexs = ft::split(location_info.at("index"), " ");
     for (std::string& index : indexs)
     {
-        if (dir_entry.find(index) != std::string::npos)
+        if (this->_responses[client_fd].isFileInDirEntry(index))
             return (true);
     }
     return (false);
@@ -1860,8 +1856,8 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
             throw (CannotOpenDirectoryException(*this, client_fd, "409", errno));
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
-        std::vector<std::string> directory_entry = ft::split(response.getDirectoryEntry(), " ");
-        for (std::string& entry : directory_entry)
+        const std::vector<std::string>& directory_entry = response.getDirectoryEntry();
+        for (const std::string& entry : directory_entry)
         {
             if (entry != "./" && entry != "../")
                 this->deleteResourceOfUri(client_fd, path + entry);
