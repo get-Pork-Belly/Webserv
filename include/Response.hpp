@@ -22,8 +22,6 @@ private:
     std::vector<std::string> _directory_entry;
     struct stat _file_info;
     ResType _resource_type;
-    ParseProgress _parse_progress;
-    ReceiveProgress _receive_progress;
     std::string _body;
 
     int _stdin_of_cgi;
@@ -40,6 +38,9 @@ private:
 
     size_t _already_encoded_size;
 
+    ParseProgress _parse_progress;
+    ReceiveProgress _receive_progress;
+
     int _resource_fd;
     int _sended_response_size;
     std::string _response_message;
@@ -50,16 +51,18 @@ private:
     std::string _script_name;
     std::string _path_translated;
     std::string _request_uri_for_cgi;
+
+private:
+    Response(const Response& other);
+    /* Overload */
+    Response& operator=(const Response& rhs);
 public:
     /* Constructor */
     Response();
-    Response(const Response& other);
 
     /* Destructor */
     virtual ~Response();
 
-    /* Overload */
-    Response& operator=(const Response& rhs);
     /* Getter */
     const std::string& getStatusCode() const;
     const std::string& getStatusMessage(const std::string& code);

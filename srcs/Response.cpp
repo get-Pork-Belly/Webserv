@@ -32,25 +32,6 @@ _request_uri_for_cgi("")
     this->initMimeTypeTable();
 }
 
-Response::Response(const Response& other)
-: _status_code(other._status_code), _headers(other._headers),
-_status_code_table(other._status_code_table), _mime_type_table(other._mime_type_table),
-_location_info(other._location_info), _resource_abs_path(other._resource_abs_path),
-_route(other._route), _directory_entry(other._directory_entry),
-_file_info(other._file_info), _resource_type(other._resource_type),
-_body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
-_stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
-_write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
-_uri_path(other._uri_path), _uri_extension(other._uri_extension),
-_transmitting_body(other._transmitting_body), _query(other._query), 
-_already_encoded_size(other._already_encoded_size), _parse_progress(other._parse_progress),
-_receive_progress(other._receive_progress), _resource_fd(other._resource_fd),
-_sended_response_size(other._sended_response_size), _response_message(other._response_message),
-_send_progress(other._send_progress), _temp_buffer(other._temp_buffer), _path_info(other._path_info),
-_script_name(other._script_name), _path_translated(other._path_translated), 
-_request_uri_for_cgi(other._request_uri_for_cgi)
-{}
-
 /*============================================================================*/
 /******************************  Destructor  **********************************/
 /*============================================================================*/
@@ -62,44 +43,6 @@ Response::~Response()
 /*============================================================================*/
 /*******************************  Overload  ***********************************/
 /*============================================================================*/
-
-Response&
-Response::operator=(const Response& rhs)
-{
-    this->_status_code = rhs._status_code;
-    this->_headers = rhs._headers;
-    this->_status_code_table = rhs._status_code_table;
-    this->_mime_type_table = rhs._mime_type_table;
-    this->_location_info = rhs._location_info;
-    this->_resource_abs_path = rhs._resource_abs_path;
-    this->_route = rhs._route;
-    this->_directory_entry = rhs._directory_entry;
-    this->_file_info = rhs._file_info;
-    this->_resource_type = rhs._resource_type;
-    this->_body = rhs._body;
-    this->_stdin_of_cgi = rhs._stdin_of_cgi;
-    this->_stdout_of_cgi = rhs._stdout_of_cgi;
-    this->_read_fd_from_cgi = rhs._read_fd_from_cgi;
-    this->_write_fd_to_cgi = rhs._write_fd_to_cgi;
-    this->_cgi_pid = rhs._cgi_pid;
-    this->_uri_path = rhs._uri_path;
-    this->_uri_extension = rhs._uri_extension;
-    this->_transmitting_body = rhs._transmitting_body;
-    this->_query = rhs._query;
-    this->_already_encoded_size = rhs._already_encoded_size;
-    this->_parse_progress = rhs._parse_progress;
-    this->_receive_progress = rhs._receive_progress;
-    this->_resource_fd = rhs._resource_fd;
-    this->_sended_response_size = rhs._sended_response_size;
-    this->_response_message = rhs._response_message;
-    this->_send_progress = rhs._send_progress;
-    this->_temp_buffer = rhs._temp_buffer;
-    this->_path_info = rhs._path_info;
-    this->_script_name = rhs._script_name;
-    this->_path_translated = rhs._path_translated;
-    this->_request_uri_for_cgi = rhs._request_uri_for_cgi;
-    return (*this);
-}
 
 /*============================================================================*/
 /********************************  Getter  ************************************/
