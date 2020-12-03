@@ -869,11 +869,11 @@ Response::appendContentLanguageHeader(std::string& headers)
 void
 Response::appendContentLengthHeader(std::string& headers, const std::string& method)
 {
-    headers += "Content-Length: ";
     if (this->getStatusCode() == "204" ||
         this->getStatusCode().front() == '1' ||
         (method == "CONNECT" && this->getStatusCode().front() == '2'))
         return ;
+    headers += "Content-Length: ";
     headers += std::to_string(this->getTransmittingBody().length());
     headers += "\r\n";
 }
