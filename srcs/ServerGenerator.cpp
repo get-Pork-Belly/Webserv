@@ -120,7 +120,6 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
         {
             server_info server_config;
             this->initServerConfig(server_config, http_config);
-            it++;
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
             this->setDefaultRouteOfServer(locations, server_config);
@@ -172,7 +171,7 @@ ServerGenerator::parseHttpBlock()
     {
         if (it == ite)
             throw (ConfigFileSyntaxError(BRACKET_ERROR));
-        if (isEmptyLine(*it))
+        if (this->isEmptyLine(*it))
             continue ;
         if (*it == "server {")
             (*this.*skipServerBlock)(it, skip_server, skip_locations);
@@ -201,15 +200,13 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
 
     while (it != this->_configfile_lines.end())
     {
-        if (*it == "server {")
+        if (*it == "server {" || this->isEmptyLine(*it))
         {
             it++;
             continue ;
         }
         directives = ft::split(ft::ltrim(ft::rtrim(*it, " \t"), " \t"), " ");
-        if (directives.size() == 0)
-            it++;
-        else if (directives.size() == 1 && directives[0] == "}")
+        if (directives.size() == 1 && directives[0] == "}")
             return ;
         else if (directives[0] == "location")
         {
@@ -219,16 +216,36 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
         }
         else
         {
-            if (directives[1].back() != ';')
-                throw (ConfigFileSyntaxError(NO_SEMICOLON));
-            else
-                directives[1].pop_back();
-            server_config[directives[0]] = directives[1];
+            setDirectiveToConfig(server_config, directives);
             it++;
         }
     }
     if (it == this->_configfile_lines.end())
         throw (ConfigFileSyntaxError(BRACKET_ERROR));
+}
+
+void
+ServerGenerator::setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive)
+{
+    std::string joined;
+
+    if (directive[directive.size() - 1].back() != ';')
+        throw (ConfigFileSyntaxError(NO_SEMICOLON));
+    else
+        directive[directive.size() - 1].pop_back();
+    if (directive.size() == 1)
+        throw (ConfigFileSyntaxError(NO_ARGUMENT));
+    if (directive.size() > 2)
+    {
+        for (size_t i = 1; i < directive.size(); ++i)
+        {
+            joined += directive[i];
+            joined += " ";
+        }
+        config[directive[0]] = joined;
+    }
+    else
+        config[directive[0]] = directive[1];
 }
 
 location_info
@@ -252,24 +269,7 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
         else if (directives[0] == "location")
             throw (ConfigFileSyntaxError(BRACKET_ERROR));
         else
-        {
-            if (directives[directives.size() - 1].back() != ';')
-                throw (ConfigFileSyntaxError(NO_SEMICOLON));
-            else
-                directives[directives.size() - 1].pop_back();
-            std::string joined;
-            if (directives.size() > 2)
-            {
-                for (size_t i = 1; i < directives.size(); ++i)
-                {
-                    joined += directives[i];
-                    joined += " ";
-                }
-                location_config[directives[0]] = joined;
-            }
-            else
-                location_config[directives[0]] = directives[1];
-        }
+            setDirectiveToConfig(location_config, directives);
     }
     if (it == this->_configfile_lines.end())
         throw (ConfigFileSyntaxError(BRACKET_ERROR));
