@@ -46,11 +46,9 @@ private:
     ServerManager* _server_manager;
     std::map<std::string, std::string> _server_config;
     int _server_socket;
-    std::string _server_name;
+    std::string _server_name; // getter 만들어서 로그에서 조지기
     std::string _host;
     std::string _port;
-    int _request_uri_limit_size;
-    int _request_header_limit_size;
     struct sockaddr_in _server_address;
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
