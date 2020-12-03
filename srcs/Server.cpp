@@ -926,6 +926,33 @@ Server::receiveRequest(int client_fd)
 }
 
 void
+Server::setResponseMessageAccordingToTheParseProgress(int client_fd, std::string& status_line, std::string& headers)
+{
+    Request& request = this->_requests[client_fd];
+    Response& response = this->_responses[client_fd];
+    const std::string& method = request.getMethod();
+    switch (response.getParseProgress())
+    {
+    case ParseProgress::DEFAULT:
+        response.setParseProgress(ParseProgress::FINISH);
+        if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
+            response.setResponseMessage(status_line + headers);
+        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
+        break;
+    case ParseProgress::CHUNK_START:
+        if (request.getMethod() == "HEAD")
+            response.setResponseMessage(status_line + headers);
+        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
+        break;
+    default: //NOTE: PraseProgress::CHUNK_PROGRESS or ParseProgress::FINISH
+        if (request.getMethod() == "HEAD")
+            response.setResponseMessage("");
+        response.setResponseMessage(response.getTransmittingBody());
+        break;
+    }
+}
+
+void
 Server::makeResponseMessage(int client_fd)
 {
     Log::trace("> makeResponseMessage", 1);
@@ -934,10 +961,6 @@ Server::makeResponseMessage(int client_fd)
 
     Request& request = this->_requests[client_fd];
     Response& response = this->_responses[client_fd];
-    const std::string& method = request.getMethod();
-
-    std::string status_line;
-    std::string headers;
 
     if (response.getStatusCode().front() != '2')
         response.setResourceType(ResType::ERROR_HTML);
@@ -945,55 +968,19 @@ Server::makeResponseMessage(int client_fd)
     if (response.isRedirection(response.getStatusCode()) == false)
         response.makeBody(request);
 
-    const SendProgress& send_progress = response.getSendProgress();
-    if (send_progress == SendProgress::READY)
+    std::string status_line;
+    std::string headers;
+    if (response.getSendProgress() == SendProgress::READY)
     {
         headers = response.makeHeaders(request);
         status_line = response.makeStatusLine();
     }
 
-    //TODO: refactoring
-    const ParseProgress& parse_progress = response.getParseProgress();
-    switch (parse_progress)
-    {
-    case ParseProgress::FINISH:
-        if (method == "HEAD")
-            response.setResponseMessage("");
+    this->setResponseMessageAccordingToTheParseProgress(client_fd, status_line, headers);
 
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        response.setResponseMessage(response.getTransmittingBody());
-        break;
-    case ParseProgress::DEFAULT:
-        response.setParseProgress(ParseProgress::FINISH);
-        if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
-            response.setResponseMessage(status_line + headers);
+    Log::printTimeDiff(from, 1);
+    Log::trace("< makeResponseMessage", 1);
 
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
-        break;
-    case ParseProgress::CHUNK_START:
-        if (request.getMethod() == "HEAD")
-            response.setResponseMessage(status_line + headers);
-            
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        response.setResponseMessage(status_line + headers + response.getTransmittingBody());
-        break;
-    case ParseProgress::CHUNK_PROGRESS:
-        if (request.getMethod() == "HEAD")
-            response.setResponseMessage("");
-
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        response.setResponseMessage(response.getTransmittingBody());
-        break;
-    default:
-        Log::printTimeDiff(from, 1);
-        Log::trace("< makeResponseMessage", 1);
-        break;
-    }
 }
 
 long long sended_bytes;

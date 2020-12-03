@@ -101,6 +101,7 @@ public:
     void receiveRequestNormalBody(int fd);
     void receiveRequestChunkedBody(int fd);
     void makeResponseMessage(int fd);
+    void setResponseMessageAccordingToTheParseProgress(int client_fd, std::string& status_line, std::string& headers);
     void sendResponse(int fd);
     bool isClientOfServer(int fd) const;
     bool isIndexFileExist(int fd);
