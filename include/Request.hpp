@@ -9,7 +9,8 @@
 //NOTE: test용으로 ostream include함.
 #include <iostream>
 
-# define RECV_COUNT_NOT_REACHED -2
+const int RECV_COUNT_NOT_REACHED = -2;
+const int MAXIMUM_NUMBER_OF_MSG_PEEK_FOR_FULL_RECEPTION = 50;
 
 class Request
 {
