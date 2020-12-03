@@ -124,9 +124,36 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
             this->setDefaultRouteOfServer(locations, server_config);
+            testServerConfig(server_config);
+            testLocationConfig(locations);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
         }
     }
+}
+
+void
+ServerGenerator::checkHttpBlock(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite)
+{
+    while (it != ite)
+    {
+        if (*it == "http {")
+            break ;
+        it++;
+    }
+    if (it == ite)
+        throw (ConfigFileSyntaxError(NO_HTTP_BLOCK));
+}
+
+bool
+ServerGenerator::isEmptyLine(const std::string& line)
+{
+    for (char c : line)
+    {
+        if (c == ' ' || c == '\t')
+            continue ;
+        return (false);
+    }
+    return (true);
 }
 
 server_info
@@ -139,23 +166,18 @@ ServerGenerator::parseHttpBlock()
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
 
     this->initHttpConfig(http_config);
-    while (it != ite)
-    {
-        if (*it == "http {")
-            break ;
-        it++;
-    }
-    if (it == ite)
-        throw (ConfigFileSyntaxError("There must be http block in Config file"));
+    checkHttpBlock(it, ite);
 
     while (it++ != ite)
     {
         if (it == ite)
             throw (ConfigFileSyntaxError(BRACKET_ERROR));
-        if (*it == "}")
-            break ;
+        if (isEmptyLine(*it))
+            continue ;
         if (*it == "server {")
             (*this.*skipServerBlock)(it, skip_server, skip_locations);
+        if (*it == "}")
+            break ;
         else if (*it != "}")
         {
             if ((*it).back() == ';')
@@ -169,8 +191,6 @@ ServerGenerator::parseHttpBlock()
                 throw (ConfigFileSyntaxError(NO_SEMICOLON));
         }
     }
-    if (it != ite && *it != "}")
-        throw (ConfigFileSyntaxError(BRACKET_ERROR));
     return (http_config);
 }
 

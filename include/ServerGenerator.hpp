@@ -17,6 +17,7 @@ const int BUF_SIZE = 4096;
 const std::string NO_SEMICOLON = "Directive must end with a \';\'";
 const std::string INVALID_BLOCK = "Block directive's syntax error";
 const std::string BRACKET_ERROR = "Unexpected end of file, expecting \"}\"";
+const std::string NO_HTTP_BLOCK = "There must be http block in config file";
 
 class ServerGenerator
 {
@@ -80,6 +81,8 @@ public:
 
     void setDefaultRouteOfServer(std::map<std::string,
             location_info>& locations, server_info& server_config);
+    void checkHttpBlock(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite);
+    bool isEmptyLine(const std::string& line);
 };
 
 void testLocationConfig(std::map<std::string, location_info>& test);
