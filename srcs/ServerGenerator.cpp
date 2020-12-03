@@ -123,7 +123,7 @@ ServerGenerator::checkValidationOfLocationConfig(std::map<std::string, location_
         for (auto info : location.second)
         {
             std::vector<std::string>::iterator it = std::find(list.begin(), list.end(), info.first);
-            std::vector<std::string> arguments;
+            std::vector<std::string> value;
             if (it == list.end())
             {
                 std::cerr << info.first << " ";
@@ -131,19 +131,19 @@ ServerGenerator::checkValidationOfLocationConfig(std::map<std::string, location_
             }
             if (info.first == "return")
             {
-                arguments = ft::split(info.second, " ");
-                if (arguments.size() != 2)
-                    throw (ConfigFileSyntaxError(INVALID_ARGUMENTS));
-                if (arguments[0].length() != 3 || arguments[0].front() != '3')
-                    throw (ConfigFileSyntaxError(INVALID_ARGUMENTS));
+                value = ft::split(info.second, " ");
+                if (value.size() != 2)
+                    throw (ConfigFileSyntaxError(INVALID_VALUE));
+                if (value[0].length() != 3 || value[0].front() != '3')
+                    throw (ConfigFileSyntaxError(INVALID_VALUE));
             }
             else if (info.first == "cgi")
             {
-                arguments = ft::split(info.second, " ");
-                for (auto& arg : arguments)
+                value = ft::split(info.second, " ");
+                for (auto& arg : value)
                 {
                     if (arg.front() != '.')
-                        throw (ConfigFileSyntaxError(INVALID_ARGUMENTS));
+                        throw (ConfigFileSyntaxError(INVALID_VALUE));
                 }
             }
         }
@@ -159,7 +159,7 @@ ServerGenerator::checkValidationOfServerConfig(server_info& server)
      "limit_client_body_size", "server_name"};
     for (auto& directive : server)
     {
-        std::vector<std::string> arguments;
+        std::vector<std::string> value;
         std::vector<std::string>::iterator it = std::find(list.begin(), list.end(), directive.first);
         if (it == list.end())
         {
@@ -291,7 +291,7 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
 void
 ServerGenerator::setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive)
 {
-    std::string arguments;
+    std::string value;
 
     if (directive[directive.size() - 1].back() != ';')
         throw (ConfigFileSyntaxError(NO_SEMICOLON));
@@ -303,10 +303,10 @@ ServerGenerator::setDirectiveToConfig(std::map<std::string, std::string>& config
     {
         for (size_t i = 1; i < directive.size(); ++i)
         {
-            arguments += directive[i];
-            arguments += " ";
+            value += directive[i];
+            value += " ";
         }
-        config[directive[0]] = arguments;
+        config[directive[0]] = value;
     }
     else
         config[directive[0]] = directive[1];

@@ -19,7 +19,7 @@ const std::string INVALID_BLOCK = "Block directive's syntax error";
 const std::string BRACKET_ERROR = "Unexpected end of file, expecting \"}\"";
 const std::string NO_HTTP_BLOCK = "There must be http block in config file";
 const std::string NO_ARGUMENT = "Simple directive have at least one arguments";
-const std::string INVALID_ARGUMENTS = "Invalid arguments at Simple directive";
+const std::string INVALID_VALUE = "Invalid arguments at Simple directive";
 const std::string NOT_VALID_DIRECTIVE = "is not a valid Directive";
 
 class ServerGenerator
@@ -47,11 +47,11 @@ public:
     /* Exception */
     class ConfigFileSyntaxError : public ConfigFileErrorException
     {
-        private:
-            std::string _msg;
-        public:
-            ConfigFileSyntaxError(std::string msg);
-            virtual const char* what() const throw();
+    private:
+        std::string _msg;
+    public:
+        ConfigFileSyntaxError(std::string msg);
+        virtual const char* what() const throw();
     };
     /* Util */
     void convertFileToStringVector(const char *config_file_path);
