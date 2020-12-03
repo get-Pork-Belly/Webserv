@@ -972,15 +972,9 @@ Response::appendRetryAfterHeader(std::string& headers, const std::string& status
 
     headers += "Retry-After: ";
     if (status_code.compare("503") == 0)
-    {
-        //NOTE: nginx는 perl script 등을 이용하여 예상복구시간을 동적으로 계산한다. 오버디벨롭이라 판단하여 제외함.
         headers += ft::getEstimatedUnavailableTime();
-    }
     else
-    {
-        //TODO: throw 되지 않도록 예외처리.
         headers += this->getLocationInfo().at("retry_after_sec");
-    }
     headers += "\r\n";
 
     Log::printTimeDiff(from, 2);
@@ -1057,6 +1051,20 @@ Response::appendEntityHeaders(std::string& headers, Request& request)
         this->appendAllowHeader(headers);
 }
 
+void
+Response::appendResponseHeaders(std::string& headers, Request& request)
+{
+    const std::string& status_code = this->getStatusCode();
+    if (status_code == "200" && this->getResourceType() == ResType::STATIC_RESOURCE)
+        this->appendLastModifiedHeader(headers);
+    else if (status_code == "401")
+        this->appendAuthenticateHeader(headers);
+    else if (status_code == "201" || this->isRedirection(status_code))
+        this->appendLocationHeader(headers, request);
+    else if (status_code == "503" || status_code == "429" || status_code == "301")
+        this->appendRetryAfterHeader(headers, status_code);
+}
+
 std::string
 Response::makeHeaders(Request& request)
 {
@@ -1065,29 +1073,11 @@ Response::makeHeaders(Request& request)
     gettimeofday(&from, NULL);
 
     std::string headers;
-    // const std::string& method = request.getMethod();
     
     headers.reserve(400);
     this->appendGeneralHeaders(headers, request);
     this->appendEntityHeaders(headers, request);
-    // this->appendResponseHeaders(headers);
-
-    // Log::printLocationInfo(this->_location_info);
-
-    //TODO switch 문 고려
-    std::string status_code = this->getStatusCode();
-    if (status_code.compare("200") == 0)
-    {
-        if (this->getResourceType() == ResType::STATIC_RESOURCE)
-            this->appendLastModifiedHeader(headers);
-    }
-    else if (status_code.compare("401") == 0)
-        this->appendAuthenticateHeader(headers);
-    else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
-        this->appendLocationHeader(headers, request);
-    else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
-            || status_code.compare("301") == 0)
-        this->appendRetryAfterHeader(headers, status_code);
+    this->appendResponseHeaders(headers, request);
     headers += "\r\n";
 
     Log::printTimeDiff(from, 2);
