@@ -6,16 +6,20 @@
 #include "Response.hpp"
 #include <iostream>
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     if (argc > 2)
     {
-        //TODO: error message
+        std::cerr << "\033[31m\033[01m";
+        std::cerr << "===============================================" << std::endl;
+        std::cerr << "Please put less than two argv." << std::endl;
+        std::cerr << "===============================================" << std::endl;
+        std::cerr << "\033[0m";
         return (EXIT_FAILURE);
     }
 
-    const char *default_path = "tests/yohlee_config";
-    const char *config_path = (argc == 1) ? default_path : argv[1];
+    const char* default_path = "tests/yohlee_config";
+    const char* config_path = (argc == 1) ? default_path : argv[1];
     try
     {
         ServerManager server_manager(config_path);
@@ -33,7 +37,7 @@ int main(int argc, char *argv[])
     {
         std::cerr << e.what() << '\n';
     }
-    catch(const char *e)
+    catch(const char* e)
     {
         std::cerr<<e<<std::endl;
     }
