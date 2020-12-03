@@ -46,7 +46,6 @@ private:
     ServerManager* _server_manager;
     std::map<std::string, std::string> _server_config;
     int _server_socket;
-    std::string _server_name; // getter 만들어서 로그에서 조지기
     std::string _host;
     std::string _port;
     struct sockaddr_in _server_address;

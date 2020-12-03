@@ -20,7 +20,7 @@ std::vector<int> g_child_process_ids(1024, 0);
 
 Server::Server(ServerManager* server_manager, server_info& server_config, std::map<std::string, location_info>& location_config)
 : _server_manager(server_manager), _server_config(server_config),
-_server_socket(-1), _server_name(""), _host(server_config["server_name"]), _port(""),
+_server_socket(-1), _host(server_config["server_name"]), _port(""),
 _location_config(location_config)
 {
     try
@@ -424,7 +424,7 @@ Server::init()
 {
     for (auto& conf: this->_server_config)
     {
-        if (conf.first == "host")
+        if (conf.first == "server_name")
             this->_host = conf.second;
         else if (conf.first == "listen")
             this->_port = conf.second;
