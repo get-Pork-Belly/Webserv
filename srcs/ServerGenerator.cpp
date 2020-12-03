@@ -291,7 +291,7 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
 void
 ServerGenerator::setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive)
 {
-    std::string joined;
+    std::string arguments;
 
     if (directive[directive.size() - 1].back() != ';')
         throw (ConfigFileSyntaxError(NO_SEMICOLON));
@@ -303,10 +303,10 @@ ServerGenerator::setDirectiveToConfig(std::map<std::string, std::string>& config
     {
         for (size_t i = 1; i < directive.size(); ++i)
         {
-            joined += directive[i];
-            joined += " ";
+            arguments += directive[i];
+            arguments += " ";
         }
-        config[directive[0]] = joined;
+        config[directive[0]] = arguments;
     }
     else
         config[directive[0]] = directive[1];
