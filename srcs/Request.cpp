@@ -20,48 +20,6 @@ _received_request_line_length(0), _index_of_crlf_in_request_line(DEFAULT_INDEX_O
 _recv_counts(0), _carriege_return_trimmed(false), _temp_buffer("")
  {}
 
-Request::Request(const Request& other)
-: _method(other._method), _uri(other._uri), 
-_version(other._version), _headers(other._headers),
-_protocol(other._protocol), _body(other._body),
-_status_code(other._status_code), _info(other._info),
-_ip_address(other._ip_address), _transfered_body_size(other._transfered_body_size),
-_target_chunk_size(other._target_chunk_size), _received_chunk_data_length(other._received_chunk_data_length),
-_index_of_crlf_in_chunk_size(other._index_of_crlf_in_chunk_size),
-_received_chunk_size_length(other._received_chunk_size_length),
-_received_last_chunk_data_length(other._received_last_chunk_data_length),
-_received_request_line_length(other._received_request_line_length),
-_index_of_crlf_in_request_line(other._index_of_crlf_in_request_line),
-_recv_counts(other._recv_counts),
-_carriege_return_trimmed(other._carriege_return_trimmed), _temp_buffer(other._temp_buffer)
-{}
-
-Request&
-Request::operator=(const Request& other)
-{
-    this->_method = other._method;
-    this->_uri = other._uri;
-    this->_version = other._version;
-    this->_headers = other._headers;
-    this->_protocol = other._protocol;
-    this->_body = other._body;
-    this->_status_code = other._status_code;
-    this->_info = other._info;
-    this->_ip_address = other._ip_address;
-    this->_transfered_body_size = other._transfered_body_size;
-    this->_target_chunk_size = other._target_chunk_size;
-    this->_received_chunk_data_length = other._received_chunk_data_length;
-    this->_index_of_crlf_in_chunk_size = other._index_of_crlf_in_chunk_size;
-    this->_received_chunk_size_length = other._received_chunk_size_length;
-    this->_received_last_chunk_data_length = other._received_last_chunk_data_length;
-    this->_received_request_line_length = other._received_request_line_length;
-    this->_index_of_crlf_in_request_line = other._index_of_crlf_in_request_line;
-    this->_recv_counts = other._recv_counts;
-    this->_carriege_return_trimmed = other._carriege_return_trimmed;
-    this->_temp_buffer = other._temp_buffer;
-    return (*this);
-}
-
 /*============================================================================*/
 /******************************  Destructor  **********************************/
 /*============================================================================*/

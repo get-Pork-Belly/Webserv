@@ -40,12 +40,14 @@ private:
     bool _carriege_return_trimmed;
     std::string _temp_buffer;
 
+private:
+    Request(const Request& other);
+    /* Overload */
+    Request& operator=(const Request& rhs);
 
 public:
     /* Constructor */
     Request();
-    Request(const Request& other);
-    Request& operator=(const Request& rhs);
 
     /* Destructor */
     virtual ~Request();
