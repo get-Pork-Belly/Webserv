@@ -881,9 +881,10 @@ Response::appendContentLanguageHeader(std::string& headers)
 void
 Response::appendContentLengthHeader(std::string& headers, const std::string& method)
 {
-    if (this->getStatusCode() == "204" ||
-        this->getStatusCode().front() == '1' ||
-        (method == "CONNECT" && this->getStatusCode().front() == '2'))
+    const std::string& status_code = this->getStatusCode();
+    if (status_code == "204" ||
+        status_code.front() == '1' ||
+        (method == "CONNECT" && status_code.front() == '2'))
         return ;
     headers += "Content-Length: ";
     headers += std::to_string(this->getTransmittingBody().length());
@@ -1028,6 +1029,33 @@ Response::appendGeneralHeaders(std::string& headers, Request& request)
         this->appendConnectionHeader(headers, request);
 }
 
+void
+Response::appendEntityHeaders(std::string& headers, Request& request)
+{
+    const std::string& method = request.getMethod();
+    if ((method == "PUT" || method == "DELETE") && this->getStatusCode().front() == '2')
+    {
+        headers += "Content-Length: 0\r\n";
+        return ;
+    }
+
+    if (this->isNeedToBeChunkedBody(request))
+        this->appendTransferEncodingHeader(headers, method);
+    else
+        this->appendContentLengthHeader(headers, method);
+    this->appendContentLanguageHeader(headers);
+    this->appendContentTypeHeader(headers);
+
+    const std::string& status_code = this->getStatusCode();
+    if (status_code == "200")
+    {
+        if (method == "OPTIONS")
+            this->appendAllowHeader(headers);
+        this->appendContentLocationHeader(headers);
+    }
+    else if (status_code == "405")
+        this->appendAllowHeader(headers);
+}
 
 std::string
 Response::makeHeaders(Request& request)
@@ -1037,25 +1065,12 @@ Response::makeHeaders(Request& request)
     gettimeofday(&from, NULL);
 
     std::string headers;
-    const std::string& method = request.getMethod();
+    // const std::string& method = request.getMethod();
     
     headers.reserve(400);
     this->appendGeneralHeaders(headers, request);
-    // this->appendEntityHeaders(headers);
+    this->appendEntityHeaders(headers, request);
     // this->appendResponseHeaders(headers);
-
-    // Entity headers
-    if ((method == "PUT" || method == "DELETE") && this->getStatusCode().front() == '2')
-        headers += "Content-Length: 0\r\n";
-    else
-    {
-        this->appendContentLanguageHeader(headers);
-        this->appendContentTypeHeader(headers);
-        if (this->isNeedToBeChunkedBody(request))
-            this->appendTransferEncodingHeader(headers, method);
-        else
-            this->appendContentLengthHeader(headers, method);
-    }
 
     // Log::printLocationInfo(this->_location_info);
 
@@ -1063,14 +1078,9 @@ Response::makeHeaders(Request& request)
     std::string status_code = this->getStatusCode();
     if (status_code.compare("200") == 0)
     {
-        this->appendContentLocationHeader(headers);
         if (this->getResourceType() == ResType::STATIC_RESOURCE)
             this->appendLastModifiedHeader(headers);
-        if (method == "OPTIONS")
-            this->appendAllowHeader(headers);
     }
-    else if (status_code.compare("405") == 0)
-        this->appendAllowHeader(headers);
     else if (status_code.compare("401") == 0)
         this->appendAuthenticateHeader(headers);
     else if (status_code.compare("201") == 0 || this->isRedirection(status_code))

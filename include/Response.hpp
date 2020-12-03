@@ -216,6 +216,7 @@ public:
     void appendConnectionHeader(std::string& headers, Request& request);
 
     /* Entity header */
+    void appendEntityHeaders(std::string& headers, Request& request);
     void appendAllowHeader(std::string& headers);
     void appendContentLanguageHeader(std::string& headers);
     void appendContentLengthHeader(std::string& headers, const std::string& method);
