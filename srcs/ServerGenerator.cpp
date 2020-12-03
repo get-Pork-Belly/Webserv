@@ -105,7 +105,14 @@ ServerGenerator::setDefaultRouteOfServer(std::map<std::string, location_info>& l
 }
 
 void
-ServerGenerator::validCheckOfLocations(std::map<std::string, location_info>& locations)
+ServerGenerator::checkValidationOfConfigs(server_info& server, std::map<std::string, location_info>& locations)
+{
+    this->checkValidationOfServerConfig(server);
+    this->checkValidationOfLocationConfig(locations);
+}
+
+void
+ServerGenerator::checkValidationOfLocationConfig(std::map<std::string, location_info>& locations)
 {
     std::vector<std::string> list =
     {"autoindex", "auth_basic", "auth_basic_user_file", "cgi", "cgi_path",
@@ -144,7 +151,7 @@ ServerGenerator::validCheckOfLocations(std::map<std::string, location_info>& loc
 }
 
 void
-ServerGenerator::validCheckOfServer(server_info& server)
+ServerGenerator::checkValidationOfServerConfig(server_info& server)
 {
     std::vector<std::string> list =
     {"autoindex", "auth_basic", "auth_basic_user_file", "index",
@@ -160,7 +167,6 @@ ServerGenerator::validCheckOfServer(server_info& server)
             throw (ConfigFileSyntaxError(NOT_VALID_DIRECTIVE));
         }
     }
-    testServerConfig(server);
 }
 
 void 
@@ -181,8 +187,7 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             this->initServerConfig(server_config, http_config);
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
-            this->validCheckOfServer(server_config);
-            this->validCheckOfLocations(locations);
+            this->checkValidationOfConfigs(server_config, locations);
             this->setDefaultRouteOfServer(locations, server_config);
             servers.push_back(new Server(this->_server_manager, server_config, locations));
         }

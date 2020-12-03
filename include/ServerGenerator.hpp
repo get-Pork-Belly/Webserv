@@ -87,8 +87,9 @@ public:
     void checkHttpBlock(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite);
     bool isEmptyLine(const std::string& line);
     void setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive);
-    void validCheckOfLocations(std::map<std::string, location_info>& locations);
-    void validCheckOfServer(server_info& server);
+    void checkValidationOfConfigs(server_info& server, std::map<std::string, location_info>& locations);
+    void checkValidationOfServerConfig(server_info& server);
+    void checkValidationOfLocationConfig(std::map<std::string, location_info>& locations);
 
 };
 
