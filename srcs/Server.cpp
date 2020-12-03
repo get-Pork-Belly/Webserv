@@ -12,6 +12,8 @@
 /****************************  Static variables  ******************************/
 /*============================================================================*/
 
+std::vector<int> g_child_process_ids(1024, 0);
+
 /*============================================================================*/
 /******************************  Constructor  *********************************/
 /*============================================================================*/
@@ -2188,11 +2190,13 @@ Server::forkAndExecuteCgi(int client_fd)
     {
         close(stdin_of_cgi);
         close(stdout_of_cgi);
+        g_child_process_ids[client_fd] = pid;
         response.setCgiPid(pid);
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
         this->_server_manager->fdSet(response.getWriteFdToCgi(), FdSet::WRITE);
     }
+
     Log::printTimeDiff(from, 1);
     Log::trace("< forkAndExecuteCgi", 1);
 }
@@ -2213,6 +2217,7 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
 
+    g_child_process_ids[client_fd] = 0;
     waitpid(response.getCgiPid(), &status, 0);
 
     this->_server_manager->closeCgiReadPipe(*this, read_fd_from_cgi);

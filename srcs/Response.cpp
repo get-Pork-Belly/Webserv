@@ -20,7 +20,7 @@ Response::Response()
 _location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(""), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT_FD),
-_write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(DEFAULT_FD), _uri_path(""), _uri_extension(""), _transmitting_body(""),
+_write_fd_to_cgi(DEFAULT_FD),  _cgi_pid(0), _uri_path(""), _uri_extension(""), _transmitting_body(""),
 _query(""), _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resource_fd(DEFAULT_FD),
 _sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY),
