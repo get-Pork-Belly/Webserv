@@ -1017,8 +1017,7 @@ Response::makeHeaders(Request& request)
     std::string headers;
     const std::string& method = request.getMethod();
     
-    //TODO 적정 reserve size 구하기
-    headers.reserve(200);
+    headers.reserve(400);
     // General headers
     this->appendDateHeader(headers);
     this->appendServerHeader(headers);
