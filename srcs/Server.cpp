@@ -12,6 +12,8 @@
 /****************************  Static variables  ******************************/
 /*============================================================================*/
 
+std::vector<int> g_child_process_ids(1024, 0);
+
 /*============================================================================*/
 /******************************  Constructor  *********************************/
 /*============================================================================*/
@@ -1333,16 +1335,23 @@ Server::receiveDataFromCgi(int read_fd_from_cgi)
     Response& response = this->_responses[client_fd];
 
     char buf[BUFFER_SIZE + 1];
-
     bytes = read(read_fd_from_cgi, buf, BUFFER_SIZE);
+    buf[bytes] = 0;
+
     if (bytes > 0)
     {
         buf[bytes] = 0;
-        if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN)
+        if (response.getReceiveProgress() == ReceiveProgress::CGI_BEGIN ||
+            response.getReceiveProgress() == ReceiveProgress::PHP_CGI_BEGIN)
         {
             response.appendTempBuffer(buf, bytes);
             if (response.findEndOfHeaders())
             {
+                if (response.getReceiveProgress() == ReceiveProgress::PHP_CGI_BEGIN)
+                {
+                    response.trimPhpCgiFirstHeadersFromTempBuffer();
+                    response.setReceiveProgress(ReceiveProgress::CGI_BEGIN);
+                }
                 response.preparseCgiMessage();
                 response.setReceiveProgress(ReceiveProgress::ON_GOING);
                 this->_server_manager->fdClr(read_fd_from_cgi, FdSet::READ);
@@ -1628,6 +1637,9 @@ Server::findResourceAbsPath(int client_fd)
 
     Response& response = this->_responses[client_fd];
     response.setUriPath(path);
+    // extension 확인해서, cgi에 해당하면
+    //   path_info 분리
+    //   cgi script_name 분리
     response.setRouteAndLocationInfo(path, this);
     response.setQuery(parser.getQuery());
     std::string root = response.getLocationInfo().at("root");
@@ -1750,6 +1762,7 @@ Server::checkAndSetResourceType(int client_fd)
     {
         this->checkValidOfCgiMethod(client_fd);
         response.setResourceType(ResType::CGI);
+        response.setCgiEnvpValues();
         return ;
     }
     DIR* dir_ptr;
@@ -1816,7 +1829,10 @@ Server::preprocessResponseBody(int client_fd, ResType& res_type)
     case ResType::CGI:
         this->openCgiPipe(client_fd);
         this->forkAndExecuteCgi(client_fd);
-        this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
+        if (this->_responses[client_fd].getUriExtension() == ".php")
+            this->_responses[client_fd].setReceiveProgress(ReceiveProgress::PHP_CGI_BEGIN);
+        else
+            this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
         break ;
     default:
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
@@ -1981,13 +1997,27 @@ Server::makeEnvpUsingResponse(char** envp, int client_fd, int* idx)
 {
     const Response& response = this->_responses[client_fd];
     
+    std::string path_info;
+    std::string path_translated;
+    if (response.getPathInfo().length() == 0)
+    {
+        path_info = response.getUriPath();
+        path_translated = response.getResourceAbsPath();
+    }
+    else
+    {
+        path_info = response.getPathInfo();
+        path_translated = response.getPathTranslated();
+    }
+    if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + path_info)))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + path_translated)))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getRequestUriForCgi())))
+        return (false);
+    if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + response.getScriptName())))
+        return (false);
     if (!(envp[(*idx)++] = ft::strdup("QUERY_STRING=" + response.getQuery())))
-        return (false);
-    if (!(envp[(*idx)++] = ft::strdup("PATH_INFO=" + response.getUriPath())))
-        return (false);
-    if (!(envp[(*idx)++] = ft::strdup("PATH_TRANSLATED=" + response.getResourceAbsPath())))
-        return (false);
-    if (!(envp[(*idx)++] = ft::strdup("REQUEST_URI=" + response.getUriPath())))
         return (false);
     return (true);
 }
@@ -2029,14 +2059,9 @@ Server::makeEnvpUsingHeaders(char** envp, int client_fd, int* idx)
 }
 
 bool
-Server::makeEnvpUsingEtc(char** envp, int client_fd, int* idx)
+Server::makeEnvpUsingEtc(char** envp, int* idx)
 {
-    const std::map<std::string, std::string>& location_info =
-        this->getLocationConfig().at(this->_responses[client_fd].getRoute());
-
     if (!(envp[(*idx)++] = ft::strdup("GATEWAY_INTERFACE=Cgi/1.1")))
-        return (false);
-    if (!(envp[(*idx)++] = ft::strdup("SCRIPT_NAME=" + location_info.at("cgi_path"))))
         return (false);
     if (!(envp[(*idx)++] = ft::strdup("SERVER_NAME=" + this->getHost())))
         return (false);
@@ -2069,7 +2094,7 @@ Server::makeCgiEnvp(int client_fd)
     if (!this->makeEnvpUsingRequest(envp, client_fd, &idx) ||
         !this->makeEnvpUsingResponse(envp, client_fd, &idx) ||
         !this->makeEnvpUsingHeaders(envp, client_fd, &idx) ||
-        !this->makeEnvpUsingEtc(envp, client_fd, &idx))
+        !this->makeEnvpUsingEtc(envp, &idx))
     {
         ft::doubleFree(&envp);
         throw (InternalServerException(*this, client_fd));
@@ -2087,34 +2112,19 @@ Server::makeCgiArgv(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-
     char** argv;
-    Response& response = this->_responses[client_fd];
 
-    if (!(argv = (char **)malloc(sizeof(char *) * 3)))
+    if (!(argv = (char **)malloc(sizeof(char *) * 2)))
         throw (InternalServerException(*this, client_fd));
-    const location_info& location_info =
-            this->getLocationConfig().at(this->_responses[client_fd].getRoute());
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 2; i++)
         argv[i] = nullptr;
-    location_info::const_iterator it = location_info.find("cgi_path");
-    if (it == location_info.end())
-    {
-        ft::doubleFree(&argv);
-        throw (InternalServerException(*this, client_fd));
-    }
-    if (!(argv[0] = ft::strdup(location_info.at("cgi_path"))))
-    {
-        ft::doubleFree(&argv);
-        throw (InternalServerException(*this, client_fd));
-    }
-    if (!(argv[1] = ft::strdup(response.getResourceAbsPath())))
+    if (!(argv[0] = ft::strdup(this->_responses[client_fd].getScriptName())))
     {
         ft::doubleFree(&argv);
         throw (InternalServerException(*this, client_fd));
     }
 
-    
+
     Log::printTimeDiff(from, 2);
     Log::trace("< makeCgiArgv", 2);
     return (argv);
@@ -2155,6 +2165,7 @@ Server::forkAndExecuteCgi(int client_fd)
         ft::doubleFree(&envp);
         throw (InternalServerException(*this, client_fd));
     }
+
     if ((pid = fork()) < 0)
         throw (InternalServerException(*this, client_fd));
     else if (pid == 0)
@@ -2165,6 +2176,10 @@ Server::forkAndExecuteCgi(int client_fd)
             throw (InternalServerException(*this, client_fd));
         if (dup2(stdout_of_cgi, 1) < 0)
             throw (InternalServerException(*this, client_fd));
+        
+        if (this->_responses[client_fd].getUriExtension() == ".php" &&
+            (ret = execve(PHP_CGI_PATH.c_str(), argv, envp)) < 0)
+            exit(ret);
         if ((ret = execve(argv[0], argv, envp)) < 0)
             exit(ret);
         exit(ret);
@@ -2173,11 +2188,13 @@ Server::forkAndExecuteCgi(int client_fd)
     {
         close(stdin_of_cgi);
         close(stdout_of_cgi);
+        g_child_process_ids[client_fd] = pid;
         response.setCgiPid(pid);
         ft::doubleFree(&argv);
         ft::doubleFree(&envp);
         this->_server_manager->fdSet(response.getWriteFdToCgi(), FdSet::WRITE);
     }
+
     Log::printTimeDiff(from, 1);
     Log::trace("< forkAndExecuteCgi", 1);
 }
@@ -2198,6 +2215,7 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
 
+    g_child_process_ids[client_fd] = 0;
     waitpid(response.getCgiPid(), &status, 0);
 
     this->_server_manager->closeCgiReadPipe(*this, read_fd_from_cgi);
