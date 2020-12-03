@@ -9,7 +9,8 @@
 //NOTE: test용으로 ostream include함.
 #include <iostream>
 
-# define RECV_COUNT_NOT_REACHED -2
+const int RECV_COUNT_NOT_REACHED = -2;
+const int MAXIMUM_NUMBER_OF_MSG_PEEK_FOR_FULL_RECEPTION = 50;
 
 class Request
 {
@@ -39,12 +40,14 @@ private:
     bool _carriege_return_trimmed;
     std::string _temp_buffer;
 
+private:
+    Request(const Request& other);
+    /* Overload */
+    Request& operator=(const Request& rhs);
 
 public:
     /* Constructor */
     Request();
-    Request(const Request& other);
-    Request& operator=(const Request& rhs);
 
     /* Destructor */
     virtual ~Request();
@@ -114,6 +117,7 @@ public:
     bool isBodyUnnecessary() const;
     bool isNormalBody() const;
     bool isChunkedBody() const;
+    bool isConnectionHeaderClose() const;
 
     int peekMessageFromClient(int client_fd, char* buf);
     void raiseRecvCounts();

@@ -16,7 +16,7 @@
 */
 
 Response::Response()
-: _status_code("200"), _headers(), _transfer_type(""), _clients(""),
+: _status_code("200"), _headers(),
 _location_info(), _resource_abs_path(""), _route(""),
 _directory_entry(), _resource_type(ResType::NOT_YET_CHECKED), _body(""),
 _stdin_of_cgi(DEFAULT_FD), _stdout_of_cgi(DEFAULT_FD), _read_fd_from_cgi(DEFAULT_FD),
@@ -32,26 +32,6 @@ _request_uri_for_cgi("")
     this->initMimeTypeTable();
 }
 
-Response::Response(const Response& other)
-: _status_code(other._status_code), _headers(other._headers),
-_transfer_type(other._transfer_type), _clients(other._clients),
-_status_code_table(other._status_code_table), _mime_type_table(other._mime_type_table),
-_location_info(other._location_info), _resource_abs_path(other._resource_abs_path),
-_route(other._route), _directory_entry(other._directory_entry),
-_file_info(other._file_info), _resource_type(other._resource_type),
-_body(other._body), _stdin_of_cgi(other._stdout_of_cgi),
-_stdout_of_cgi(other._stdout_of_cgi), _read_fd_from_cgi(other._read_fd_from_cgi),
-_write_fd_to_cgi(other._write_fd_to_cgi), _cgi_pid(other._cgi_pid),
-_uri_path(other._uri_path), _uri_extension(other._uri_extension),
-_transmitting_body(other._transmitting_body), _query(other._query), 
-_already_encoded_size(other._already_encoded_size), _parse_progress(other._parse_progress),
-_receive_progress(other._receive_progress), _resource_fd(other._resource_fd),
-_sended_response_size(other._sended_response_size), _response_message(other._response_message),
-_send_progress(other._send_progress), _temp_buffer(other._temp_buffer), _path_info(other._path_info),
-_script_name(other._script_name), _path_translated(other._path_translated), 
-_request_uri_for_cgi(other._request_uri_for_cgi)
-{}
-
 /*============================================================================*/
 /******************************  Destructor  **********************************/
 /*============================================================================*/
@@ -63,46 +43,6 @@ Response::~Response()
 /*============================================================================*/
 /*******************************  Overload  ***********************************/
 /*============================================================================*/
-
-Response&
-Response::operator=(const Response& rhs)
-{
-    this->_status_code = rhs._status_code;
-    this->_headers = rhs._headers;
-    this->_transfer_type = rhs._transfer_type;
-    this->_clients = rhs._clients;
-    this->_status_code_table = rhs._status_code_table;
-    this->_mime_type_table = rhs._mime_type_table;
-    this->_location_info = rhs._location_info;
-    this->_resource_abs_path = rhs._resource_abs_path;
-    this->_route = rhs._route;
-    this->_directory_entry = rhs._directory_entry;
-    this->_file_info = rhs._file_info;
-    this->_resource_type = rhs._resource_type;
-    this->_body = rhs._body;
-    this->_stdin_of_cgi = rhs._stdin_of_cgi;
-    this->_stdout_of_cgi = rhs._stdout_of_cgi;
-    this->_read_fd_from_cgi = rhs._read_fd_from_cgi;
-    this->_write_fd_to_cgi = rhs._write_fd_to_cgi;
-    this->_cgi_pid = rhs._cgi_pid;
-    this->_uri_path = rhs._uri_path;
-    this->_uri_extension = rhs._uri_extension;
-    this->_transmitting_body = rhs._transmitting_body;
-    this->_query = rhs._query;
-    this->_already_encoded_size = rhs._already_encoded_size;
-    this->_parse_progress = rhs._parse_progress;
-    this->_receive_progress = rhs._receive_progress;
-    this->_resource_fd = rhs._resource_fd;
-    this->_sended_response_size = rhs._sended_response_size;
-    this->_response_message = rhs._response_message;
-    this->_send_progress = rhs._send_progress;
-    this->_temp_buffer = rhs._temp_buffer;
-    this->_path_info = rhs._path_info;
-    this->_script_name = rhs._script_name;
-    this->_path_translated = rhs._path_translated;
-    this->_request_uri_for_cgi = rhs._request_uri_for_cgi;
-    return (*this);
-}
 
 /*============================================================================*/
 /********************************  Getter  ************************************/
@@ -562,8 +502,6 @@ Response::init()
 {
     this->_status_code = "200";
     this->_headers = {};
-    this->_transfer_type = "";
-    this->_clients = "";
     this->_location_info = {};
     this->_resource_abs_path = "";
     this->_route = "";
@@ -719,7 +657,6 @@ Response::initMimeTypeTable()
     };
 }
 
-//NOTE
 bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
@@ -729,8 +666,6 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 
     std::map<std::string, location_info> location_config = server->getLocationConfig();
     std::string route;
-
-    // Log::printLocationConfig(location_config);
 
     if (uri.length() == 1)
     {
@@ -809,6 +744,18 @@ Response::appendServerHeader(std::string& headers)
 }
 
 void
+Response::appendConnectionHeader(std::string& headers, Request& request)
+{
+    //NOTE: 아래 경우를 제외하고는 keep-alive
+    //      1. status code가 200이 아닌 경우.
+    //      2. Request에 포함된 Connection header 값이 close인 경우.
+    if (this->getStatusCode() != "200" || request.isConnectionHeaderClose())
+        headers += "Connection: close\r\n";
+    else
+        headers += "Connection: keep-alive\r\n";
+}
+
+void
 Response::appendAllowHeader(std::string& headers)
 {
     const std::vector<const std::string> implemented_methods = {
@@ -817,10 +764,10 @@ Response::appendAllowHeader(std::string& headers)
         "HEAD",
         "PUT",
         "DELETE",
-        "CONNECT",
+        // "CONNECT", not implemented
         "OPTIONS",
         "TRACE",
-        "PATCH",
+        // "PATCH", not implemented
     };
 
     headers += "Allow:";
@@ -849,10 +796,10 @@ Response::appendAllowHeader(std::string& headers)
 void
 Response::appendContentLanguageHeader(std::string& headers)
 {
-    //TODO html 외 다른 파일들의 메타데이터는 어찌 처리할지 결정할 것.
-    //NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면 생략한다.
+    // NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면, 
+    //       굳이 메타데이터를 추출하지 않도록 구현되어있음.
     std::string extension = this->getUriExtension();
-    if (!(this->isExtensionExist(extension) 
+    if (!(this->ExtensionExists(extension) 
             && this->isExtensionInMimeTypeTable(extension)
             && this->getMimeTypeTable().at(extension).compare("text/html") == 0))
         return ;
@@ -869,9 +816,10 @@ Response::appendContentLanguageHeader(std::string& headers)
 void
 Response::appendContentLengthHeader(std::string& headers, const std::string& method)
 {
-    if (this->getStatusCode() == "204" ||
-        this->getStatusCode().front() == '1' ||
-        (method == "CONNECT" && this->getStatusCode().front() == '2'))
+    const std::string& status_code = this->getStatusCode();
+    if (status_code == "204" ||
+        status_code.front() == '1' ||
+        (method == "CONNECT" && status_code.front() == '2'))
         return ;
     headers += "Content-Length: ";
     headers += std::to_string(this->getTransmittingBody().length());
@@ -902,7 +850,7 @@ Response::appendContentTypeHeader(std::string& headers)
         std::string extension = this->getUriExtension();
         if (this->getResourceType() == ResType::AUTO_INDEX || this->getResourceType() == ResType::ERROR_HTML)
             headers += "text/html";
-        else if (this->isExtensionExist(extension) && this->isExtensionInMimeTypeTable(extension))
+        else if (this->ExtensionExists(extension) && this->isExtensionInMimeTypeTable(extension))
             headers += this->getMimeTypeTable().at(extension);
         else
             headers += "application/octet-stream";
@@ -959,15 +907,9 @@ Response::appendRetryAfterHeader(std::string& headers, const std::string& status
 
     headers += "Retry-After: ";
     if (status_code.compare("503") == 0)
-    {
-        //NOTE: nginx는 perl script 등을 이용하여 예상복구시간을 동적으로 계산한다. 오버디벨롭이라 판단하여 제외함.
         headers += ft::getEstimatedUnavailableTime();
-    }
     else
-    {
-        //TODO: throw 되지 않도록 예외처리.
         headers += this->getLocationInfo().at("retry_after_sec");
-    }
     headers += "\r\n";
 
     Log::printTimeDiff(from, 2);
@@ -981,8 +923,6 @@ Response::appendTransferEncodingHeader(std::string& headers, const std::string& 
     timeval from;
     gettimeofday(&from, NULL);
 
-    //NOTE: 204 코드일 때와 1로 시작하는 상태코드, 
-    //NOTE: CONNECT 메서드이면서 2로 시작하는 상태코드일 때 Transfer-Encoding을 붙여서는 안됨
     if (this->getStatusCode() == "204" ||
         this->getStatusCode().front() == '1' ||
         (method == "CONNECT" && this->getStatusCode().front() == '2'))
@@ -1007,6 +947,57 @@ Response::appendAuthenticateHeader(std::string& headers)
     headers += "\r\n";
 }
 
+void
+Response::appendGeneralHeaders(std::string& headers, Request& request)
+{
+    this->appendDateHeader(headers);
+    this->appendServerHeader(headers);
+    if (request.getVersion() != "HTTP/2.0")
+        this->appendConnectionHeader(headers, request);
+}
+
+void
+Response::appendEntityHeaders(std::string& headers, Request& request)
+{
+    const std::string& method = request.getMethod();
+    if ((method == "PUT" || method == "DELETE") && this->getStatusCode().front() == '2')
+    {
+        headers += "Content-Length: 0\r\n";
+        return ;
+    }
+
+    if (this->isNeedToBeChunkedBody(request))
+        this->appendTransferEncodingHeader(headers, method);
+    else
+        this->appendContentLengthHeader(headers, method);
+    this->appendContentLanguageHeader(headers);
+    this->appendContentTypeHeader(headers);
+
+    const std::string& status_code = this->getStatusCode();
+    if (status_code == "200")
+    {
+        if (method == "OPTIONS")
+            this->appendAllowHeader(headers);
+        this->appendContentLocationHeader(headers);
+    }
+    else if (status_code == "405")
+        this->appendAllowHeader(headers);
+}
+
+void
+Response::appendResponseHeaders(std::string& headers, Request& request)
+{
+    const std::string& status_code = this->getStatusCode();
+    if (status_code == "200" && this->getResourceType() == ResType::STATIC_RESOURCE)
+        this->appendLastModifiedHeader(headers);
+    else if (status_code == "401")
+        this->appendAuthenticateHeader(headers);
+    else if (status_code == "201" || this->isRedirection(status_code))
+        this->appendLocationHeader(headers, request);
+    else if (status_code == "503" || status_code == "429" || status_code == "301")
+        this->appendRetryAfterHeader(headers, status_code);
+}
+
 std::string
 Response::makeHeaders(Request& request)
 {
@@ -1015,64 +1006,11 @@ Response::makeHeaders(Request& request)
     gettimeofday(&from, NULL);
 
     std::string headers;
-    const std::string& method = request.getMethod();
     
-    //TODO 적정 reserve size 구하기
-    headers.reserve(200);
-    // General headers
-    this->appendDateHeader(headers);
-    this->appendServerHeader(headers);
-
-    // Entity headers
-    if (method == "PUT" && this->getStatusCode().front() == '2')
-        headers += "Content-Length: 0\r\n";
-    else
-    {
-        this->appendContentLanguageHeader(headers);
-        this->appendContentTypeHeader(headers);
-        if (this->isNeedToBeChunkedBody(request))
-            this->appendTransferEncodingHeader(headers, method);
-        else
-            this->appendContentLengthHeader(headers, method);
-    }
-
-    // Log::printLocationInfo(this->_location_info);
-
-    //TODO switch 문 고려
-    std::string status_code = this->getStatusCode();
-    if (status_code.compare("200") == 0)
-    {
-        this->appendContentLocationHeader(headers);
-        if (this->getResourceType() == ResType::STATIC_RESOURCE)
-            this->appendLastModifiedHeader(headers);
-        if (method == "OPTIONS")
-            this->appendAllowHeader(headers);
-    }
-    else if (status_code.compare("405") == 0)
-        this->appendAllowHeader(headers);
-    else if (status_code.compare("401") == 0)
-    {
-        this->appendAuthenticateHeader(headers);
-    }
-    // else if (status_code.compare("403") == 0)
-    // {
-
-    // }
-    else if (status_code.compare("201") == 0 || this->isRedirection(status_code))
-        this->appendLocationHeader(headers, request);
-    else if (status_code.compare("503") == 0 || status_code.compare("429") == 0 
-            || status_code.compare("301") == 0)
-    {
-        this->appendRetryAfterHeader(headers, status_code);
-    }
-    
-    //NOTE: error code를 응답하는 경우를 제외하고는 keep-alive
-    //TODO: 인증헤더 관련하여서도 keep-alive인지 확인할 것.
-    //TODO: request의 헤더가 close이면 close로 처리시킬 것.
-    if (status_code != "200") // || isRequestConnectionClose())
-        headers += "Connection: close\r\n";
-    else
-        headers += "Connection: keep-alive\r\n";
+    headers.reserve(400);
+    this->appendGeneralHeaders(headers, request);
+    this->appendEntityHeaders(headers, request);
+    this->appendResponseHeaders(headers, request);
     headers += "\r\n";
 
     Log::printTimeDiff(from, 2);
@@ -1151,7 +1089,7 @@ Response::isAllowedMethod(const std::string& method)
 }
 
 bool
-Response::isExtensionExist(const std::string& extension) const
+Response::ExtensionExists(const std::string& extension) const
 {
     return (extension != "");
 }
@@ -1177,9 +1115,6 @@ Response::findAndSetUriExtension()
         {
             if ((index = abs_path.find(cgi_extension)) != std::string::npos)
             {
-                // this->setScriptName(abs_path.substr(0, index + cgi_extension.length()));
-                // this->setPathInfo(abs_path.substr(index + cgi_extension.length(), abs_path.length()));
-                // this->setPathTranslated(this->_location_info.at("root") + this->getPathInfo());
                 this->setUriExtension(cgi_extension);
                 return ;
             }
@@ -1200,7 +1135,6 @@ Response::isNeedToBeChunkedBody(const Request& request) const
     if (request.getVersion().compare("HTTP/1.1") != 0 && request.getVersion().compare("HTTP/2.0") != 0)
         return (false);
 
-    //NOTE: 아래 기준은 임의로 정한 것임.
     if (this->_file_info.st_size > BUFFER_SIZE && request.getMethod() != "PUT")
         return (true);
     if (this->getResourceType() == ResType::CGI)
@@ -1235,8 +1169,9 @@ Response::getRedirectUri(const Request& request) const
     Log::trace("> getRedirectUri", 2);
     timeval from;
     gettimeofday(&from, NULL);
-    //TODO: find 실패하지 않도록 invalid 여부는 처음 서버 만들 때 잘 확인할 것.
 
+    if (this->_location_info.find("return") == this->_location_info.end())
+        return ("/");
     const std::string& redirection_info = this->_location_info.at("return");
     std::string redirect_route = redirection_info.substr(redirection_info.find(" "));
     std::string requested_uri = request.getUri();
@@ -1385,7 +1320,7 @@ Response::encodeChunkedBody()
     timeval from;
     gettimeofday(&from, NULL);
 
-    const std::string& raw_body = this->getBody(); // raw_body
+    const std::string& raw_body = this->getBody();
     size_t already_encoded_size = this->getAlreadyEncodedSize(); // 지금까지 인코딩한 사이즈
     std::string chunked_body; // 청크처리되어 이번에 송신될 body.
     size_t target_size; // 이번 청크처리에서 청크처리할 사이즈.
