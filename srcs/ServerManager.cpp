@@ -298,7 +298,6 @@ ServerManager::runServers()
         this->fdSet(server_socket, FdSet::ALL);
         this->updateFdMax(server_socket);
     }
-    //TODO: siganl 입력시 반복종료 구현
     while (true)
     {
         this->closeUnresponsiveFd();
