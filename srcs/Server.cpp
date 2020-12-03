@@ -370,7 +370,7 @@ Server::ReceiveDataFromCgiPipeErrorException::ReceiveDataFromCgiPipeErrorExcepti
     int client_fd = server._server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     int write_fd_to_cgi = server._responses[client_fd].getWriteFdToCgi();
 
-    kill(server._responses[client_fd].getCgiPid(), SIGKILL);
+    kill(server._responses[client_fd].getCgiPid(), SIGTERM);
     server._server_manager->closeCgiWritePipe(server, write_fd_to_cgi);
     server._server_manager->closeCgiReadPipe(server, read_fd_from_cgi);
     server._responses[client_fd].setStatusCode("500");
@@ -388,7 +388,7 @@ Server::SendDataToCgiPipeErrorException::SendDataToCgiPipeErrorException(Server&
     int client_fd = server._server_manager->getLinkedFdFromFdTable(write_fd_to_cgi);
     int read_fd_from_cgi= server._responses[client_fd].getReadFdFromCgi();
 
-    kill(server._responses[client_fd].getCgiPid(), SIGKILL);
+    kill(server._responses[client_fd].getCgiPid(), SIGTERM);
     server._server_manager->closeCgiWritePipe(server, write_fd_to_cgi);
     server._server_manager->closeCgiReadPipe(server, read_fd_from_cgi);
     server._responses[client_fd].setStatusCode("500");

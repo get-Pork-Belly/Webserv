@@ -425,7 +425,7 @@ ServerManager::closeUnresponsiveCgi(int pipe_fd)
             if (!server)
                 return ;
             Response& response = server->getResponse(client_fd);
-            kill(response.getCgiPid(), SIGKILL);
+            kill(response.getCgiPid(), SIGTERM);
             g_child_process_ids[client_fd] = 0;
             if (response.getSendProgress() == SendProgress::READY)
                 response.setStatusCode("500");
@@ -553,7 +553,7 @@ ServerManager::clearServers()
         {
             if (this->getFdTable()[fd].first == FdType::CLIENT_SOCKET)
             {
-                kill(server->getResponse(fd).getCgiPid(), SIGKILL);
+                kill(server->getResponse(fd).getCgiPid(), SIGTERM);
                 waitpid(server->getResponse(fd).getCgiPid(), &status, WNOHANG);
             }
             close(fd);
@@ -570,9 +570,12 @@ ServerManager::exitServers(int signo)
     {
         for (size_t i = 0; i < g_child_process_ids.size(); i++)
         {
-            kill(g_child_process_ids[i], SIGKILL);
-            if (g_child_process_ids[i] != 0)
+            // NOTE: pid is zero, sig is sent to all processes whose group ID is equal to the process group ID to the sender
+            if (g_child_process_ids[i] != 0) 
+            {
+                kill(g_child_process_ids[i], SIGTERM);
                 std::cout<<"server killed pid["<<g_child_process_ids[i]<<"] before exit"<<std::endl;
+            }
         }
         exit(EXIT_SUCCESS);
     }
