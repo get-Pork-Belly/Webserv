@@ -14,8 +14,6 @@ class Response
 private:
     std::string _status_code;
     std::map<std::string, std::string> _headers;
-    std::string _transfer_type;
-    std::string _clients;
     std::map<std::string, std::string> _status_code_table;
     std::map<std::string, std::string> _mime_type_table;
     location_info _location_info;
@@ -53,23 +51,22 @@ private:
     std::string _script_name;
     std::string _path_translated;
     std::string _request_uri_for_cgi;
+
+private:
+    Response(const Response& other);
+    /* Overload */
+    Response& operator=(const Response& rhs);
 public:
     /* Constructor */
     Response();
-    Response(const Response& other);
 
     /* Destructor */
     virtual ~Response();
 
-    /* Overload */
-    Response& operator=(const Response& rhs);
     /* Getter */
     const std::string& getStatusCode() const;
     const std::string& getStatusMessage(const std::string& code);
     const std::string& getRoute() const;
-    // std::string getHeaders() const;
-    // std::string getTransferType() const;
-    // std::string getClients() const;
     const location_info& getLocationInfo() const;
     const std::string& getResourceAbsPath() const;
     const std::vector<std::string>& getDirectoryEntry() const;
@@ -77,7 +74,6 @@ public:
     const ResType& getResourceType() const;
     const std::string& getBody() const;
     const std::string& getUriPath() const;
-    // int getCgiPipeFd() const;
     const std::map<std::string, std::string>& getMimeTypeTable() const;
     const std::string& getUriExtension() const;
     int getStdinOfCgi() const;
@@ -171,11 +167,10 @@ public:
         virtual const char* what() const throw();
     };
     /* Util */
-    // bool isLocationUri(const std::string& uri, Server* server);
     bool setRouteAndLocationInfo(const std::string& uri, Server* server);
     bool isLimitExceptInLocation();
     bool isAllowedMethod(const std::string& method);
-    bool isExtensionExist(const std::string& extension) const;
+    bool ExtensionExists(const std::string& extension) const;
     bool isExtensionInMimeTypeTable(const std::string& extension) const;
     void findAndSetUriExtension();
     bool isNeedToBeChunkedBody(const Request& request) const;
@@ -199,26 +194,33 @@ public:
     void init();
     void initStatusCodeTable();
     void initMimeTypeTable();
+
+    std::string makeStatusLine();
+    std::string makeHeaders(Request& request);
     void makeBody(Request& request);
     void makeTraceBody(const Request& request);
     void makeOptionBody();
-    std::string makeHeaders(Request& request);
-    std::string makeStatusLine();
 
     void appendBody(char* buf, int bytes);
     void appendTempBuffer(char* buf, int bytes);
     void trimPhpCgiFirstHeadersFromTempBuffer();
 
     /* General header */
+    void appendGeneralHeaders(std::string& headers, Request& request);
     void appendDateHeader(std::string& headers);
     void appendServerHeader(std::string& headers);
+    void appendConnectionHeader(std::string& headers, Request& request);
 
     /* Entity header */
+    void appendEntityHeaders(std::string& headers, Request& request);
     void appendAllowHeader(std::string& headers);
     void appendContentLanguageHeader(std::string& headers);
     void appendContentLengthHeader(std::string& headers, const std::string& method);
     void appendContentLocationHeader(std::string& headers);
     void appendContentTypeHeader(std::string& headers);
+
+    /* Respones header */
+    void appendResponseHeaders(std::string& headers, Request& request);
     void appendLastModifiedHeader(std::string& headers);
     void appendLocationHeader(std::string& headers, const Request& request);
     void appendRetryAfterHeader(std::string& headers, const std::string& status_code);
