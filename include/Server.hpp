@@ -128,6 +128,8 @@ public:
     void acceptClient();
     void openCgiPipe(int fd);
     void forkAndExecuteCgi(int fd);
+
+    void writeSequence(int fd);
     char** makeCgiArgv(int fd);
     char** makeCgiEnvp(int fd);
     bool makeEnvpUsingRequest(char** envp, int fd, int* idx);
@@ -139,6 +141,7 @@ public:
     bool isCgiReadPipe(int fd) const;
     bool isCgiWritePipe(int fd) const;
 
+    void readSequence(int fd);
     void receiveChunkSize(int fd);
     void receiveChunkData(int client_fd, int receive_size);
     void receiveLastChunkData(int fd);
@@ -159,6 +162,7 @@ public:
     void finishReceiveDataFromCgiPipe(int read_fd_from_cgi);
 
     void killCgiAndSendErrorToClient(int fd);
+    void findAndCloseClientSocket(int fd);
 
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
