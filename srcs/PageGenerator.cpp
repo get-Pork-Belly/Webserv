@@ -27,8 +27,8 @@ PageGenerator::makeAutoIndex(Response& res)
     body += "<html>\n\t<head>\n\t\t<title>Index of " + res.getRoute() +
         "</title>\n\t</head>\n\t<body>\n\t\t<h1>Index of" + res.getRoute() +
         "</h1>\n\t\t<hr>\n\t\t<pre>";
-    for (auto& s : files)
-        body += "\n\t\t\t<a href=\""+ s +"\">" + s + "</a>";
+    for (auto& file : files)
+        body += "\n\t\t\t<a href=\""+ res.getUriPath() + file +"\">" + file + "</a>";
     body += "\n\t\t</pre>\n\t\t<hr>\n\t</body>\n</html>";
     res.setTransmittingBody(body);
 }

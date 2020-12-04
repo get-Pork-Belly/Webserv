@@ -1004,10 +1004,6 @@ Server::sendResponse(int client_fd)
     if (bytes > 0)
     {
         sended_bytes += bytes;
-        // std::cout<<response_message<<std::endl;
-        // std::cout<<"\033[1;44;37m"<<"sended_bytes: "<<sended_bytes<<"\033[0m"<<std::endl;
-        // std::cout<<"\033[1;44;37m"<<"ParseProgress: "<<Log::parseProgressToString(this->_responses[client_fd].getParseProgress())<<"\033[0m"<<std::endl;
-
         sended_response_size += bytes;
         response.setSendedResponseSize(sended_response_size);
         if (sended_response_size == response_message_size)
@@ -1743,6 +1739,8 @@ Server::checkAndSetResourceType(int client_fd)
     DIR* dir_ptr;
     if ((dir_ptr = opendir(response.getResourceAbsPath().c_str())) != NULL)
     {
+        if (response.getUriPath().back() != '/')
+            response.setUriPath(response.getUriPath() + "/");
         response.setDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
         if (method.compare("PUT") == 0)
