@@ -19,3 +19,13 @@ CannotSendErrorCodeToClientException::what() const throw()
 {
     return ("[CannotSendErrorCodeToClientException] <-- overloaded");
 }
+
+ConfigFileErrorException::ConfigFileErrorException()
+{
+}
+
+const char*
+ConfigFileErrorException::what() const throw()
+{
+    return ("[ConfigFileErrorException] <-- overloaded");
+}

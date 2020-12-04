@@ -15,9 +15,8 @@ ServerGenerator::ServerGenerator(ServerManager* server_manager)
 : _server_manager(server_manager)
 {
     this->convertFileToStringVector(this->_server_manager->getConfigFilePath());
-    // TODO 구현하기
-    // if (!this->isValidConfigFile())
-    //     throw "config file error"; // throw
+    if (!this->isConfigFileBracketAllPaired())
+        throw (ConfigFileSyntaxError(BRACKET_ERROR));
 }
 
 /*============================================================================*/
@@ -42,6 +41,17 @@ ServerGenerator::~ServerGenerator()
 
 /*============================================================================*/
 /******************************  Exception  ***********************************/
+
+ServerGenerator::ConfigFileSyntaxError::ConfigFileSyntaxError(std::string msg)
+: _msg(msg)
+{
+}
+
+const char*
+ServerGenerator::ConfigFileSyntaxError::what() const throw()
+{
+    return (this->_msg.c_str());
+}
 
 /*============================================================================*/
 /*============================================================================*/
@@ -96,12 +106,77 @@ ServerGenerator::setDefaultRouteOfServer(std::map<std::string, location_info>& l
     }
 }
 
+void
+ServerGenerator::checkValidationOfConfigs(server_info& server, std::map<std::string, location_info>& locations)
+{
+    this->checkValidationOfServerConfig(server);
+    this->checkValidationOfLocationConfig(locations);
+}
+
+void
+ServerGenerator::checkValidationOfLocationConfig(std::map<std::string, location_info>& locations)
+{
+    std::vector<std::string> list =
+    {"autoindex", "auth_basic", "auth_basic_user_file", "cgi", "cgi_path",
+     "index", "return","retry_after_sec", "route", "root", "limit_except",
+     "limit_client_body_size"};
+    for (auto& location : locations)
+    {
+        for (auto info : location.second)
+        {
+            std::vector<std::string>::iterator it = std::find(list.begin(), list.end(), info.first);
+            std::vector<std::string> value;
+            if (it == list.end())
+            {
+                std::cerr << info.first << " ";
+                throw (ConfigFileSyntaxError(INVALID_DIRECtiVE));
+            }
+            if (info.first == "return")
+            {
+                value = ft::split(info.second, " ");
+                if (value.size() != 2)
+                    throw (ConfigFileSyntaxError(INVALID_VALUE));
+                if (value[0].length() != 3 || value[0].front() != '3')
+                    throw (ConfigFileSyntaxError(INVALID_VALUE));
+            }
+            else if (info.first == "cgi")
+            {
+                value = ft::split(info.second, " ");
+                for (auto& arg : value)
+                {
+                    if (arg.front() != '.')
+                        throw (ConfigFileSyntaxError(INVALID_VALUE));
+                }
+            }
+        }
+    }
+}
+
+void
+ServerGenerator::checkValidationOfServerConfig(server_info& server)
+{
+    std::vector<std::string> list =
+    {"autoindex", "auth_basic", "auth_basic_user_file", "index",
+     "retry_after_sec", "route", "root", "limit_except", "listen",
+     "limit_client_body_size", "server_name"};
+    for (auto& directive : server)
+    {
+        std::vector<std::string> value;
+        std::vector<std::string>::iterator it = std::find(list.begin(), list.end(), directive.first);
+        if (it == list.end())
+        {
+            std::cerr << directive.first << " ";
+            throw (ConfigFileSyntaxError(INVALID_DIRECtiVE));
+        }
+    }
+}
+
 //TODO: server generate 중 에러 발생시 catch 해줄 것.
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
     server_info http_config;
-    std::vector<std::string> directives;
+    bool server_block_exists = false;
     
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
@@ -109,20 +184,73 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
 
     while (it != ite)
     {
-        if ( *it == "server {")
+        if ( *it++ == "server {")
         {
             server_info server_config;
             this->initServerConfig(server_config, http_config);
-            it++;
             std::map<std::string, location_info> locations;
             this->parseServerBlock(it, server_config, locations);
+            this->checkValidationOfConfigs(server_config, locations);
             this->setDefaultRouteOfServer(locations, server_config);
-            // testServerConfig(server_config);
-            // testLocationConfig(locations);
-            servers.push_back(new Server(this->_server_manager, server_config, locations));
+            server_block_exists = true;
+            testServerConfig(server_config);
+            try
+            {
+                Server* server = new Server(this->_server_manager, server_config, locations);
+                servers.push_back(server);
+            }
+            catch (std::bad_alloc& e)
+            {
+                for (auto& s : servers)
+                    delete s;
+                throw ("new Failed");
+            }
         }
+    }
+    if (server_block_exists == false)
+        throw ("There is no server block in config_file!");
+}
+
+bool
+ServerGenerator::httpBlockExists(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite)
+{
+    while (it != ite)
+    {
+        if (*it == "http {")
+            return (true);
         it++;
     }
+    return (false);
+}
+
+bool
+ServerGenerator::isConfigFileBracketAllPaired() const
+{
+    //NOTE: line by line, { 이나 }가 한줄에 하나만 있어야한다. 이에 따르지 않으면 undefined behavior가 발생한다.
+    //NOTE: 또한 파일명, 폴더명에 '{' or '}' 이 포함되어있다면 undefined behavior가 발생한다.
+    int count_not_paired_bracket = 0;
+    for (auto& line : this->_configfile_lines)
+    {
+        if (line.find("{") != std::string::npos)
+            count_not_paired_bracket++;
+        if (line.find("}") != std::string::npos)
+            count_not_paired_bracket--;
+    }
+    if (count_not_paired_bracket == 0)
+        return (true);
+    return (false);
+}
+
+bool
+ServerGenerator::isEmptyLine(const std::string& line)
+{
+    for (char c : line)
+    {
+        if (c == ' ' || c == '\t')
+            continue ;
+        return (false);
+    }
+    return (true);
 }
 
 server_info
@@ -135,24 +263,33 @@ ServerGenerator::parseHttpBlock()
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
 
     this->initHttpConfig(http_config);
-    while (it != ite)
+    if (!httpBlockExists(it, ite))
+        throw (ConfigFileSyntaxError(NO_HTTP_BLOCK));
+
+    while (it++ != ite)
     {
-        if (*it == "http {")
-            break ;
-        it++;
-    }
-    while (it != ite)
-    {
-        if ((*it).back() == ';')
-        {
-            size_t pos = (*it).find(" ");
-            std::string key = (*it).substr(0, pos);
-            std::string value = ft::ltrim(ft::rtrim((*it).substr(pos), "; "), " ");
-            http_config[key] = value;
-        }
-        else if (*it == "server {")
+        if (it == ite)
+            throw (ConfigFileSyntaxError(BRACKET_ERROR));
+        if (this->isEmptyLine(*it))
+            continue ;
+        if (*it == "server {")
             (*this.*skipServerBlock)(it, skip_server, skip_locations);
-        it++;
+        if (*it == "}")
+            break ;
+        else if (*it != "}")
+        {
+            if ((*it).back() == ';')
+            {
+                size_t pos = (*it).find(" ");
+                if (pos == std::string::npos)
+                    throw (ConfigFileSyntaxError(INVALID_DIRECtiVE));
+                std::string key = (*it).substr(0, pos);
+                std::string value = ft::ltrim(ft::rtrim((*it).substr(pos), "; "), " ");
+                http_config[key] = value;
+            }
+            else
+                throw (ConfigFileSyntaxError(NO_SEMICOLON));
+        }
     }
     return (http_config);
 }
@@ -164,21 +301,52 @@ ServerGenerator::parseServerBlock(std::vector<std::string>::iterator& it, server
 
     while (it != this->_configfile_lines.end())
     {
-        directives = ft::split(*it, " ");
-        if (directives[0] == "location")
+        if (*it == "server {" || this->isEmptyLine(*it))
+        {
+            it++;
+            continue ;
+        }
+        directives = ft::split(ft::ltrim(ft::rtrim(*it, " \t"), " \t"), " ");
+        if (directives.size() == 1 && directives[0] == "}")
+            return ;
+        else if (directives[0] == "location")
         {
             location_info location_config = this->parseLocationBlock(it, server_config);
             locations[location_config["route"]] = location_config;
             continue ;
         }
-        if (directives[0] == "}")
-            return ;
-        std::string temp = ft::rtrim(directives[1], ";");
-        directives[1] = temp;
-        server_config[directives[0]] = directives[1];
-        directives.clear();
-        it++;
+        else
+        {
+            setDirectiveToConfig(server_config, directives);
+            it++;
+        }
     }
+    if (it == this->_configfile_lines.end())
+        throw (ConfigFileSyntaxError(BRACKET_ERROR));
+}
+
+void
+ServerGenerator::setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive)
+{
+    std::string value;
+
+    if (directive[directive.size() - 1].back() != ';')
+        throw (ConfigFileSyntaxError(NO_SEMICOLON));
+    else
+        directive[directive.size() - 1].pop_back();
+    if (directive.size() == 1)
+        throw (ConfigFileSyntaxError(NO_ARGUMENT));
+    if (directive.size() > 2)
+    {
+        for (size_t i = 1; i < directive.size(); ++i)
+        {
+            value += directive[i];
+            value += " ";
+        }
+        config[directive[0]] = value;
+    }
+    else
+        config[directive[0]] = directive[1];
 }
 
 location_info
@@ -188,46 +356,31 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
     location_info location_config;
 
     this->initLocationConfig(location_config, server_config);
+    directives = ft::split(ft::ltrim(ft::rtrim(*it++, " \t"), " \t"), " ");
+    if (directives.size() != 3 || directives[2] != "{")
+        throw (ConfigFileSyntaxError(INVALID_BLOCK));
+    location_config["route"] = directives[1];
     while (it != this->_configfile_lines.end())
     {
-        directives = ft::split(*it, " ");
-        if (directives[0] == "location")
-        {
-            location_config["route"] = directives[1];
-            it++;
+        directives = ft::split(ft::ltrim(ft::rtrim(*it++, " \t"), " \t"), " ");
+        if (directives.size() == 0)
             continue ;
-        }
-        if (directives[0] == "}")
-        {
-            it++;
+        else if (directives[0] == "}")
             return (location_config);
-        }
-        std::string joined;
-        if (directives.size() > 2)
-        {
-            for (size_t i = 1; i < directives.size(); ++i)
-            {
-                joined += directives[i];
-                joined += " ";
-            }
-            joined = ft::rtrim(joined, "; ");
-            location_config[directives[0]] = joined;
-        }
+        else if (directives[0] == "location")
+            throw (ConfigFileSyntaxError(BRACKET_ERROR));
         else
-        {
-            std::string temp = ft::rtrim(directives[1], ";");
-            location_config[directives[0]] = temp;
-        }
-        directives.clear();
-        it++;
+            setDirectiveToConfig(location_config, directives);
     }
+    if (it == this->_configfile_lines.end())
+        throw (ConfigFileSyntaxError(BRACKET_ERROR));
     return (location_config);
 }
 
 void
 ServerGenerator::initHttpConfig(server_info& http_config)
 {
-    http_config["root"] = "html";
+    http_config["root"] = "/Users/iwoo/Documents/Webserv";
     http_config["index"] = "index.html";
     http_config["autoindex"] = "off";
     http_config["auth_basic"] = "off";
@@ -240,7 +393,6 @@ ServerGenerator::initServerConfig(server_info& server_config, server_info& http_
     const std::map<std::string, std::string>::iterator& ite = http_config.end();
 
     server_config["listen"] = std::to_string(8080);
-    server_config["client_max_body_size"] = std::string("1m");
     if (http_config.find("root") != ite)
         server_config["root"] = http_config["root"];
     if (http_config.find("index") != ite)

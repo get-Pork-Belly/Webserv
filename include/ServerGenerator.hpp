@@ -9,10 +9,18 @@
 # include "utils.hpp"
 # include "Server.hpp"
 # include <iomanip>
+# include "exception"
 
 class ServerManager;
 
 const int BUF_SIZE = 4096;
+const std::string NO_SEMICOLON = "[CONFIG ERROR] Directive must end with a \';\'";
+const std::string INVALID_BLOCK = "[CONFIG ERROR] Block directive's syntax error";
+const std::string BRACKET_ERROR = "[CONFIG ERROR] Unexpected end of file, expecting \"}\"";
+const std::string NO_HTTP_BLOCK = "[CONFIG ERROR] There must be http block in config file";
+const std::string NO_ARGUMENT = "[CONFIG ERROR] Simple directive have at least one arguments";
+const std::string INVALID_VALUE = "[CONFIG ERROR] Invalid arguments at Simple directive";
+const std::string INVALID_DIRECtiVE = "[CONFIG ERROR] Invalid directive";
 
 class ServerGenerator
 {
@@ -37,10 +45,16 @@ public:
     /* Getter */
     /* Setter */
     /* Exception */
+    class ConfigFileSyntaxError : public ConfigFileErrorException
+    {
+    private:
+        std::string _msg;
+    public:
+        ConfigFileSyntaxError(std::string msg);
+        virtual const char* what() const throw();
+    };
     /* Util */
     void convertFileToStringVector(const char *config_file_path);
-    // TODO isValidConfigFile 구현하기
-    // bool isValidConfigFile() const; //throw
     void generateServers(std::vector<Server *>& servers);
 
     void initHttpConfig(server_info& http_config);
@@ -70,6 +84,14 @@ public:
 
     void setDefaultRouteOfServer(std::map<std::string,
             location_info>& locations, server_info& server_config);
+    bool httpBlockExists(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite);
+    bool isConfigFileBracketAllPaired() const;
+    bool isEmptyLine(const std::string& line);
+    void setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive);
+    void checkValidationOfConfigs(server_info& server, std::map<std::string, location_info>& locations);
+    void checkValidationOfServerConfig(server_info& server);
+    void checkValidationOfLocationConfig(std::map<std::string, location_info>& locations);
+
 };
 
 void testLocationConfig(std::map<std::string, location_info>& test);
