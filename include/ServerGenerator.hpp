@@ -84,7 +84,8 @@ public:
 
     void setDefaultRouteOfServer(std::map<std::string,
             location_info>& locations, server_info& server_config);
-    void checkHttpBlock(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite);
+    bool httpBlockExists(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite);
+    bool isConfigFileBracketAllPaired() const;
     bool isEmptyLine(const std::string& line);
     void setDirectiveToConfig(std::map<std::string, std::string>& config, std::vector<std::string>& directive);
     void checkValidationOfConfigs(server_info& server, std::map<std::string, location_info>& locations);

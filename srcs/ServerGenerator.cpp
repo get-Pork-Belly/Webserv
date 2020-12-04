@@ -15,6 +15,8 @@ ServerGenerator::ServerGenerator(ServerManager* server_manager)
 : _server_manager(server_manager)
 {
     this->convertFileToStringVector(this->_server_manager->getConfigFilePath());
+    if (!this->isConfigFileBracketAllPaired())
+        throw (ConfigFileSyntaxError(BRACKET_ERROR));
 }
 
 /*============================================================================*/
@@ -174,6 +176,7 @@ void
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
     server_info http_config;
+    bool server_block_exists = false;
     
     std::vector<std::string>::iterator it = this->_configfile_lines.begin();
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
@@ -189,6 +192,8 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             this->parseServerBlock(it, server_config, locations);
             this->checkValidationOfConfigs(server_config, locations);
             this->setDefaultRouteOfServer(locations, server_config);
+            server_block_exists = true;
+            testServerConfig(server_config);
             try
             {
                 Server* server = new Server(this->_server_manager, server_config, locations);
@@ -202,19 +207,38 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
             }
         }
     }
+    if (server_block_exists == false)
+        throw ("There is no server block in config_file!");
 }
 
-void
-ServerGenerator::checkHttpBlock(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite)
+bool
+ServerGenerator::httpBlockExists(std::vector<std::string>::iterator& it, const std::vector<std::string>::iterator& ite)
 {
     while (it != ite)
     {
         if (*it == "http {")
-            break ;
+            return (true);
         it++;
     }
-    if (it == ite)
-        throw (ConfigFileSyntaxError(NO_HTTP_BLOCK));
+    return (false);
+}
+
+bool
+ServerGenerator::isConfigFileBracketAllPaired() const
+{
+    //NOTE: line by line, { 이나 }가 한줄에 하나만 있어야한다. 이에 따르지 않으면 undefined behavior가 발생한다.
+    //NOTE: 또한 파일명, 폴더명에 '{' or '}' 이 포함되어있다면 undefined behavior가 발생한다.
+    int count_not_paired_bracket = 0;
+    for (auto& line : this->_configfile_lines)
+    {
+        if (line.find("{") != std::string::npos)
+            count_not_paired_bracket++;
+        if (line.find("}") != std::string::npos)
+            count_not_paired_bracket--;
+    }
+    if (count_not_paired_bracket == 0)
+        return (true);
+    return (false);
 }
 
 bool
@@ -239,7 +263,8 @@ ServerGenerator::parseHttpBlock()
     std::vector<std::string>::iterator ite = this->_configfile_lines.end();
 
     this->initHttpConfig(http_config);
-    checkHttpBlock(it, ite);
+    if (!httpBlockExists(it, ite))
+        throw (ConfigFileSyntaxError(NO_HTTP_BLOCK));
 
     while (it++ != ite)
     {
@@ -256,6 +281,8 @@ ServerGenerator::parseHttpBlock()
             if ((*it).back() == ';')
             {
                 size_t pos = (*it).find(" ");
+                if (pos == std::string::npos)
+                    throw (ConfigFileSyntaxError(NOT_VALID_DIRECTIVE));
                 std::string key = (*it).substr(0, pos);
                 std::string value = ft::ltrim(ft::rtrim((*it).substr(pos), "; "), " ");
                 http_config[key] = value;
@@ -353,7 +380,7 @@ ServerGenerator::parseLocationBlock(std::vector<std::string>::iterator& it, serv
 void
 ServerGenerator::initHttpConfig(server_info& http_config)
 {
-    http_config["root"] = "html";
+    http_config["root"] = "/Users/iwoo/Documents/Webserv";
     http_config["index"] = "index.html";
     http_config["autoindex"] = "off";
     http_config["auth_basic"] = "off";
