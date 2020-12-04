@@ -645,7 +645,10 @@ Server::receiveRequestLine(int client_fd)
     {
         buf[bytes] = 0;
         if (this->isExistCrlf(client_fd, RecvRequest::REQUEST_LINE))
+        {
             this->readBufferUntilRequestLine(client_fd);
+            this->parseUriAndSetResponse(client_fd);
+        }
         else
             this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::REQUEST_LINE);
     }
@@ -1495,6 +1498,18 @@ Server::run(int fd)
                 }
                 std::cerr << e.what() << '\n';
             }
+            // catch(const std::exception& e)
+            // {
+            //     std::cerr << e.what() << '\n';
+            //     if (this->isCgiReadPipe(fd))
+            //     {
+            //         this->_server_manager->closeCgiReadPipe(*this, fd);
+                    
+            //     }
+            //     else if (this->isStaticResource(fd))
+            //         this->readStaticResource(fd);
+            //     else if (this->isClientSocket(fd))
+            // }
         }
     }
 }
@@ -1863,8 +1878,6 @@ Server::processResponseBody(int client_fd)
     Log::trace("> processResopnseBody", 1);
     timeval from;
     gettimeofday(&from, NULL);
-
-    this->parseUriAndSetResponse(client_fd);
 
     const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     if (location_info.find("limit_client_body_size") != location_info.end())
