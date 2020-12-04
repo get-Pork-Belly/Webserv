@@ -12,7 +12,7 @@
 /****************************  Static variables  ******************************/
 /*============================================================================*/
 
-std::vector<int> g_child_process_ids(1024, 0);
+extern std::vector<int> g_child_process_ids;
 
 /*============================================================================*/
 /******************************  Constructor  *********************************/
@@ -1544,6 +1544,8 @@ Server::closeClientSocket(int client_fd)
         this->_server_manager->closeCgiWritePipe(*this, response.getWriteFdToCgi());
     if (response.isCgiReadPipeNotClosed())
         this->_server_manager->closeCgiReadPipe(*this, response.getReadFdFromCgi());
+    if (this->_server_manager->isCgiProcessTerminated(client_fd) == false)
+        this->_server_manager->terminateCgiProcess(client_fd);
     if (response.isResourceNotClosed())
         this->_server_manager->closeStaticResource(*this, response.getResourceFd());
     response.init();
@@ -2219,7 +2221,7 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
 
-    g_child_process_ids[client_fd] = 0;
+    g_child_process_ids[client_fd] = DEFAULT_PID;
     waitpid(response.getCgiPid(), &status, 0);
 
     this->_server_manager->closeCgiReadPipe(*this, read_fd_from_cgi);
@@ -2259,7 +2261,7 @@ Server::killCgiAndSendErrorToClient(int fd)
     {
         client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
         kill(this->_responses[client_fd].getCgiPid(), SIGTERM);
-        g_child_process_ids[client_fd] = 0;
+        g_child_process_ids[client_fd] = DEFAULT_PID;
     }
     else if (this->isStaticResource(fd))
         client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
