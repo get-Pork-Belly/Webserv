@@ -1506,33 +1506,17 @@ Server::run(int fd)
                 if (this->isCgiReadPipe(fd))
                 {
                     client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    int write_fd_to_cgi = this->_responses[client_fd].getWriteFdToCgi();
-                    if (write_fd_to_cgi != DEFAULT_FD)
-                        this->_server_manager->closeCgiWritePipe(*this, write_fd_to_cgi);
-                    this->_server_manager->closeCgiReadPipe(*this, fd);
-                    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-                    this->_responses[client_fd].setStatusCode("500");
                     kill(this->_responses[client_fd].getCgiPid(), SIGTERM);
+                    g_child_process_ids[client_fd] = 0;
                 }
                 else if (this->isStaticResource(fd))
-                {
                     client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    this->_server_manager->closeStaticResource(*this, fd);
-                    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-                    this->_responses[client_fd].setStatusCode("500");
-                }
                 else if (this->isClientSocket(fd))
-                {
                     client_fd = fd;
-                    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-                    this->_responses[client_fd].setStatusCode("500");
-                }
                 else
-                {
                     client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-                    this->_responses[client_fd].setStatusCode("500");
-                }
+                this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+                this->_responses[client_fd].setStatusCode("500");
             }
         }
     }
