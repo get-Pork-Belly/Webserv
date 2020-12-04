@@ -17,4 +17,11 @@ public:
     virtual const char* what() const throw();
 };
 
+class ConfigFileErrorException : public std::exception
+{
+public:
+    ConfigFileErrorException();
+    virtual const char* what() const throw();
+};
+
 #endif
