@@ -1469,6 +1469,11 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
             }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->findAndCloseClientSocket(fd);
+            }
         }
         else if (this->_server_manager->fdIsCopySet(fd, FdSet::READ))
         {
@@ -2245,4 +2250,17 @@ Server::killCgiAndSendErrorToClient(int fd)
         client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     this->_responses[client_fd].setStatusCode("500");
+}
+
+void
+Server::findAndCloseClientSocket(int fd)
+{
+    int client_fd;
+    if (this->isCgiWritePipe(fd))
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+    else if (this->isClientSocket(fd))
+        client_fd = fd;
+    else
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+    this->closeClientSocket(client_fd);
 }
