@@ -1500,23 +1500,9 @@ Server::run(int fd)
             }
             catch(const std::exception& e)
             {
-                std::cerr << "[CODE 901] std::exception was throwed!\n";
+                this->killCgiAndSendErrorToClient(fd);
+                std::cerr << "[CODE 901] std::exception was throwed!: ";
                 std::cerr << e.what() << '\n';
-                int client_fd;
-                if (this->isCgiReadPipe(fd))
-                {
-                    client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                    kill(this->_responses[client_fd].getCgiPid(), SIGTERM);
-                    g_child_process_ids[client_fd] = 0;
-                }
-                else if (this->isStaticResource(fd))
-                    client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                else if (this->isClientSocket(fd))
-                    client_fd = fd;
-                else
-                    client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-                this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-                this->_responses[client_fd].setStatusCode("500");
             }
         }
     }
@@ -2239,4 +2225,24 @@ Server::finishPutFileOnServer(int resource_fd)
 
     this->_server_manager->closeStaticResource(*this, resource_fd);
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+void
+Server::killCgiAndSendErrorToClient(int fd)
+{
+    int client_fd;
+    if (this->isCgiReadPipe(fd))
+    {
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+        kill(this->_responses[client_fd].getCgiPid(), SIGTERM);
+        g_child_process_ids[client_fd] = 0;
+    }
+    else if (this->isStaticResource(fd))
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+    else if (this->isClientSocket(fd))
+        client_fd = fd;
+    else
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+    this->_responses[client_fd].setStatusCode("500");
 }

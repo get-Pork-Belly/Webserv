@@ -158,6 +158,8 @@ public:
     void finishSendDataToCgiPipe(int write_fd_to_cgi);
     void finishReceiveDataFromCgiPipe(int read_fd_from_cgi);
 
+    void killCgiAndSendErrorToClient(int fd);
+
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
     {
