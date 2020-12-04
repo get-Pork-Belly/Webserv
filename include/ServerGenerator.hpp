@@ -14,13 +14,13 @@
 class ServerManager;
 
 const int BUF_SIZE = 4096;
-const std::string NO_SEMICOLON = "Directive must end with a \';\'";
-const std::string INVALID_BLOCK = "Block directive's syntax error";
-const std::string BRACKET_ERROR = "Unexpected end of file, expecting \"}\"";
-const std::string NO_HTTP_BLOCK = "There must be http block in config file";
-const std::string NO_ARGUMENT = "Simple directive have at least one arguments";
-const std::string INVALID_VALUE = "Invalid arguments at Simple directive";
-const std::string NOT_VALID_DIRECTIVE = "is not a valid Directive";
+const std::string NO_SEMICOLON = "[CONFIG ERROR] Directive must end with a \';\'";
+const std::string INVALID_BLOCK = "[CONFIG ERROR] Block directive's syntax error";
+const std::string BRACKET_ERROR = "[CONFIG ERROR] Unexpected end of file, expecting \"}\"";
+const std::string NO_HTTP_BLOCK = "[CONFIG ERROR] There must be http block in config file";
+const std::string NO_ARGUMENT = "[CONFIG ERROR] Simple directive have at least one arguments";
+const std::string INVALID_VALUE = "[CONFIG ERROR] Invalid arguments at Simple directive";
+const std::string INVALID_DIRECtiVE = "[CONFIG ERROR] Invalid directive";
 
 class ServerGenerator
 {

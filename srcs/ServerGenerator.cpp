@@ -129,7 +129,7 @@ ServerGenerator::checkValidationOfLocationConfig(std::map<std::string, location_
             if (it == list.end())
             {
                 std::cerr << info.first << " ";
-                throw (ConfigFileSyntaxError(NOT_VALID_DIRECTIVE));
+                throw (ConfigFileSyntaxError(INVALID_DIRECtiVE));
             }
             if (info.first == "return")
             {
@@ -166,7 +166,7 @@ ServerGenerator::checkValidationOfServerConfig(server_info& server)
         if (it == list.end())
         {
             std::cerr << directive.first << " ";
-            throw (ConfigFileSyntaxError(NOT_VALID_DIRECTIVE));
+            throw (ConfigFileSyntaxError(INVALID_DIRECtiVE));
         }
     }
 }
@@ -282,7 +282,7 @@ ServerGenerator::parseHttpBlock()
             {
                 size_t pos = (*it).find(" ");
                 if (pos == std::string::npos)
-                    throw (ConfigFileSyntaxError(NOT_VALID_DIRECTIVE));
+                    throw (ConfigFileSyntaxError(INVALID_DIRECtiVE));
                 std::string key = (*it).substr(0, pos);
                 std::string value = ft::ltrim(ft::rtrim((*it).substr(pos), "; "), " ");
                 http_config[key] = value;
