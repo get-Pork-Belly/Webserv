@@ -1475,20 +1475,13 @@ Server::run(int fd)
             try
             {
                 if (this->isCgiReadPipe(fd))
-                {
                     this->receiveDataFromCgi(fd);
-                    throw (std::exception());
-                }
                 else if (this->isStaticResource(fd))
-                {
                     this->readStaticResource(fd);
-                    throw (std::exception());
-                }
                 else if (this->isClientSocket(fd))
                 {
                     this->receiveRequest(fd);
                     Log::getRequest(*this, fd);
-                    throw (std::exception());
                     if (this->_requests[fd].getRecvRequest() == RecvRequest::COMPLETE)
                     {
                         this->_server_manager->fdClr(fd, FdSet::READ);
@@ -1505,42 +1498,42 @@ Server::run(int fd)
                 }
                 std::cerr << e.what() << '\n';
             }
-            // catch(const std::exception& e)
-            // {
-            //     std::cerr << "[CODE 901] std::exception was throwed!\n";
-            //     std::cerr << e.what() << '\n';
-            //     int client_fd;
-            //     if (this->isCgiReadPipe(fd))
-            //     {
-            //         client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-            //         int write_fd_to_cgi = this->_responses[client_fd].getWriteFdToCgi();
-            //         if (write_fd_to_cgi != DEFAULT_FD)
-            //             this->_server_manager->closeCgiWritePipe(*this, write_fd_to_cgi);
-            //         this->_server_manager->closeCgiReadPipe(*this, fd);
-            //         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-            //         this->_responses[client_fd].setStatusCode("500");
-            //         kill(this->_responses[client_fd].getCgiPid(), SIGTERM);
-            //     }
-            //     else if (this->isStaticResource(fd))
-            //     {
-            //         client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-            //         this->_server_manager->closeStaticResource(*this, fd);
-            //         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-            //         this->_responses[client_fd].setStatusCode("500");
-            //     }
-            //     else if (this->isClientSocket(fd))
-            //     {
-            //         client_fd = fd;
-            //         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-            //         this->_responses[client_fd].setStatusCode("500");
-            //     }
-            //     else
-            //     {
-            //         client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
-            //         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
-            //         this->_responses[client_fd].setStatusCode("500");
-            //     }
-            // }
+            catch(const std::exception& e)
+            {
+                std::cerr << "[CODE 901] std::exception was throwed!\n";
+                std::cerr << e.what() << '\n';
+                int client_fd;
+                if (this->isCgiReadPipe(fd))
+                {
+                    client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+                    int write_fd_to_cgi = this->_responses[client_fd].getWriteFdToCgi();
+                    if (write_fd_to_cgi != DEFAULT_FD)
+                        this->_server_manager->closeCgiWritePipe(*this, write_fd_to_cgi);
+                    this->_server_manager->closeCgiReadPipe(*this, fd);
+                    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+                    this->_responses[client_fd].setStatusCode("500");
+                    kill(this->_responses[client_fd].getCgiPid(), SIGTERM);
+                }
+                else if (this->isStaticResource(fd))
+                {
+                    client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+                    this->_server_manager->closeStaticResource(*this, fd);
+                    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+                    this->_responses[client_fd].setStatusCode("500");
+                }
+                else if (this->isClientSocket(fd))
+                {
+                    client_fd = fd;
+                    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+                    this->_responses[client_fd].setStatusCode("500");
+                }
+                else
+                {
+                    client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+                    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+                    this->_responses[client_fd].setStatusCode("500");
+                }
+            }
         }
     }
 }
