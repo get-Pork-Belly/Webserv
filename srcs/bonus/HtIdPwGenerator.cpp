@@ -201,16 +201,14 @@ setIdPassword()
             break;
         }
     
+        //NOTE: To init terminal mode
+        struct termios init;
+        tcgetattr(0, &init);
+
         while (true)
         {
             std::cout<<"\033[1;35m"<<"Add new id/password? (y/n)"<<"\033[0m"<<std::endl;
-
-            //NOTE set terminal mode to echo inputs 
-            struct termios t;
-            tcgetattr(0, &t);
-            t.c_lflag ^= ~ECHO;
-            t.c_lflag |= ECHO;
-            tcsetattr(0, TCSANOW, &t);
+            tcsetattr(0, TCSANOW, &init);
 
             std::string option;
             std::getline(std::cin, option);
@@ -243,7 +241,8 @@ int main()
     {
     case Options::START_SERVERS:
         std::cout<<"\033[104;1;97m"<<"Start Servers! please wait :)"<<"\033[0m"<<std::endl;
-        exit(static_cast<int>(Options::START_SERVERS));
+        std::cout<<"exit(0)"<<std::endl;
+        exit(0);
         break;
     
     case Options::SET_IDPASSWORD:
@@ -251,15 +250,16 @@ int main()
             exitWithError("Failed to set id/password", 3);
         else
             std::cout<<"\033[104;1;97m"<<"Start Servers! please wait :)"<<"\033[0m"<<std::endl;
-        exit(static_cast<int>(Options::START_SERVERS));
+        exit(0);
         break;
     
     case Options::QUIT:
-        exit(static_cast<int>(Options::QUIT));
+        std::cout<<"exit(1)"<<std::endl;
+        exit(1);
         break;
 
     default:
         break;
     }
-    return 0;
+    return (1);
 }
