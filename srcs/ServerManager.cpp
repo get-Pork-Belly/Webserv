@@ -7,7 +7,7 @@
 /****************************  Static variables  ******************************/
 /*============================================================================*/
 
-extern std::vector<int> g_child_process_ids;
+std::vector<int> g_child_process_ids(1024, DEFAULT_PID);
 
 /*============================================================================*/
 /******************************  Constructor  *********************************/
@@ -426,7 +426,7 @@ ServerManager::closeUnresponsiveCgi(int pipe_fd)
                 return ;
             Response& response = server->getResponse(client_fd);
             kill(response.getCgiPid(), SIGTERM);
-            g_child_process_ids[client_fd] = 0;
+            g_child_process_ids[client_fd] = DEFAULT_PID;
             if (response.getSendProgress() == SendProgress::READY)
                 response.setStatusCode("500");
             else
@@ -458,6 +458,23 @@ ServerManager::isUnresponsiveFd(int fd)
         this->fdIsOriginSet(fd, FdSet::WRITE) != this->fdIsCopySet(fd, FdSet::WRITE))
         return (true);
     return (false);
+}
+
+bool
+ServerManager::isCgiProcessTerminated(int client_fd) const
+{
+    return (g_child_process_ids[client_fd] == DEFAULT_PID);
+}
+
+void
+ServerManager::terminateCgiProcess(int client_fd)
+{
+    if (g_child_process_ids[client_fd] == DEFAULT_PID)
+        return ;
+    kill(g_child_process_ids[client_fd], SIGTERM);
+    waitpid(g_child_process_ids[client_fd], NULL, 0);
+    std::cout<<"\033[41;1;97m"<<"Server send SIGTERM to process(pid:"<<g_child_process_ids[client_fd]<<")"<<"\033[0m"<<std::endl;
+    g_child_process_ids[client_fd] = DEFAULT_PID;
 }
 
 Server*
@@ -571,10 +588,10 @@ ServerManager::exitServers(int signo)
         for (size_t i = 0; i < g_child_process_ids.size(); i++)
         {
             // NOTE: pid is zero, sig is sent to all processes whose group ID is equal to the process group ID to the sender
-            if (g_child_process_ids[i] != 0) 
+            if (g_child_process_ids[i] != DEFAULT_PID) 
             {
                 kill(g_child_process_ids[i], SIGTERM);
-                std::cout<<"server killed pid["<<g_child_process_ids[i]<<"] before exit"<<std::endl;
+                std::cout<<"\nserver killed pid["<<g_child_process_ids[i]<<"] before exit"<<std::endl;
             }
         }
         exit(EXIT_SUCCESS);

@@ -20,6 +20,7 @@
 
 const int CLIENT_TIME_OUT_SECOND = 5;
 const int CGI_TIME_OUT_SECOND = 60;
+const int DEFAULT_PID = 0;
 
 class Server;
 
@@ -96,6 +97,8 @@ public:
     bool isMonitorTimeOutOn(int fd);
 
     bool isUnresponsiveFd(int fd);
+    bool isCgiProcessTerminated(int clinet_fd) const;
+    void terminateCgiProcess(int client_fd);
     Server* findLinkedServer(int client_fd);
 };
 
