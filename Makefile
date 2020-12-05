@@ -35,7 +35,7 @@ all: $(NAME)
 
 ${NAME}: ${OBJS}
 	@echo "$(GREEN)Making START$(RESET)"
-	@${CC} ${CFLAGS} ${INCLUDES} ${OBJS} -o ${NAME}
+	@${CC} ${CFLAGS} ${INCLUDES} ${OBJS} -o ${NAME} -framework Python
 	@echo "$(GREEN)DONE"
 
 $(OBJDIR)/%.o : %.cpp
