@@ -472,6 +472,8 @@ ServerManager::terminateCgiProcess(int client_fd)
     if (g_child_process_ids[client_fd] == DEFAULT_PID)
         return ;
     kill(g_child_process_ids[client_fd], SIGTERM);
+    waitpid(g_child_process_ids[client_fd], NULL, 0);
+    std::cout<<"\033[41;1;97m"<<"Server send SIGTERM to process(pid:"<<g_child_process_ids[client_fd]<<")"<<"\033[0m"<<std::endl;
     g_child_process_ids[client_fd] = DEFAULT_PID;
 }
 
