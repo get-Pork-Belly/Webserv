@@ -1785,6 +1785,41 @@ Server::checkAndSetResourceType(int client_fd)
 }
 
 void
+Server::executePythonCgi(int client_fd)
+{
+    Py_Initialize();
+    if (Py_IsInitialized())
+    {
+        char** argv = this->makeCgiArgv(client_fd);
+        PySys_SetArgv(0, argv);
+        PyRun_SimpleString("import sys\n");
+
+        PyObject* py_module_object = PyImport_ImportModule("python_scripts.python_script");
+        std::string cgi_response;
+        if (py_module_object)
+        {
+            PyObject* py_def_object = PyObject_GetAttrString(py_module_object, "python_cgi");
+            if (py_def_object)
+            {
+                PyObject* result = PyObject_CallFunction(py_def_object, (char *)"s", this->_requests[client_fd].getBody().c_str());
+                if (result)
+                {
+                    cgi_response += PyString_AS_STRING(result);
+                    Py_XDECREF(result);
+                }
+                Py_XDECREF(py_def_object);
+            }
+            Py_XDECREF(py_module_object);
+        }
+        Py_Finalize();
+
+        this->_responses[client_fd].setBody(cgi_response);
+        this->_responses[client_fd].setReceiveProgress(ReceiveProgress::FINISH);
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+    }
+}
+
+void
 Server::preprocessResponseBody(int client_fd, ResType& res_type)
 {
     Log::trace("> preprocessResponseBody", 1);
@@ -1800,12 +1835,17 @@ Server::preprocessResponseBody(int client_fd, ResType& res_type)
         this->openStaticResource(client_fd);
         break ;
     case ResType::CGI:
-        this->openCgiPipe(client_fd);
-        this->forkAndExecuteCgi(client_fd);
-        if (this->_responses[client_fd].getUriExtension() == ".php")
-            this->_responses[client_fd].setReceiveProgress(ReceiveProgress::PHP_CGI_BEGIN);
+        if (this->_responses[client_fd].getUriExtension() == ".py")
+            this->executePythonCgi(client_fd);
         else
-            this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
+        {
+            this->openCgiPipe(client_fd);
+            this->forkAndExecuteCgi(client_fd);
+            if (this->_responses[client_fd].getUriExtension() == ".php")
+                this->_responses[client_fd].setReceiveProgress(ReceiveProgress::PHP_CGI_BEGIN);
+            else
+                this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
+        }
         break ;
     default:
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
