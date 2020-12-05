@@ -936,19 +936,33 @@ Server::setResponseMessageAccordingToTheParseProgress(int client_fd, std::string
     case ParseProgress::DEFAULT:
         response.setParseProgress(ParseProgress::FINISH);
         if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
+        {
             response.setResponseMessage(status_line + headers);
+            break ;
+        }
         response.setResponseMessage(status_line + headers + response.getTransmittingBody());
-        break;
+        break ;
     case ParseProgress::CHUNK_START:
         if (request.getMethod() == "HEAD")
+        {
             response.setResponseMessage(status_line + headers);
+            break ;
+        }
         response.setResponseMessage(status_line + headers + response.getTransmittingBody());
-        break;
+        break ;
     default: //NOTE: PraseProgress::CHUNK_PROGRESS or ParseProgress::FINISH
         if (request.getMethod() == "HEAD")
+        {
             response.setResponseMessage("");
+            break ;
+        }
+        if (response.getResourceType() == ResType::CGI && response.getUriExtension() == ".py")
+        {
+            response.setResponseMessage(status_line + headers + response.getTransmittingBody());
+            break ;
+        }
         response.setResponseMessage(response.getTransmittingBody());
-        break;
+        break ;
     }
 }
 
