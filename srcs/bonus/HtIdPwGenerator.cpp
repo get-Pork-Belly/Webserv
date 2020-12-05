@@ -241,7 +241,6 @@ int main()
     {
     case Options::START_SERVERS:
         std::cout<<"\033[104;1;97m"<<"Start Servers! please wait :)"<<"\033[0m"<<std::endl;
-        std::cout<<"exit(0)"<<std::endl;
         exit(0);
         break;
     
@@ -254,7 +253,6 @@ int main()
         break;
     
     case Options::QUIT:
-        std::cout<<"exit(1)"<<std::endl;
         exit(1);
         break;
 
