@@ -31,6 +31,12 @@ http {
             cgi_path /Users/yohan/Webserv/cgi_tester;
             root /Users/yohan/Webserv/YoupiBanane;
         }
+        location /bonus {
+            limit_except POST GET HEAD;
+            cgi .py;
+            cgi_path /Users/yohan/Webserv/python_scripts/python_scripts.py;
+            root /Users/yohan/Webserv/python_scripts;
+        }
     }
     server {
         server_name second_server;
