@@ -9,6 +9,7 @@
 # include <sys/types.h>
 # include <sys/time.h>
 # include <netinet/in.h>
+# include <Python/Python.h>
 # include <algorithm>
 # include <vector>
 # include <fcntl.h>
