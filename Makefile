@@ -19,7 +19,7 @@ LOGDIR = ./log
 LOGS = $(LOGDIR)/access_log $(LOGDIR)/error_log
 
 PW_GENERATOR_NAME = htpassword_generator
-PW_GENERATOR_FILES = Base64 utils passwd
+PW_GENERATOR_FILES = Base64 utils HtIdPwGenerator
 PW_GENERATOR_OBJS = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(PW_GENERATOR_FILES)))
 
 VPATH := .:srcs:tests:srcs/bonus
