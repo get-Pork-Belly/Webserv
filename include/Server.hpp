@@ -129,6 +129,7 @@ public:
     void acceptClient();
     void openCgiPipe(int fd);
     void forkAndExecuteCgi(int fd);
+    void executePythonCgi(int fd);
     char** makeCgiArgv(int fd);
     char** makeCgiEnvp(int fd);
     bool makeEnvpUsingRequest(char** envp, int fd, int* idx);
