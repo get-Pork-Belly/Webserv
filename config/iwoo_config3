@@ -23,7 +23,7 @@ http {
         location /second {
             root /Users/humblego/Documents/dev/team_webserv/tests/;
             index  html;
-            limit_except PUT POST GET
+            limit_except PUT POST GET;
             index index.html index.htm index.abc;
         }
     }
