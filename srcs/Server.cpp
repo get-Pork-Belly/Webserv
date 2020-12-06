@@ -2319,6 +2319,7 @@ Server::negotiateContent(int client_fd)
         if (ft::fileExists(target_content_path))
         {
             response.setResourceAbsPath(target_content_path);
+            response.setContentLanguage(language);
             return ;
         }
     }

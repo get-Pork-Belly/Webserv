@@ -240,6 +240,12 @@ Response::getRequestUriForCgi() const
     return (this->_request_uri_for_cgi);
 }
 
+const std::string&
+Response::getContentLanguage() const
+{
+    return (this->_content_language);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -373,6 +379,12 @@ Response::setHeaders(const std::string& key, const std::string& value)
 }
 
 void
+Response::setContentLanguage(const std::string& content_language)
+{
+    this->_content_language = content_language;
+}
+
+void
 Response::setSendedResponseSize(const int sended_response_size)
 {
     this->_sended_response_size = sended_response_size;
@@ -450,8 +462,6 @@ Response::setCgiEnvpValues()
         }
     }
 }
-
-
 
 /*============================================================================*/
 /******************************  Exception  ***********************************/
@@ -799,18 +809,22 @@ Response::appendContentLanguageHeader(std::string& headers)
     // NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면, 
     //       굳이 메타데이터를 추출하지 않도록 구현되어있음.
     std::string extension = this->getUriExtension();
-    if (!(this->ExtensionExists(extension) 
-            && this->isExtensionInMimeTypeTable(extension)
-            && this->getMimeTypeTable().at(extension).compare("text/html") == 0))
-        return ;
-
-    std::string lang_meta_data = this->getHtmlLangMetaData();
-    if (lang_meta_data != "")
+    if ((this->ExtensionExists(this->_uri_extension) 
+            && this->isExtensionInMimeTypeTable(this->_uri_extension)
+            && this->getMimeTypeTable().at(this->_uri_extension).compare("text/html") == 0))
     {
-        headers += "Content-Language: ";
-        headers += lang_meta_data;
-        headers += "\r\n";
+        std::string lang_meta_data = this->getHtmlLangMetaData();
+        if (lang_meta_data != "")
+        {
+            headers += "Content-Language: ";
+            headers += lang_meta_data;
+            headers += "\r\n";
+            return ;
+        }
     }
+    headers += "Content-Language: ";
+    headers += this->getContentLanguage();
+    headers += "\r\n";
 }
 
 void

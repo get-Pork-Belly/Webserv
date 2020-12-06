@@ -35,6 +35,7 @@ private:
     std::string _uri_extension;
     std::string _transmitting_body;
     std::string _query;
+    std::string _content_language;
 
     size_t _already_encoded_size;
 
@@ -98,6 +99,7 @@ public:
     const std::string& getPathTranslated() const;
     const std::string& getRequestUriForCgi() const;
     const std::string& getQuery() const;
+    const std::string& getContentLanguage() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -110,6 +112,7 @@ public:
     void setQuery(const std::string& query);
     void setUriExtension(const std::string& extension);
     void setHeaders(const std::string& key, const std::string& value);
+    void setContentLanguage(const std::string& content_language);
 
     void setStdinOfCgi(const int fd);
     void setStdoutOfCgi(const int fd);
