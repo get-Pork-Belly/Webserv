@@ -252,3 +252,33 @@ UriParser::print()
     std::cout << "path: " << this->getPath() << std::endl;
     std::cout << "query: " << this->getQuery() << std::endl;
 }
+
+std::vector<std::string>
+UriParser::makeLanguageWeightTable(const std::string& accept_languages)
+{
+    std::vector<std::pair<double, std::string>> weight_and_languages;
+    std::vector<std::string> tmp = ft::split(accept_languages, ",");
+    size_t count = tmp.size();
+    size_t index;
+    for (std::string& s : tmp)
+    {
+        s = ft::ltrim(s);
+        if ((index =s.find(";q=")) != std::string::npos)
+        {
+            double q = std::stod(s.substr(index + 3));
+            weight_and_languages.push_back(make_pair(q, s.substr(0, index)));
+        }
+        else
+            weight_and_languages.push_back(make_pair(count--, s));
+        
+    }
+
+    sort(weight_and_languages.begin(), weight_and_languages.end());
+
+    std::vector<std::string> language_weight_table;
+    size_t i = weight_and_languages.size();
+    while (i--)
+        language_weight_table.push_back(weight_and_languages[i].second);
+    
+    return (language_weight_table);
+}

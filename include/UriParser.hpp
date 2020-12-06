@@ -6,6 +6,7 @@
 # include <vector>
 # include <map>
 # include "utils.hpp"
+# include <algorithm>
 
 class UriParser
 {
@@ -58,6 +59,7 @@ public:
     std::string findPath();
     void print();
     void findAndSetQuery(const std::string& path);
+    std::vector<std::string> makeLanguageWeightTable(const std::string& accept_languages);
 
 };
 
