@@ -802,3 +802,11 @@ Request::isCarriegeReturnTrimmed()
 {
     return (this->getCarriegeReturnTrimmed());
 }
+
+bool
+Request::acceptLanguageHeaderExists() const
+{
+    if (this->_headers.find("Accept-Language") != this->_headers.end())
+        return (true);
+    return (false);
+}

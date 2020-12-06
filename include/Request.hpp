@@ -141,6 +141,7 @@ public:
     void checkHeaderIsDuplicated(std::string& key);
 
     bool isCarriegeReturnTrimmed();
+    bool acceptLanguageHeaderExists() const;
 
     void appendBody(char* buf, int bytes);
     void appendBody(const char* buf, int bytes);
