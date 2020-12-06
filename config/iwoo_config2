@@ -1,6 +1,6 @@
 http { 
     include mime.types;
-    root /Users/humblego/Documents/dev/team_webserv/;
+    root /Users/humblego/Documents/dev/team_webserv/www/;
     server {
         server_name first_server;
         listen       8080;
@@ -8,28 +8,28 @@ http {
         location / {
             limit_except GET;
             cgi .bin .cgi .bla;
-            cgi_path /Users/humblego/Documents/dev/team_webserv/cgi_tester;
+            cgi_path /Users/humblego/Documents/dev/team_webserv/php-mac/bin/php-cgi;
             autoindex on;
-            root /Users/humblego/Documents/dev/team_webserv/;
+            root /Users/humblego/Documents/dev/team_webserv/www/;
         }
         location /put_test {
             limit_except PUT;
             root /Users/humblego/Documents/dev/team_webserv/tests/put_test;
             cgi .bla;
-            cgi_path /Users/humblego/Documents/dev/team_webserv/cgi_tester;
+            cgi_path /Users/humblego/Documents/dev/team_webserv/php-mac/bin/php-cgi;
         }
         location /post_body {
             limit_client_body_size 100;
             limit_except POST;
             index index.html;
-            root /Users/humblego/Documents/dev/team_webserv/tests/folder;
+            root /Users/humblego/Documents/dev/team_webserv/www/folder/;
         }
         location /directory { 
             limit_except GET POST;
             index youpi.bad_extension;
             cgi .bla;
-            cgi_path /Users/humblego/Documents/dev/team_webserv/cgi_tester;
-            root /Users/humblego/Documents/dev/team_webserv/YoupiBanane;
+            cgi_path /Users/humblego/Documents/dev/team_webserv/YoupiBanane/youpi.bad_extension;
+            root /Users/humblego/Documents/dev/team_webserv/YoupiBanane/;
         }
     }
     server {
