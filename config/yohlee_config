@@ -8,7 +8,7 @@ http {
         location / {
             limit_except GET;
             cgi .bin .cgi .bla;
-            cgi_path /Users/yohan/Webserv/cgi_tester;
+            cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
             autoindex on;
             root /Users/yohan/Webserv/;
         }
@@ -16,19 +16,19 @@ http {
             limit_except PUT;
             root /Users/yohan/Webserv/tests/put_test;
             cgi .bla;
-            cgi_path /Users/yohan/Webserv/cgi_tester;
+            cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
         }
         location /post_body {
             limit_client_body_size 100;
             limit_except POST;
             index index.html;
-            root /Users/yohan/Webserv/tests/folder;
+            root /Users/yohan/Webserv/www/folder;
         }
         location /directory { 
             limit_except GET POST;
             index youpi.bad_extension;
             cgi .bla;
-            cgi_path /Users/yohan/Webserv/cgi_tester;
+            cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
             root /Users/yohan/Webserv/YoupiBanane;
         }
         location /bonus {
