@@ -798,9 +798,9 @@ Request::checkHeaderIsDuplicated(std::string& key)
 }
 
 bool
-Request::isCarriegeReturnTrimmed()
+Request::isCarriegeReturnTrimmed() const
 {
-    return (this->getCarriegeReturnTrimmed());
+    return (this->_carriege_return_trimmed);
 }
 
 bool
