@@ -12,7 +12,7 @@
 /****************************  Static variables  ******************************/
 /*============================================================================*/
 
-std::vector<int> g_child_process_ids(1024, 0);
+extern std::vector<int> g_child_process_ids;
 
 /*============================================================================*/
 /******************************  Constructor  *********************************/
@@ -645,7 +645,10 @@ Server::receiveRequestLine(int client_fd)
     {
         buf[bytes] = 0;
         if (this->isExistCrlf(client_fd, RecvRequest::REQUEST_LINE))
+        {
             this->readBufferUntilRequestLine(client_fd);
+            this->parseUriAndSetResponse(client_fd);
+        }
         else
             this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::REQUEST_LINE);
     }
@@ -1416,6 +1419,80 @@ Server::putFileOnServer(int resource_fd)
 }
 
 void
+Server::writeSequence(int fd)
+{
+    timeval from;
+    gettimeofday(&from, NULL);
+    Log::trace(">>> write sequence", 1);
+
+    if (this->isCgiWritePipe(fd))
+        this->sendDataToCgi(fd);
+    else if (this->isClientSocket(fd))
+    {
+        if (this->_responses[fd].getSendProgress() != SendProgress::SENDING)
+            this->makeResponseMessage(fd);
+        this->sendResponse(fd);
+        if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
+        {
+            this->_server_manager->fdClr(fd, FdSet::WRITE);
+            if (this->_responses[fd].getResourceFd() != DEFAULT_FD)
+                this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
+            else
+            {
+                if (this->_responses[fd].getWriteFdToCgi() == DEFAULT_FD)
+                    this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCgi(), FdSet::READ);
+                else
+                    this->_server_manager->fdSet(this->_responses[fd].getWriteFdToCgi(), FdSet::WRITE);
+            }
+        }
+        if (this->isResponseAllSended(fd))
+        {
+            if (this->_responses[fd].getStatusCode()[0] != '2')
+                this->closeClientSocket(fd);
+            else
+            {
+                this->_server_manager->fdClr(fd, FdSet::WRITE);
+                this->_server_manager->fdSet(fd, FdSet::READ);
+                this->_requests[fd].init();
+                this->_responses[fd].init();
+            }
+            this->_server_manager->monitorTimeOutOff(fd);
+        }
+    }
+    else
+        this->putFileOnServer(fd);
+
+    Log::printTimeDiff(from, 1);
+    Log::trace("<<< write sequence", 1);
+}
+
+void
+Server::readSequence(int fd)
+{
+    timeval from;
+    gettimeofday(&from, NULL);
+    Log::trace(">>> read sequence", 1);
+
+    if (this->isCgiReadPipe(fd))
+        this->receiveDataFromCgi(fd);
+    else if (this->isStaticResource(fd))
+        this->readStaticResource(fd);
+    else if (this->isClientSocket(fd))
+    {
+        this->receiveRequest(fd);
+        Log::getRequest(*this, fd);
+        if (this->_requests[fd].getRecvRequest() == RecvRequest::COMPLETE)
+        {
+            this->_server_manager->fdClr(fd, FdSet::READ);
+            this->processResponseBody(fd);
+        }
+    }
+
+    Log::printTimeDiff(from, 1);
+    Log::trace("<<< read sequence", 1);
+}
+
+void
 Server::run(int fd)
 {
     if (isServerSocket(fd))
@@ -1426,47 +1503,7 @@ Server::run(int fd)
         {
             try
             {
-                timeval from;
-                gettimeofday(&from, NULL);
-                Log::trace(">>> write sequence", 1);
-                if (this->isCgiWritePipe(fd))
-                    this->sendDataToCgi(fd);
-                else if (this->isClientSocket(fd))
-                {
-                    if (this->_responses[fd].getSendProgress() != SendProgress::SENDING)
-                        this->makeResponseMessage(fd);
-                    this->sendResponse(fd);
-                    if (this->_responses[fd].getReceiveProgress() == ReceiveProgress::ON_GOING)
-                    {
-                        this->_server_manager->fdClr(fd, FdSet::WRITE);
-                        if (this->_responses[fd].getResourceFd() != DEFAULT_FD)
-                            this->_server_manager->fdSet(this->_responses[fd].getResourceFd(), FdSet::READ);
-                        else
-                        {
-                            if (this->_responses[fd].getWriteFdToCgi() == DEFAULT_FD)
-                                this->_server_manager->fdSet(this->_responses[fd].getReadFdFromCgi(), FdSet::READ);
-                            else
-                                this->_server_manager->fdSet(this->_responses[fd].getWriteFdToCgi(), FdSet::WRITE);
-                        }
-                    }
-                    if (this->isResponseAllSended(fd))
-                    {
-                        if (this->_responses[fd].getStatusCode()[0] != '2')
-                            this->closeClientSocket(fd);
-                        else
-                        {
-                            this->_server_manager->fdClr(fd, FdSet::WRITE);
-                            this->_server_manager->fdSet(fd, FdSet::READ);
-                            this->_requests[fd].init();
-                            this->_responses[fd].init();
-                        }
-                        this->_server_manager->monitorTimeOutOff(fd);
-                    }
-                }
-                else
-                    this->putFileOnServer(fd);
-                Log::printTimeDiff(from, 1);
-                Log::trace("<<< write sequence", 1);
+                this->writeSequence(fd);
             }
             catch(const SendErrorCodeToClientException& e)
             {
@@ -1476,25 +1513,17 @@ Server::run(int fd)
             {
                 std::cerr << e.what() << '\n';
             }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+                this->findAndCloseClientSocket(fd);
+            }
         }
         else if (this->_server_manager->fdIsCopySet(fd, FdSet::READ))
         {
             try
             {
-                if (this->isCgiReadPipe(fd))
-                    this->receiveDataFromCgi(fd);
-                else if (this->isStaticResource(fd))
-                    this->readStaticResource(fd);
-                else if (this->isClientSocket(fd))
-                {
-                    this->receiveRequest(fd);
-                    Log::getRequest(*this, fd);
-                    if (this->_requests[fd].getRecvRequest() == RecvRequest::COMPLETE)
-                    {
-                        this->_server_manager->fdClr(fd, FdSet::READ);
-                        this->processResponseBody(fd);
-                    }
-                }
+                this->readSequence(fd);
             }
             catch(const SendErrorCodeToClientException& e)
             {
@@ -1503,6 +1532,12 @@ Server::run(int fd)
                     this->_server_manager->fdSet(fd, FdSet::WRITE);
                     this->_responses[fd].setStatusCode(this->_requests[fd].getStatusCode());
                 }
+                std::cerr << e.what() << '\n';
+            }
+            catch(const std::exception& e)
+            {
+                this->killCgiAndSendErrorToClient(fd);
+                std::cerr << "[CODE 901] std::exception was throwed!: ";
                 std::cerr << e.what() << '\n';
             }
         }
@@ -1523,6 +1558,8 @@ Server::closeClientSocket(int client_fd)
         this->_server_manager->closeCgiWritePipe(*this, response.getWriteFdToCgi());
     if (response.isCgiReadPipeNotClosed())
         this->_server_manager->closeCgiReadPipe(*this, response.getReadFdFromCgi());
+    if (this->_server_manager->isCgiProcessTerminated(client_fd) == false)
+        this->_server_manager->terminateCgiProcess(client_fd);
     if (response.isResourceNotClosed())
         this->_server_manager->closeStaticResource(*this, response.getResourceFd());
     response.init();
@@ -1916,8 +1953,6 @@ Server::processResponseBody(int client_fd)
     timeval from;
     gettimeofday(&from, NULL);
 
-    this->parseUriAndSetResponse(client_fd);
-
     const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     if (location_info.find("limit_client_body_size") != location_info.end())
     {
@@ -2240,7 +2275,7 @@ Server::finishReceiveDataFromCgiPipe(int read_fd_from_cgi)
     int client_fd = this->_server_manager->getLinkedFdFromFdTable(read_fd_from_cgi);
     Response& response = this->_responses[client_fd];
 
-    g_child_process_ids[client_fd] = 0;
+    g_child_process_ids[client_fd] = DEFAULT_PID;
     waitpid(response.getCgiPid(), &status, 0);
 
     this->_server_manager->closeCgiReadPipe(*this, read_fd_from_cgi);
@@ -2270,4 +2305,37 @@ Server::finishPutFileOnServer(int resource_fd)
 
     this->_server_manager->closeStaticResource(*this, resource_fd);
     this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+}
+
+void
+Server::killCgiAndSendErrorToClient(int fd)
+{
+    int client_fd;
+    if (this->isCgiReadPipe(fd))
+    {
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+        kill(this->_responses[client_fd].getCgiPid(), SIGTERM);
+        g_child_process_ids[client_fd] = DEFAULT_PID;
+    }
+    else if (this->isStaticResource(fd))
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+    else if (this->isClientSocket(fd))
+        client_fd = fd;
+    else
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+    this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+    this->_responses[client_fd].setStatusCode("500");
+}
+
+void
+Server::findAndCloseClientSocket(int fd)
+{
+    int client_fd;
+    if (this->isCgiWritePipe(fd))
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+    else if (this->isClientSocket(fd))
+        client_fd = fd;
+    else
+        client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
+    this->closeClientSocket(client_fd);
 }
