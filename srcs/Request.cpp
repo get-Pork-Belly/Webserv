@@ -406,7 +406,7 @@ Request::updateRecvRequest()
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
         this->setRecvRequest(RecvRequest::REQUEST_LINE);
     else if (this->isBodyUnnecessary())
-        this->setRecvRequest(RecvRequest::COMPLETE);
+        throw (RequestFormatException(*this, "400"));
     else if (this->isNormalBody())
         this->setRecvRequest(RecvRequest::NORMAL_BODY);
     else if (this->isChunkedBody())
