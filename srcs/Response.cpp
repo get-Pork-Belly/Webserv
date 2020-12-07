@@ -803,15 +803,22 @@ Response::appendAllowHeader(std::string& headers)
     headers += "\r\n";
 }
 
+bool
+Response::isContentTypeTextHtml() const
+{
+    if ((this->ExtensionExists(this->_uri_extension) 
+            && this->isExtensionInMimeTypeTable(this->_uri_extension)
+            && this->getMimeTypeTable().at(this->_uri_extension).compare("text/html") == 0))
+        return (true);
+    return (false);
+}
+
 void
 Response::appendContentLanguageHeader(std::string& headers)
 {
     // NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면, 
     //       굳이 메타데이터를 추출하지 않도록 구현되어있음.
-    std::string extension = this->getUriExtension();
-    if ((this->ExtensionExists(this->_uri_extension) 
-            && this->isExtensionInMimeTypeTable(this->_uri_extension)
-            && this->getMimeTypeTable().at(this->_uri_extension).compare("text/html") == 0))
+    if (this->isContentTypeTextHtml())
     {
         std::string lang_meta_data = this->getHtmlLangMetaData();
         if (lang_meta_data != "")
@@ -1153,7 +1160,7 @@ Response::makeLanguageWeightTable(const std::string& accept_languages)
     for (std::string& s : tmp)
     {
         s = ft::ltrim(s);
-        if ((index =s.find(";q=")) != std::string::npos)
+        if ((index = s.find(";q=")) != std::string::npos)
         {
             double q = std::stod(s.substr(index + 3));
             weight_and_languages.push_back(make_pair(q, s.substr(0, index)));

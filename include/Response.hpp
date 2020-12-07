@@ -194,6 +194,7 @@ public:
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
     bool isFileInDirEntry(std::string& index);
+    bool isContentTypeTextHtml() const;
 
     void setTransmittingBody(const std::string& chunked_body);
     void encodeChunkedBody();
