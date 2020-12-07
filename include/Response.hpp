@@ -176,6 +176,10 @@ public:
     bool ExtensionExists(const std::string& extension) const;
     bool isExtensionInMimeTypeTable(const std::string& extension) const;
     void findAndSetUriExtension();
+
+    std::vector<std::string> makeLanguageWeightTable(const std::string& accept_languages);
+    void negotiateContent(const std::string& accept_languages);
+
     bool isNeedToBeChunkedBody(const Request& request) const;
     bool isRedirection(const std::string& status_code) const;
     bool isLocationToBeRedirected() const;

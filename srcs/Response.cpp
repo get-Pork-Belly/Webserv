@@ -1143,6 +1143,65 @@ Response::findAndSetUriExtension()
     this->setUriExtension(extension);
 }
 
+std::vector<std::string>
+Response::makeLanguageWeightTable(const std::string& accept_languages)
+{
+    std::vector<std::pair<double, std::string>> weight_and_languages;
+    std::vector<std::string> tmp = ft::split(accept_languages, ",");
+    size_t count = tmp.size();
+    size_t index;
+    for (std::string& s : tmp)
+    {
+        s = ft::ltrim(s);
+        if ((index =s.find(";q=")) != std::string::npos)
+        {
+            double q = std::stod(s.substr(index + 3));
+            weight_and_languages.push_back(make_pair(q, s.substr(0, index)));
+        }
+        else
+            weight_and_languages.push_back(make_pair(count--, s));
+        
+    }
+
+    sort(weight_and_languages.begin(), weight_and_languages.end());
+
+    std::vector<std::string> language_weight_table;
+    size_t i = weight_and_languages.size();
+    while (i--)
+        language_weight_table.push_back(weight_and_languages[i].second);
+    
+    return (language_weight_table);
+}
+
+void
+Response::negotiateContent(const std::string& accept_language)
+{
+    std::vector<std::string> language_weight_table = this->makeLanguageWeightTable(accept_language);
+
+    size_t index;
+    for (std::string& language : language_weight_table)
+    {
+        //NOTE: en is default.
+        if (language == "en")
+            return ;
+
+        std::string resource_abs_path = this->getResourceAbsPath();
+        if (this->getUriExtension() != "")
+            index = resource_abs_path.rfind(this->getUriExtension());
+        else
+            index = resource_abs_path.length();
+        
+        std::string target_content_path = resource_abs_path.substr(0, index) + "_" + language + this->getUriExtension();
+        
+        if (ft::fileExists(target_content_path))
+        {
+            this->setResourceAbsPath(target_content_path);
+            this->setContentLanguage(language);
+            return ;
+        }
+    }
+}
+
 bool
 Response::isNeedToBeChunkedBody(const Request& request) const
 {

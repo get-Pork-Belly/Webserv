@@ -1816,8 +1816,9 @@ Server::checkAndSetResourceType(int client_fd)
             throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
         }
     }
-    if (this->_requests[client_fd].acceptLanguageHeaderExists())
-        this->negotiateContent(client_fd);
+    Request& request = this->_requests[client_fd];
+    if (request.acceptLanguageHeaderExists())
+        response.negotiateContent(request.getHeaders().at("Accept-Language"));
 
     Log::printTimeDiff(from, 2);
     Log::trace("< checkAndSetResourceType", 2);
@@ -2286,41 +2287,4 @@ Server::findAndCloseClientSocket(int fd)
     else
         client_fd = this->_server_manager->getLinkedFdFromFdTable(fd);
     this->closeClientSocket(client_fd);
-}
-
-void
-Server::negotiateContent(int client_fd)
-{
-    // 읽은 header 정보를 바탕으로 가중치 테이블 만들기
-    // 폴더엔트리 조사해서 해당하는 파일 있는지 확인
-    // 파일 있으면 path 교체, 없으면 그대로
-
-    UriParser uri_parser;
-    Response& response = this->_responses[client_fd];
-    Request& request = this->_requests[client_fd];
-    const std::string& accpet_languages = request.getHeaders().at("Accept-Language");
-    std::vector<std::string> language_weight_table = uri_parser.makeLanguageWeightTable(accpet_languages);
-
-    size_t index;
-    for (std::string& language : language_weight_table)
-    {
-        //NOTE: en is default.
-        if (language == "en")
-            return ;
-
-        std::string resource_abs_path = response.getResourceAbsPath();
-        if (response.getUriExtension() != "")
-            index = resource_abs_path.rfind(response.getUriExtension());
-        else
-            index = resource_abs_path.length();
-        
-        std::string target_content_path = resource_abs_path.substr(0, index) + "_" + language + response.getUriExtension();
-        
-        if (ft::fileExists(target_content_path))
-        {
-            response.setResourceAbsPath(target_content_path);
-            response.setContentLanguage(language);
-            return ;
-        }
-    }
 }

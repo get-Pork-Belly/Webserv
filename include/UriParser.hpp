@@ -59,7 +59,6 @@ public:
     std::string findPath();
     void print();
     void findAndSetQuery(const std::string& path);
-    std::vector<std::string> makeLanguageWeightTable(const std::string& accept_languages);
 
 };
 
