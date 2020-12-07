@@ -1845,8 +1845,13 @@ Server::executePythonCgi(int client_fd)
         PySys_SetArgv(0, argv);
         PyRun_SimpleString("import sys\n");
 
-        PyObject* py_module_object = PyImport_ImportModule("python_scripts.python_script");
+        const std::string& python_script_uri = this->_responses[client_fd].getScriptName();
+        std::string python_script_name = python_script_uri.substr(python_script_uri.find("python_scripts"));
+        python_script_name = python_script_name.substr(0, python_script_name.rfind(".py"));
+        python_script_name[python_script_name.find("/")] = '.';
+
         std::string cgi_response;
+        PyObject* py_module_object = PyImport_ImportModule(python_script_name.c_str());
         if (py_module_object)
         {
             PyObject* py_def_object = PyObject_GetAttrString(py_module_object, "python_cgi");
@@ -1864,7 +1869,8 @@ Server::executePythonCgi(int client_fd)
         }
         Py_Finalize();
 
-        this->_responses[client_fd].setBody(cgi_response);
+        this->_responses[client_fd].setTempBuffer(cgi_response);
+        this->_responses[client_fd].preparseCgiMessage();
         this->_responses[client_fd].setReceiveProgress(ReceiveProgress::FINISH);
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);
     }
