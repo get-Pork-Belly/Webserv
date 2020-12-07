@@ -1631,10 +1631,9 @@ Server::checkAuthenticate(int client_fd)
     location_info::const_iterator it = location_info.find("auth_basic");
     if (it->second == "off")
         return ;
-    std::map<std::string, std::vector<std::string> >::iterator iter = this->_authenticate_realms.find(route);
-    if (iter == this->_authenticate_realms.end())
+    if (this->_authenticate_realms.find(route) == this->_authenticate_realms.end())
         return ;
-    std::vector<std::string> auths = iter->second;
+    std::vector<std::string> auths = this->_authenticate_realms.find(route)->second;
     const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
     it = headers.find("Authorization");
     if (it == headers.end())
