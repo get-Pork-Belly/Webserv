@@ -27,14 +27,14 @@ http {
         location /directory { 
             limit_except GET POST;
             index youpi.bad_extension;
-            cgi .bla;
+            cgi .bla .php;
             cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
             root /Users/yohan/Webserv/YoupiBanane;
         }
         location /bonus {
             limit_except POST GET HEAD;
             cgi .py;
-            cgi_path /Users/yohan/Webserv/python_scripts/python_scripts.py;
+            cgi_path /Users/yohan/Webserv/python_scripts/python_script_bad_extension.py;
             root /Users/yohan/Webserv/python_scripts;
         }
     }
