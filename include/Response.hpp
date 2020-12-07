@@ -35,6 +35,7 @@ private:
     std::string _uri_extension;
     std::string _transmitting_body;
     std::string _query;
+    std::string _content_language;
 
     size_t _already_encoded_size;
 
@@ -98,6 +99,7 @@ public:
     const std::string& getPathTranslated() const;
     const std::string& getRequestUriForCgi() const;
     const std::string& getQuery() const;
+    const std::string& getContentLanguage() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -110,6 +112,7 @@ public:
     void setQuery(const std::string& query);
     void setUriExtension(const std::string& extension);
     void setHeaders(const std::string& key, const std::string& value);
+    void setContentLanguage(const std::string& content_language);
 
     void setStdinOfCgi(const int fd);
     void setStdoutOfCgi(const int fd);
@@ -173,6 +176,10 @@ public:
     bool ExtensionExists(const std::string& extension) const;
     bool isExtensionInMimeTypeTable(const std::string& extension) const;
     void findAndSetUriExtension();
+
+    std::vector<std::string> makeLanguageWeightTable(const std::string& accept_languages);
+    void negotiateContent(const std::string& accept_languages);
+
     bool isNeedToBeChunkedBody(const Request& request) const;
     bool isRedirection(const std::string& status_code) const;
     bool isLocationToBeRedirected() const;
@@ -187,6 +194,7 @@ public:
     bool isValidSP(std::string& str);
     bool isDuplicatedHeader(std::string& key);
     bool isFileInDirEntry(std::string& index);
+    bool isContentTypeTextHtml() const;
 
     void setTransmittingBody(const std::string& chunked_body);
     void encodeChunkedBody();

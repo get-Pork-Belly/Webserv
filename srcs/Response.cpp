@@ -240,6 +240,12 @@ Response::getRequestUriForCgi() const
     return (this->_request_uri_for_cgi);
 }
 
+const std::string&
+Response::getContentLanguage() const
+{
+    return (this->_content_language);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -373,6 +379,12 @@ Response::setHeaders(const std::string& key, const std::string& value)
 }
 
 void
+Response::setContentLanguage(const std::string& content_language)
+{
+    this->_content_language = content_language;
+}
+
+void
 Response::setSendedResponseSize(const int sended_response_size)
 {
     this->_sended_response_size = sended_response_size;
@@ -450,8 +462,6 @@ Response::setCgiEnvpValues()
         }
     }
 }
-
-
 
 /*============================================================================*/
 /******************************  Exception  ***********************************/
@@ -793,24 +803,35 @@ Response::appendAllowHeader(std::string& headers)
     headers += "\r\n";
 }
 
+bool
+Response::isContentTypeTextHtml() const
+{
+    if ((this->ExtensionExists(this->_uri_extension) 
+            && this->isExtensionInMimeTypeTable(this->_uri_extension)
+            && this->getMimeTypeTable().at(this->_uri_extension).compare("text/html") == 0))
+        return (true);
+    return (false);
+}
+
 void
 Response::appendContentLanguageHeader(std::string& headers)
 {
     // NOTE: 만약 요청된 resource가 html, htm 확장자가 있는 파일이 아니면, 
     //       굳이 메타데이터를 추출하지 않도록 구현되어있음.
-    std::string extension = this->getUriExtension();
-    if (!(this->ExtensionExists(extension) 
-            && this->isExtensionInMimeTypeTable(extension)
-            && this->getMimeTypeTable().at(extension).compare("text/html") == 0))
-        return ;
-
-    std::string lang_meta_data = this->getHtmlLangMetaData();
-    if (lang_meta_data != "")
+    if (this->isContentTypeTextHtml())
     {
-        headers += "Content-Language: ";
-        headers += lang_meta_data;
-        headers += "\r\n";
+        std::string lang_meta_data = this->getHtmlLangMetaData();
+        if (lang_meta_data != "")
+        {
+            headers += "Content-Language: ";
+            headers += lang_meta_data;
+            headers += "\r\n";
+            return ;
+        }
     }
+    headers += "Content-Language: ";
+    headers += this->getContentLanguage();
+    headers += "\r\n";
 }
 
 void
@@ -1127,6 +1148,65 @@ Response::findAndSetUriExtension()
     if (extension == ".")
         return ;
     this->setUriExtension(extension);
+}
+
+std::vector<std::string>
+Response::makeLanguageWeightTable(const std::string& accept_languages)
+{
+    std::vector<std::pair<double, std::string>> weight_and_languages;
+    std::vector<std::string> tmp = ft::split(accept_languages, ",");
+    size_t count = tmp.size();
+    size_t index;
+    for (std::string& s : tmp)
+    {
+        s = ft::ltrim(s);
+        if ((index = s.find(";q=")) != std::string::npos)
+        {
+            double q = std::stod(s.substr(index + 3));
+            weight_and_languages.push_back(make_pair(q, s.substr(0, index)));
+        }
+        else
+            weight_and_languages.push_back(make_pair(count--, s));
+        
+    }
+
+    sort(weight_and_languages.begin(), weight_and_languages.end());
+
+    std::vector<std::string> language_weight_table;
+    size_t i = weight_and_languages.size();
+    while (i--)
+        language_weight_table.push_back(weight_and_languages[i].second);
+    
+    return (language_weight_table);
+}
+
+void
+Response::negotiateContent(const std::string& accept_language)
+{
+    std::vector<std::string> language_weight_table = this->makeLanguageWeightTable(accept_language);
+
+    size_t index;
+    for (std::string& language : language_weight_table)
+    {
+        //NOTE: en is default.
+        if (language == "en")
+            return ;
+
+        std::string resource_abs_path = this->getResourceAbsPath();
+        if (this->getUriExtension() != "")
+            index = resource_abs_path.rfind(this->getUriExtension());
+        else
+            index = resource_abs_path.length();
+        
+        std::string target_content_path = resource_abs_path.substr(0, index) + "_" + language + this->getUriExtension();
+        
+        if (ft::fileExists(target_content_path))
+        {
+            this->setResourceAbsPath(target_content_path);
+            this->setContentLanguage(language);
+            return ;
+        }
+    }
 }
 
 bool

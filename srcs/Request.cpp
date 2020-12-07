@@ -406,7 +406,7 @@ Request::updateRecvRequest()
     if (this->getMethod() == "" && this->getUri() == "" && this->getVersion() == "")
         this->setRecvRequest(RecvRequest::REQUEST_LINE);
     else if (this->isBodyUnnecessary())
-        this->setRecvRequest(RecvRequest::COMPLETE);
+        throw (RequestFormatException(*this, "400"));
     else if (this->isNormalBody())
         this->setRecvRequest(RecvRequest::NORMAL_BODY);
     else if (this->isChunkedBody())
@@ -798,7 +798,15 @@ Request::checkHeaderIsDuplicated(std::string& key)
 }
 
 bool
-Request::isCarriegeReturnTrimmed()
+Request::isCarriegeReturnTrimmed() const
 {
-    return (this->getCarriegeReturnTrimmed());
+    return (this->_carriege_return_trimmed);
+}
+
+bool
+Request::acceptLanguageHeaderExists() const
+{
+    if (this->_headers.find("Accept-Language") != this->_headers.end())
+        return (true);
+    return (false);
 }

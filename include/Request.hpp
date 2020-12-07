@@ -140,7 +140,8 @@ public:
     void checkSpaceIsValid(std::string& str);
     void checkHeaderIsDuplicated(std::string& key);
 
-    bool isCarriegeReturnTrimmed();
+    bool isCarriegeReturnTrimmed() const;
+    bool acceptLanguageHeaderExists() const;
 
     void appendBody(char* buf, int bytes);
     void appendBody(const char* buf, int bytes);

@@ -1830,6 +1830,9 @@ Server::checkAndSetResourceType(int client_fd)
             throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
         }
     }
+    Request& request = this->_requests[client_fd];
+    if (request.acceptLanguageHeaderExists())
+        response.negotiateContent(request.getHeaders().at("Accept-Language"));
 
     Log::printTimeDiff(from, 2);
     Log::trace("< checkAndSetResourceType", 2);
