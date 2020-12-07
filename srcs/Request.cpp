@@ -798,7 +798,15 @@ Request::checkHeaderIsDuplicated(std::string& key)
 }
 
 bool
-Request::isCarriegeReturnTrimmed()
+Request::isCarriegeReturnTrimmed() const
 {
-    return (this->getCarriegeReturnTrimmed());
+    return (this->_carriege_return_trimmed);
+}
+
+bool
+Request::acceptLanguageHeaderExists() const
+{
+    if (this->_headers.find("Accept-Language") != this->_headers.end())
+        return (true);
+    return (false);
 }

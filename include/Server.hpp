@@ -164,6 +164,7 @@ public:
     void killCgiAndSendErrorToClient(int fd);
     void findAndCloseClientSocket(int fd);
 
+
 public:
     class PayloadTooLargeException : public SendErrorCodeToClientException
     {

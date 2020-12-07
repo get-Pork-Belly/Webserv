@@ -6,6 +6,7 @@
 # include <vector>
 # include <map>
 # include "utils.hpp"
+# include <algorithm>
 
 class UriParser
 {
