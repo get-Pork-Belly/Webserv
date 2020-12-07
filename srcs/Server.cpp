@@ -92,6 +92,12 @@ Server::getResponse(int fd)
     return (this->_responses[fd]);
 }
 
+const std::map<std::string, std::vector<std::string> >&
+Server::getAuthenticateRealms() const
+{
+    return (this->_authenticate_realms);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -133,10 +139,15 @@ void
 Server::setAuthenticateRealm()
 {
     int fd;
-    char temp[1024];
+    int bytes;
+    char temp[BUFFER_SIZE + 1];
+    std::string readed;
+    std::vector<std::string> auths;
     std::string before_decode;
     std::string after_decode;
+
     const std::map<std::string, location_info>& locations = this->getLocationConfig();
+
     for (auto& location: locations)
     {
         const location_info& location_info = location.second;
@@ -150,22 +161,25 @@ Server::setAuthenticateRealm()
                     setAuthBasic("off", location.first);
                 else
                 {
-                    ft::memset(reinterpret_cast<void *>(temp), 0, 1024);
-                    int bytes = read(fd, temp, 1024);
-                    if (bytes >= 0)
+                    const std::string& route = location.first;
+                    while ((bytes = read(fd, temp, BUFFER_SIZE)) > 0)
                     {
-                        before_decode = std::string(temp);
-                        Base64::decode(before_decode, after_decode);
-                        this->setAuthBasicUserFile(after_decode, location.first);
+                        temp[bytes] = 0;
+                        readed.append(temp, bytes);
                     }
-                    else
-                        this->setAuthBasic("off", location.first);
+                    if (bytes == -1)
+                        this->setAuthBasic("off", route);
+                    auths = ft::split(readed, "\n");
+                    for (auto& auth : auths)
+                    {
+                        Base64::decode(auth, after_decode);
+                        this->_authenticate_realms[route].push_back(after_decode);
+                    }
                 }
             }
         }
     }
 }
-
 
 /*============================================================================*/
 /******************************  Exception  ***********************************/
