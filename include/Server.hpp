@@ -75,7 +75,7 @@ public:
     void setServerSocket();
     void setAuthBasic(const std::string& auth_basic, const std::string& route);
     void setAuthBasicUserFile(const std::string& decoded_id_password, const std::string& route);
-    void setAuthenticateRealm();
+    void setAuthenticateRealms();
 
     /* Exception */
 
@@ -89,6 +89,9 @@ public:
     bool isClientSocket(int fd) const;
     bool isStaticResource(int fd) const;
     bool isCgiPipe(int fd) const;
+    bool isAuthRealm(int fd);
+    bool authorizationHeaderExist(int fd);
+    void checkValidOfAuthHeader(int fd);
 
     /* Server function */
     void init();
