@@ -1849,12 +1849,17 @@ Server::executePythonCgi(int client_fd)
         PyRun_SimpleString("import sys\n");
 
         const std::string& python_script_uri = this->_responses[client_fd].getScriptName();
-        std::string python_script_name = python_script_uri.substr(python_script_uri.find("python_scripts"));
+        const location_info& location_info = this->_responses[client_fd].getLocationInfo();
+
+        const std::string& root_path = location_info.at("root");
+        std::string python_script_path = root_path.substr(root_path.rfind("/") + 1);
+        std::string python_script_name = python_script_uri.substr(location_info.at("root").length());
         python_script_name = python_script_name.substr(0, python_script_name.rfind(".py"));
         python_script_name[python_script_name.find("/")] = '.';
+        python_script_path.append(python_script_name);
 
         std::string cgi_response;
-        PyObject* py_module_object = PyImport_ImportModule(python_script_name.c_str());
+        PyObject* py_module_object = PyImport_ImportModule(python_script_path.c_str());
         if (py_module_object)
         {
             PyObject* py_def_object = PyObject_GetAttrString(py_module_object, "python_cgi");
