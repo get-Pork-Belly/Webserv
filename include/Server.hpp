@@ -90,7 +90,7 @@ public:
     bool isStaticResource(int fd) const;
     bool isCgiPipe(int fd) const;
     bool isAuthRealm(int fd);
-    bool authorizationHeaderExist(int fd);
+    bool authorizationHeaderExists(int fd);
     void checkValidOfAuthHeader(int fd);
 
     /* Server function */

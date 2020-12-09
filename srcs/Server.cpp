@@ -1628,7 +1628,7 @@ Server::isAuthRealm(int client_fd)
 }
 
 bool
-Server::authorizationHeaderExist(int client_fd)
+Server::authorizationHeaderExists(int client_fd)
 {
     if (this->_requests[client_fd].getHeaders().find("Authorization") ==
             this->_requests[client_fd].getHeaders().end())
@@ -1668,7 +1668,7 @@ Server::checkAuthenticate(int client_fd)
 
     if (this->isAuthRealm(client_fd) == false)
         return ;
-    if (this->authorizationHeaderExist(client_fd) == false)
+    if (this->authorizationHeaderExists(client_fd) == false)
         throw (AuthenticateErrorException(*this, client_fd, "401"));
     this->checkValidOfAuthHeader(client_fd);
 }
