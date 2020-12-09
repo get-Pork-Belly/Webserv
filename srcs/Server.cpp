@@ -1666,9 +1666,9 @@ Server::checkAuthenticate(int client_fd)
     std::string before_decode;
     std::string after_decode;
 
-    if (!this->isAuthRealm(client_fd))
+    if (this->isAuthRealm(client_fd) == false)
         return ;
-    if (!this->authorizationHeaderExist(client_fd))
+    if (this->authorizationHeaderExist(client_fd) == false)
         throw (AuthenticateErrorException(*this, client_fd, "401"));
     this->checkValidOfAuthHeader(client_fd);
 }
