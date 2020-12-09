@@ -92,6 +92,12 @@ Server::getResponse(int fd)
     return (this->_responses[fd]);
 }
 
+const std::map<std::string, std::vector<std::string> >&
+Server::getAuthenticateRealms() const
+{
+    return (this->_authenticate_realms);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -130,12 +136,15 @@ Server::setAuthBasicUserFile(const std::string& decoded_id_password, const std::
 }
 
 void
-Server::setAuthenticateRealm()
+Server::setAuthenticateRealms()
 {
     int fd;
-    char temp[1024];
-    std::string before_decode;
+    int bytes;
+    char temp[BUFFER_SIZE + 1];
+    std::string readed;
+    std::vector<std::string> auths;
     std::string after_decode;
+
     const std::map<std::string, location_info>& locations = this->getLocationConfig();
     for (auto& location: locations)
     {
@@ -150,27 +159,30 @@ Server::setAuthenticateRealm()
                     setAuthBasic("off", location.first);
                 else
                 {
-                    ft::memset(reinterpret_cast<void *>(temp), 0, 1024);
-                    int bytes = read(fd, temp, 1024);
-                    if (bytes >= 0)
+                    const std::string& route = location.first;
+                    while ((bytes = read(fd, temp, BUFFER_SIZE)) > 0)
                     {
-                        before_decode = std::string(temp);
-                        Base64::decode(before_decode, after_decode);
-                        this->setAuthBasicUserFile(after_decode, location.first);
+                        temp[bytes] = 0;
+                        readed.append(temp, bytes);
                     }
-                    else
-                        this->setAuthBasic("off", location.first);
+                    close(fd);
+                    if (bytes == -1)
+                        this->setAuthBasic("off", route);
+                    auths = ft::split(readed, "\n");
+                    for (auto& auth : auths)
+                    {
+                        Base64::decode(auth, after_decode);
+                        this->_authenticate_realms[route].push_back(after_decode);
+                    }
                 }
             }
         }
     }
 }
 
-
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
-
 Server::PayloadTooLargeException::PayloadTooLargeException(Server& server, int client_fd)
 {
     server._server_manager->fdSet(client_fd, FdSet::WRITE);
@@ -431,7 +443,7 @@ Server::init()
     }
     this->_requests = std::vector<Request>(1024);
     this->_responses = std::vector<Response>(1024);
-    this->setAuthenticateRealm();
+    this->setAuthenticateRealms();
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
         throw "Socket Error";
@@ -691,6 +703,7 @@ Server::receiveRequestHeaders(int client_fd)
                         request.setRecvRequest(RecvRequest::COMPLETE);
                 }
                 request.updateRecvRequest();
+                this->checkAuthenticate(client_fd);
             }
         }
     }
@@ -1601,39 +1614,63 @@ Server::closeFdAndSetFd(int clear_fd, FdSet clear_fd_set, int set_fd, FdSet set_
     Log::trace("< closeFdAndSetFd", 2);
 }
 
+bool
+Server::isAuthRealm(int client_fd)
+{
+    const std::string& route = this->_responses[client_fd].getRoute();
+    const location_info& location_info = this->getLocationConfig().at(route);
+    location_info::const_iterator it = location_info.find("auth_basic");
+    if (it->second == "off")
+        return (false);
+    if (this->_authenticate_realms.find(route) == this->_authenticate_realms.end())
+        return (false);
+    return (true);
+}
+
+bool
+Server::authorizationHeaderExists(int client_fd)
+{
+    if (this->_requests[client_fd].getHeaders().find("Authorization") ==
+            this->_requests[client_fd].getHeaders().end())
+        return (false);
+    return (true);
+}
+
+void
+Server::checkValidOfAuthHeader(int client_fd)
+{
+    std::string after_decode;
+    Request& request = this->_requests[client_fd];
+    Response& response = this->_responses[client_fd];
+    std::vector<std::string> authenticate_info = ft::split(request.getHeaders().at("Authorization"), " ");
+
+    if (authenticate_info.size() != 2)
+        throw (AuthenticateErrorException(*this, client_fd, "403"));
+    Base64::decode(authenticate_info[1], after_decode);
+    for (auto& auth : this->_authenticate_realms.find(response.getRoute())->second)
+    {
+        if (auth == after_decode)
+        {
+            size_t pos = after_decode.find(":");
+            request.setRemoteUser(after_decode.substr(0, pos));
+            request.setRemoteIdent(after_decode.substr(pos + 1));
+            return ;
+        }
+    }
+    throw (AuthenticateErrorException(*this, client_fd, "403"));
+}
 
 void
 Server::checkAuthenticate(int client_fd)
 {
     std::string before_decode;
     std::string after_decode;
-    Response& response = this->_responses[client_fd];
-    Request& request = this->_requests[client_fd];
-    const std::string& route = response.getRoute();
-    const std::map<std::string, location_info>& location_config = this->getLocationConfig();
-    const location_info& location_info = location_config.at(route);
-    location_info::const_iterator it = location_info.find("auth_basic");
-    if (it->second == "off")
+
+    if (this->isAuthRealm(client_fd) == false)
         return ;
-    it = location_info.find("auth_basic_user_file");
-    if (it == location_info.end())
-        return ;
-    const std::string& id_password = it->second;
-    const std::map<std::string, std::string>& headers = this->_requests[client_fd].getHeaders();
-    it = headers.find("Authorization");
-    if (it == headers.end())
+    if (this->authorizationHeaderExists(client_fd) == false)
         throw (AuthenticateErrorException(*this, client_fd, "401"));
-    std::vector<std::string> authenticate_info = ft::split(it->second, " ");
-    if (authenticate_info[0] != "Basic")
-        throw (AuthenticateErrorException(*this, client_fd, "401"));
-    before_decode = authenticate_info[1];
-    Base64::decode(before_decode, after_decode);
-    if (id_password != after_decode)
-        throw (AuthenticateErrorException(*this, client_fd, "403"));
-    request.setAuthType(authenticate_info[0]);
-    size_t pos = after_decode.find(":");
-    request.setRemoteUser(after_decode.substr(0, pos));
-    request.setRemoteIdent(after_decode.substr(pos + 1));
+    this->checkValidOfAuthHeader(client_fd);
 }
 
 void
@@ -1909,7 +1946,6 @@ Server::processResponseBody(int client_fd)
             throw (PayloadTooLargeException(*this, client_fd));
     }
 
-    this->checkAuthenticate(client_fd);
     if (this->_responses[client_fd].isLimitExceptInLocation() && 
         !(this->_responses[client_fd].isAllowedMethod(this->_requests[client_fd].getMethod())))
             throw (NotAllowedMethodException(*this, client_fd));

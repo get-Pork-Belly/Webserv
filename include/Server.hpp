@@ -52,6 +52,7 @@ private:
     std::vector<Request> _requests;
     std::map<std::string, location_info> _location_config;
     std::vector<Response> _responses;
+    std::map<std::string, std::vector<std::string> > _authenticate_realms;
 
 public:
     /* Constructor */
@@ -69,10 +70,12 @@ public:
     Response& getResponse(int fd);
     const std::string& getHost() const;
     const std::string& getPort() const;
+    const std::map<std::string, std::vector<std::string> >& getAuthenticateRealms() const;
     /* Setter */
     void setServerSocket();
     void setAuthBasic(const std::string& auth_basic, const std::string& route);
     void setAuthBasicUserFile(const std::string& decoded_id_password, const std::string& route);
+    void setAuthenticateRealms();
 
     /* Exception */
 
@@ -86,6 +89,9 @@ public:
     bool isClientSocket(int fd) const;
     bool isStaticResource(int fd) const;
     bool isCgiPipe(int fd) const;
+    bool isAuthRealm(int fd);
+    bool authorizationHeaderExists(int fd);
+    void checkValidOfAuthHeader(int fd);
 
     /* Server function */
     void init();
@@ -117,8 +123,6 @@ public:
     void readStaticResource(int fd);
 
     void checkAuthenticate(int fd);
-
-    void setAuthenticateRealm();
 
     void processIfHeadersNotFound(int fd, const std::string& readed);
     void putFileOnServer(int fd);
