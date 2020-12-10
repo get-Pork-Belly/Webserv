@@ -1916,6 +1916,7 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
         }
         if (rmdir(path.c_str()) == -1)
             throw (InternalServerException(*this, client_fd));
+        response.setStatusCode("204");
     }
     else
     {
