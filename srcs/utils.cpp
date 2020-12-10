@@ -322,5 +322,20 @@ fileExists(std::string& file_path)
     return (true);
 }
 
+std::vector<std::string>
+makeDirectoryEntry(DIR* dir_ptr)
+{
+    std::vector<std::string> directory_entry;
+    struct dirent* entry = NULL;
+    while ((entry = readdir(dir_ptr)) != NULL)
+    {
+        std::string file_path(entry->d_name);
+        if (entry->d_type == 4)
+            file_path += "/";
+        directory_entry.push_back(file_path);
+    }
+    return (directory_entry);
+}
+
 
 }
