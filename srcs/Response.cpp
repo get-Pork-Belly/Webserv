@@ -265,15 +265,7 @@ Response::setResourceAbsPath(const std::string& path)
 void
 Response::setDirectoryEntry(DIR* dir_ptr)
 {
-    this->_directory_entry.clear();
-    struct dirent* entry = NULL;
-    while ((entry = readdir(dir_ptr)) != NULL)
-    {
-        std::string file_path(entry->d_name);
-        if (entry->d_type == 4)
-            file_path += "/";
-        this->_directory_entry.push_back(file_path);
-    }
+    this->_directory_entry = ft::makeDirectoryEntry(dir_ptr);
 }
 
 void
