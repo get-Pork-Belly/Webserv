@@ -44,6 +44,7 @@ namespace ft
     bool IsPrintable(char ch);
 
     bool fileExists(std::string& file_path);
+    std::vector<std::string> makeDirectoryEntry(DIR* dir_ptr);
 }
 
 #endif
