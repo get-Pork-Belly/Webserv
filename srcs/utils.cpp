@@ -330,7 +330,7 @@ makeDirectoryEntry(DIR* dir_ptr)
     while ((entry = readdir(dir_ptr)) != NULL)
     {
         std::string file_path(entry->d_name);
-        if (entry->d_type == 4)
+        if (entry->d_type == DT_DIR)
             file_path += "/";
         directory_entry.push_back(file_path);
     }
