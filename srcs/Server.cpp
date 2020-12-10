@@ -1906,9 +1906,8 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
     {
         if (path.back() != '/')
             throw (CannotOpenDirectoryException(*this, client_fd, "409", errno));
-        response.setDirectoryEntry(dir_ptr);
+        std::vector<std::string> directory_entry = ft::makeDirectoryEntry(dir_ptr);
         closedir(dir_ptr);
-        const std::vector<std::string>& directory_entry = response.getDirectoryEntry();
         for (const std::string& entry : directory_entry)
         {
             if (entry != "./" && entry != "../")
@@ -1916,7 +1915,6 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
         }
         if (rmdir(path.c_str()) == -1)
             throw (InternalServerException(*this, client_fd));
-        response.setStatusCode("204");
     }
     else
     {
@@ -1928,7 +1926,7 @@ Server::deleteResourceOfUri(int client_fd, const std::string& path)
         else
             throw (CannotOpenDirectoryException(*this, client_fd, "404", errno));
     }
-
+    response.setStatusCode("204");
     Log::printTimeDiff(from, 2);
     Log::trace("< deleteResourceOfUri", 2);
 }
