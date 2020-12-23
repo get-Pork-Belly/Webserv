@@ -355,10 +355,9 @@ ServerManager::runServers()
     {
         if (this->isPluginOn("check_timeout"))
             this->closeUnresponsiveFd();
+        if (this->isPluginOn("show_fd_table"))
+            this->showFdTables(BEFORE_SELECT);
 
-        // std::cout<<"\033[1;44;37m"<<"BEFORE select!"<<"\033[0m"<<std::endl;
-        // Log::printFdCopySets(*this, 10);
-        // Log::printFdSets(*this, 10);
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
@@ -376,9 +375,9 @@ ServerManager::runServers()
         }
         else
         {
-        // std::cout<<"\033[1;44;37m"<<"After select!"<<"\033[0m"<<std::endl;
-        // Log::printFdCopySets(*this, 10);
-        // Log::printFdSets(*this, 10);
+            if (this->isPluginOn("show_fd_table"))
+                this->showFdTables(AFTER_SELECT);
+
             for (int fd = 0; fd < this->getFdMax() + 1; fd++)
             {
                 if (this->fdIsCopySet(fd, FdSet::ALL))
@@ -655,6 +654,17 @@ ServerManager::exitServers(int signo)
         }
         exit(EXIT_SUCCESS);
     }
+}
+
+void
+ServerManager::showFdTables(const int sequence)
+{
+    if (sequence == BEFORE_SELECT)
+        std::cout<<"\033[1;44;37m"<<"Before select!"<<"\033[0m"<<std::endl;
+    else if (sequence == AFTER_SELECT)
+        std::cout<<"\033[1;44;37m"<<"After select!"<<"\033[0m"<<std::endl;
+    Log::printFdCopySets(*this, 10);
+    Log::printFdSets(*this, 10);
 }
 
 bool

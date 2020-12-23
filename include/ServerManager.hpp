@@ -21,6 +21,8 @@
 const int DEFAULT_CLIENT_TIME_OUT_SECOND = 5;
 const int DEFAULT_CGI_TIME_OUT_SECOND = 60;
 const int DEFAULT_PID = 0;
+const int BEFORE_SELECT = 0;
+const int AFTER_SELECT = 1;
 
 class Server;
 
@@ -107,6 +109,7 @@ public:
     bool isCgiProcessTerminated(int clinet_fd) const;
     void terminateCgiProcess(int client_fd);
     Server* findLinkedServer(int client_fd);
+    void showFdTables(const int sequence);
 
     bool isPluginOn(const std::string& plugin_name) const;
 };
