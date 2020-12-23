@@ -34,11 +34,12 @@ int main(int argc, char* argv[])
     }
     catch(const std::exception& e)
     {
-        std::cerr << e.what() << '\n';
+        std::cerr << "The server shut down due to an unexpected situation: ";
+        std::cerr << e.what() << std::endl;
     }
     catch(const char* e)
     {
-        std::cerr<<e<<std::endl;
+        std::cerr << e << std::endl;
     }
  
     return (0);

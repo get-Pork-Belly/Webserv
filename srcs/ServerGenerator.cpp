@@ -176,43 +176,50 @@ ServerGenerator::checkValidationOfServerConfig(server_info& server)
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
-    server_info http_config;
-    bool server_block_exists = false;
-    
-    std::vector<std::string>::iterator it = this->_configfile_lines.begin();
-    std::vector<std::string>::iterator ite = this->_configfile_lines.end();
-    http_config = this->parseHttpBlock();
 
-    while (it != ite)
+    try
     {
-        if ( *it++ == "server {")
-        {
-            server_info server_config;
-            this->initServerConfig(server_config, http_config);
-            std::map<std::string, location_info> locations;
-            this->parseServerBlock(it, server_config, locations);
-            this->checkValidationOfConfigs(server_config, locations);
-            this->setDefaultRouteOfServer(locations, server_config);
-            server_block_exists = true;
 
-            //ANCHOR
-            testServerConfig(server_config);
-            testLocationConfig(locations);
-            try
+        server_info http_config;
+        bool server_block_exists = false;
+        
+        std::vector<std::string>::iterator it = this->_configfile_lines.begin();
+        std::vector<std::string>::iterator ite = this->_configfile_lines.end();
+        http_config = this->parseHttpBlock();
+        this->_server_manager->setPlugins(http_config);
+
+        while (it != ite)
+        {
+            if ( *it++ == "server {")
             {
+                server_info server_config;
+                this->initServerConfig(server_config, http_config);
+                std::map<std::string, location_info> locations;
+                this->parseServerBlock(it, server_config, locations);
+                this->checkValidationOfConfigs(server_config, locations);
+                this->setDefaultRouteOfServer(locations, server_config);
+                server_block_exists = true;
+
+                testServerConfig(server_config);
+                testLocationConfig(locations);
                 Server* server = new Server(this->_server_manager, server_config, locations);
                 servers.push_back(server);
             }
-            catch (std::bad_alloc& e)
-            {
-                for (auto& s : servers)
-                    delete s;
-                throw ("new Failed");
-            }
         }
+        if (server_block_exists == false)
+            throw ("There is no server block in config_file!");
     }
-    if (server_block_exists == false)
-        throw ("There is no server block in config_file!");
+    catch (std::bad_alloc& e)
+    {
+        for (auto& s : servers)
+            delete (s);
+        throw ("new Failed while generating server");
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "ServerGenerateError: " << e.what() << std::endl;
+        throw (e);
+    }
 }
 
 bool
