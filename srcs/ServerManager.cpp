@@ -175,7 +175,11 @@ ServerManager::setPlugins(std::map<std::string, std::string>& http_config)
         if (plugin == "log_at")
         {
             if (http_config.find("log_at") != http_config.end())
+            {
                 this->_plugins[plugin] = http_config["log_at"];
+                if (this->_plugins[plugin] == ";")
+                    this->_plugins[plugin] = "STDOUT";
+            }
             else
                 this->_plugins[plugin] = "STDOUT";
         }
