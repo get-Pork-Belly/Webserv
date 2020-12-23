@@ -119,7 +119,7 @@ ServerGenerator::checkValidationOfLocationConfig(std::map<std::string, location_
     std::vector<std::string> list =
     {"autoindex", "auth_basic", "auth_basic_user_file", "cgi", "cgi_path",
      "index", "return","retry_after_sec", "route", "root", "limit_except",
-     "limit_client_body_size", "plugin", "timeout_second", "log_at", "echo"};
+     "limit_client_body_size", "plugin", "timeout_second", "log_at", "location_msg"};
     for (auto& location : locations)
     {
         for (auto info : location.second)

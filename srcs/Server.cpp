@@ -648,10 +648,10 @@ Server::findAndExecuteEchoPlugin(int client_fd)
     Response& response = this->_responses[client_fd];
     const location_info& locations = response.getLocationInfo();
 
-    if (locations.find("echo") != locations.end() &&
-            this->_server_manager->isPluginOn("echo_in_location"))
+    if (locations.find("location_msg") != locations.end() &&
+            this->_server_manager->isPluginOn("show_location_msg"))
     {
-        std::string echo_string = "echo " + locations.at("echo");
+        std::string echo_string = "echo " + locations.at("location_msg");
         system(echo_string.c_str());
     }
 }
@@ -1869,7 +1869,8 @@ Server::checkAndSetResourceType(int client_fd)
         }
     }
     Request& request = this->_requests[client_fd];
-    if (request.acceptLanguageHeaderExists())
+
+    if (request.acceptLanguageHeaderExists() && this->_server_manager->isPluginOn("accept_language"))
         response.negotiateContent(request.getHeaders().at("Accept-Language"));
 
     Log::printTimeDiff(from, 2);
