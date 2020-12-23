@@ -204,6 +204,7 @@ ServerManager::setPlugins(std::map<std::string, std::string>& http_config)
         {
             if (http_config.find("fd_table_width") != http_config.end())
                 this->_fd_table_width = std::stoi(http_config["fd_table_width"]);
+            this->_plugins[plugin] = "on";
         }
         else
             this->_plugins[plugin] = "on";
