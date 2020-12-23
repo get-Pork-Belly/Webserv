@@ -1,7 +1,7 @@
 http { 
     include mime.types;
     root /Users/yohan/Webserv/www/;
-    plugins accept_language show_location_msg control_timeout log_at;
+    plugins accept_language show_fd_table show_location_msg control_timeout log_at;
     control_timeout on;
     client_timeout_second 30;
     cgi_timeout_second 180;
@@ -10,28 +10,28 @@ http {
     server {
         server_name first_server;
         listen       8080;
-        location / {
+        location ^~/ {
             limit_except GET;
             cgi .bin .cgi .bla;
             cgi_path /Users/yohan/Webserv/php-mac/bin/php-cgi;
             autoindex on;
             root /Users/yohan/Webserv/www/;
         }
-        location /put_test {
+        location ^~/put_test {
             limit_except PUT;
             root /Users/yohan/Webserv/tests/put_test;
             location_msg "This is put_test directory";
             cgi .bla;
             cgi_path /Users/yohan/Webserv/php-mac/bin/php-cgi;
         }
-        location /post_body {
+        location ^~/post_body {
             limit_client_body_size 100;
             limit_except POST;
             location_msg "This is post_body directory";
             index index.html;
             root /Users/yohan/Webserv/www/folder/;
         }
-        location /directory { 
+        location ^~/directory { 
             limit_except GET POST;
             index youpi.bad_extension;
             cgi .bla;
