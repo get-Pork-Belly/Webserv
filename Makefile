@@ -5,7 +5,7 @@ CFLAGS = -Wall -Wextra -Werror -std=c++11 -fsanitize=address -g
 RM = rm -rf
 
 # 1 일 때 디폴트 에러 로그, 2일 때 trace로그 추가
-DEBUG = -D DEBUG=1
+DEBUG = -D DEBUG=0
 STDOUT = -D STDOUT=1
 
 MAIN_FILES = main PageGenerator Log utils ServerManager ServerGenerator Server Response Request UriParser Exception Base64

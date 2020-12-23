@@ -1,6 +1,10 @@
 http { 
     include mime.types;
     root /Users/sanam/Desktop/Webserv/www/;
+    plugins accept_language echo_in_location show_fd_table check_timeout log_at;
+    client_timeout_second 10;
+    cgi_timeout_second 180;
+    log_at log.txt;
     server {
         server_name first_server;
         listen       8080;

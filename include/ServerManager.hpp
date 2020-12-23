@@ -116,6 +116,7 @@ public:
     void showFdTables(const int sequence);
 
     bool isPluginOn(const std::string& plugin_name) const;
+    void setLogFd() const;
 };
 
 #endif

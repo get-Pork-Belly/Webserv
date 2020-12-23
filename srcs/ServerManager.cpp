@@ -183,7 +183,11 @@ ServerManager::setPlugins(std::map<std::string, std::string>& http_config)
         if (plugin == "log_at")
         {
             if (http_config.find("log_at") != http_config.end())
+            {
                 this->_plugins[plugin] = http_config["log_at"];
+                if (this->_plugins[plugin] == ";")
+                    this->_plugins[plugin] = "STDOUT";
+            }
             else
                 this->_plugins[plugin] = "STDOUT";
         }
@@ -349,12 +353,12 @@ ServerManager::updateFdMax(int fd)
 /************************  Manage Server functions  ***************************/
 /*============================================================================*/
 
-
 void
 ServerManager::initServers()
 {
     ServerGenerator server_generator(this);
     server_generator.generateServers(this->_servers);
+    this->setLogFd();
 }
 
 bool
@@ -701,4 +705,23 @@ ServerManager::isPluginOn(const std::string& plugin_name) const
         return (true);
     }
     return (false);
+}
+
+void
+ServerManager::setLogFd() const
+{
+    const std::map<std::string, std::string>& plugins = this->getPlugins();
+    if (this->isPluginOn("log_at"))
+    {
+        if (plugins.find("log_at") != plugins.end())
+        {
+            if (plugins.at("log_at") == "STDOUT")
+                Log::log_fd = 1;
+            else
+            {
+                Log::log_fd = open(plugins.at("log_at").c_str(),
+                        O_CREAT | O_TRUNC | O_WRONLY, 0644);
+            }
+        }
+    }
 }
