@@ -1,9 +1,11 @@
 http { 
     include mime.types;
     root /Users/yohan/Webserv/;
-    plugins accept_language show_fd_table show_location_msg check_timeout log_at;
+    plugins accept_language show_fd_table show_location_msg control_timeout log_at;
+    control_timeout on;
     client_timeout_second 5;
     cgi_timeout_second 180;
+
     log_at log.txt;
     fd_table_width 5;
     server {
