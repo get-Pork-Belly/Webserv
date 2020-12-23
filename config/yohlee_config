@@ -1,11 +1,10 @@
 http { 
     include mime.types;
-    root /Users/yohan/Webserv/;
-    plugins accept_language show_fd_table show_location_msg control_timeout log_at;
+    root /Users/yohan/Webserv/www/;
+    plugins accept_language show_location_msg control_timeout log_at;
     control_timeout on;
-    client_timeout_second 5;
+    client_timeout_second 30;
     cgi_timeout_second 180;
-
     log_at log.txt;
     fd_table_width 5;
     server {
@@ -14,32 +13,30 @@ http {
         location / {
             limit_except GET;
             cgi .bin .cgi .bla;
-            cgi_path /Users/yohan/Webserv/cgi_tester;
+            cgi_path /Users/yohan/Webserv/php-mac/bin/php-cgi;
             autoindex on;
-            location_msg 'this is default route';
-            root /Users/yohan/Webserv/;
+            root /Users/yohan/Webserv/www/;
         }
         location /put_test {
             limit_except PUT;
             root /Users/yohan/Webserv/tests/put_test;
-            location_msg "this is put_test route";
+            location_msg "This is put_test directory";
             cgi .bla;
-            cgi_path /Users/yohan/Webserv/cgi_tester;
+            cgi_path /Users/yohan/Webserv/php-mac/bin/php-cgi;
         }
         location /post_body {
             limit_client_body_size 100;
             limit_except POST;
-            location_msg "this is post_body route";
+            location_msg "This is post_body directory";
             index index.html;
-            root /Users/yohan/Webserv/tests/folder;
+            root /Users/yohan/Webserv/www/folder/;
         }
         location /directory { 
             limit_except GET POST;
             index youpi.bad_extension;
-            location_msg "this is directory route + home root is: $HOME";
             cgi .bla;
-            cgi_path /Users/yohan/Webserv/cgi_tester;
-            root /Users/yohan/Webserv/YoupiBanane;
+            cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
+            root /Users/yohan/Webserv/YoupiBanane/;
         }
     }
     server {
@@ -51,7 +48,7 @@ http {
         location /second {
             root /Users/yohan/Webserv/tests/;
             index  html;
-            limit_except PUT POST GET;
+            limit_except PUT POST GET DELETE;
             index index.html index.htm index.abc;
         }
     }
