@@ -1,8 +1,9 @@
 http { 
     include mime.types;
     root /Users/humblego/Documents/dev/team_webserv/www/;
-    plugin accept_language echo_in_location show_fd_table check_timeout log_at;
-    timeout_second 60;
+    plugins accept_language echo_in_location show_fd_table check_timeout log_at;
+    client_timeout_second 123;
+    cgi_timeout_second 200;
     log_at log.txt;
     server {
         server_name first_server;
