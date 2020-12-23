@@ -967,19 +967,33 @@ Server::setResponseMessageAccordingToTheParseProgress(int client_fd, std::string
     case ParseProgress::DEFAULT:
         response.setParseProgress(ParseProgress::FINISH);
         if (method == "HEAD" || ((method == "PUT" || method == "DELETE") && response.getStatusCode().front() == '2'))
+        {
             response.setResponseMessage(status_line + headers);
+            break ;
+        }
         response.setResponseMessage(status_line + headers + response.getTransmittingBody());
-        break;
+        break ;
     case ParseProgress::CHUNK_START:
         if (request.getMethod() == "HEAD")
+        {
             response.setResponseMessage(status_line + headers);
+            break ;
+        }
         response.setResponseMessage(status_line + headers + response.getTransmittingBody());
-        break;
+        break ;
     default: //NOTE: PraseProgress::CHUNK_PROGRESS or ParseProgress::FINISH
         if (request.getMethod() == "HEAD")
+        {
             response.setResponseMessage("");
+            break ;
+        }
+        if (response.getResourceType() == ResType::CGI && response.getUriExtension() == ".py")
+        {
+            response.setResponseMessage(status_line + headers + response.getTransmittingBody());
+            break ;
+        }
         response.setResponseMessage(response.getTransmittingBody());
-        break;
+        break ;
     }
 }
 
@@ -1878,6 +1892,52 @@ Server::checkAndSetResourceType(int client_fd)
 }
 
 void
+Server::executePythonCgi(int client_fd)
+{
+    Py_Initialize();
+    if (Py_IsInitialized())
+    {
+        char** argv = this->makeCgiArgv(client_fd);
+        PySys_SetArgv(0, argv);
+        PyRun_SimpleString("import sys\n");
+
+        const std::string& python_script_uri = this->_responses[client_fd].getScriptName();
+        const location_info& location_info = this->_responses[client_fd].getLocationInfo();
+
+        const std::string& root_path = location_info.at("root");
+        std::string python_script_path = root_path.substr(root_path.rfind("/") + 1);
+        std::string python_script_name = python_script_uri.substr(location_info.at("root").length());
+        python_script_name = python_script_name.substr(0, python_script_name.rfind(".py"));
+        python_script_name[python_script_name.find("/")] = '.';
+        python_script_path.append(python_script_name);
+
+        std::string cgi_response;
+        PyObject* py_module_object = PyImport_ImportModule(python_script_path.c_str());
+        if (py_module_object)
+        {
+            PyObject* py_def_object = PyObject_GetAttrString(py_module_object, "python_cgi");
+            if (py_def_object)
+            {
+                PyObject* result = PyObject_CallFunction(py_def_object, (char *)"s", this->_requests[client_fd].getBody().c_str());
+                if (result)
+                {
+                    cgi_response += PyString_AS_STRING(result);
+                    Py_XDECREF(result);
+                }
+                Py_XDECREF(py_def_object);
+            }
+            Py_XDECREF(py_module_object);
+        }
+        Py_Finalize();
+
+        this->_responses[client_fd].setTempBuffer(cgi_response);
+        this->_responses[client_fd].preparseCgiMessage();
+        this->_responses[client_fd].setReceiveProgress(ReceiveProgress::FINISH);
+        this->_server_manager->fdSet(client_fd, FdSet::WRITE);
+    }
+}
+
+void
 Server::preprocessResponseBody(int client_fd, ResType& res_type)
 {
     Log::trace("> preprocessResponseBody", 1);
@@ -1893,12 +1953,17 @@ Server::preprocessResponseBody(int client_fd, ResType& res_type)
         this->openStaticResource(client_fd);
         break ;
     case ResType::CGI:
-        this->openCgiPipe(client_fd);
-        this->forkAndExecuteCgi(client_fd);
-        if (this->_responses[client_fd].getUriExtension() == ".php")
-            this->_responses[client_fd].setReceiveProgress(ReceiveProgress::PHP_CGI_BEGIN);
+        if (this->_responses[client_fd].getUriExtension() == ".py")
+            this->executePythonCgi(client_fd);
         else
-            this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
+        {
+            this->openCgiPipe(client_fd);
+            this->forkAndExecuteCgi(client_fd);
+            if (this->_responses[client_fd].getUriExtension() == ".php")
+                this->_responses[client_fd].setReceiveProgress(ReceiveProgress::PHP_CGI_BEGIN);
+            else
+                this->_responses[client_fd].setReceiveProgress(ReceiveProgress::CGI_BEGIN);
+        }
         break ;
     default:
         this->_server_manager->fdSet(client_fd, FdSet::WRITE);

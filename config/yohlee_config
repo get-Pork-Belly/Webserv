@@ -3,7 +3,7 @@ http {
     root /Users/yohan/Webserv/www/;
     plugins accept_language show_fd_table show_location_msg control_timeout log_at;
     control_timeout on;
-    client_timeout_second 30;
+    client_timeout_second 5;
     cgi_timeout_second 180;
     log_at log.txt;
     fd_table_width 5;
@@ -13,23 +13,22 @@ http {
         location / {
             limit_except GET;
             cgi .bin .cgi .bla;
-            cgi_path /Users/yohan/Webserv/php-mac/bin/php-cgi;
+            cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
             autoindex on;
-            root /Users/yohan/Webserv/www/;
+            root /Users/yohan/Webserv/;
         }
         location /put_test {
             limit_except PUT;
             root /Users/yohan/Webserv/tests/put_test;
-            location_msg "This is put_test location";
             cgi .bla;
-            cgi_path /Users/yohan/Webserv/php-mac/bin/php-cgi;
+            cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
         }
         location /post_body {
             limit_client_body_size 100;
             limit_except POST;
             location_msg "This is post_body location";
             index index.html;
-            root /Users/yohan/Webserv/www/folder/;
+            root /Users/yohan/Webserv/www/folder;
         }
         location ^/dir[a-z]* { 
             limit_except GET POST;
@@ -38,6 +37,15 @@ http {
             cgi .bla;
             cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
             root /Users/yohan/Webserv/YoupiBanane/;
+            cgi .bla .php;
+            cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
+            root /Users/yohan/Webserv/YoupiBanane;
+        }
+        location /bonus {
+            limit_except POST GET HEAD;
+            cgi .py;
+            cgi_path /Users/yohan/Webserv/python_scripts/python_script_bad_extension.py;
+            root /Users/yohan/Webserv/python_scripts;
         }
     }
     server {
@@ -49,7 +57,7 @@ http {
         location /second {
             root /Users/yohan/Webserv/tests/;
             index  html;
-            limit_except PUT POST GET DELETE;
+            limit_except PUT POST GET;
             index index.html index.htm index.abc;
         }
     }

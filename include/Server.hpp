@@ -9,6 +9,7 @@
 # include <sys/types.h>
 # include <sys/time.h>
 # include <netinet/in.h>
+# include <Python/Python.h>
 # include <algorithm>
 # include <vector>
 # include <fcntl.h>
@@ -132,6 +133,7 @@ public:
     void acceptClient();
     void openCgiPipe(int fd);
     void forkAndExecuteCgi(int fd);
+    void executePythonCgi(int fd);
 
     void writeSequence(int fd);
     char** makeCgiArgv(int fd);
