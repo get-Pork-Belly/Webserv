@@ -1,7 +1,7 @@
 http { 
     include mime.types;
-    root /Users/sanam/Desktop/Webserv/www/;
-    plugins accept_language echo_in_location show_fd_table check_timeout log_at;
+    root /Users/sanam/Desktop/Webserv/bonus/www/;
+    plugins plugin_names;
     client_timeout_second 10;
     cgi_timeout_second 180;
     log_at log.txt;
@@ -12,30 +12,30 @@ http {
         location / {
             limit_except GET;
             cgi .bin .cgi .bla;
-            cgi_path /Users/sanam/Desktop/Webserv/php-mac/bin/php-cgi;
+            cgi_path /Users/sanam/Desktop/Webserv/bonus/php-mac/bin/php-cgi;
             autoindex on;
-            root /Users/sanam/Desktop/Webserv/www/;
+            root /Users/sanam/Desktop/Webserv/bonus/www/;
         }
         location /put_test {
             limit_except PUT;
-            root /Users/sanam/Desktop/Webserv/tests/put_test;
+            root /Users/sanam/Desktop/Webserv/bonus/tests/put_test;
             cgi .bla;
-            cgi_path /Users/sanam/Desktop/Webserv/php-mac/bin/php-cgi;
+            cgi_path /Users/sanam/Desktop/Webserv/bonus/php-mac/bin/php-cgi;
         }
         location /post_body {
             limit_client_body_size 100;
             limit_except POST;
             index index.html;
-            root /Users/sanam/Desktop/Webserv/www/folder/;
+            root /Users/sanam/Desktop/Webserv/bonus/www/folder/;
         }
         location /directory { 
             auth_basic "sanam";
-            auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpassword/sanam;
+            auth_basic_user_file /Users/sanam/Desktop/Webserv/bonus/.htpassword/sanam;
             limit_except GET POST;
             index youpi.bad_extension;
             cgi .bla;
-            cgi_path /Users/sanam/Desktop/Webserv/YoupiBanane/youpi.bad_extension;
-            root /Users/sanam/Desktop/Webserv/YoupiBanane/;
+            cgi_path /Users/sanam/Desktop/Webserv/bonus/YoupiBanane/youpi.bad_extension;
+            root /Users/sanam/Desktop/Webserv/bonus/YoupiBanane/;
         }
     }
     server {
@@ -43,15 +43,15 @@ http {
         listen       8081;
         location / {
             autoindex on;
-            root /Users/sanam/Desktop/Webserv/www/;
+            root /Users/sanam/Desktop/Webserv/bonus/www/;
             auth_basic "sanam";
-            auth_basic_user_file /Users/sanam/Desktop/Webserv/.htpassword/sanam;
+            auth_basic_user_file /Users/sanam/Desktop/Webserv/bonus/.htpassword/sanam;
         }
         location /first {
             index  index.html index.htm;
         }
         location /second {
-            root /Users/sanam/Desktop/Webserv/tests/;
+            root /Users/sanam/Desktop/Webserv/bonus/tests/;
             index  html;
             limit_except PUT POST GET;
             index index.html index.htm index.abc;
