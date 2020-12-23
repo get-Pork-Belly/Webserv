@@ -29,6 +29,8 @@ ServerManager::ServerManager(const char* config_path)
     this->_last_update_time_of_fd.resize(1024, std::pair<MonitorStatus, timeval>(false, timeval()));
     this->_fd = DEFAULT_FD;
     this->_fd_max = 2;
+    this->_client_timeout_second = DEFAULT_CLIENT_TIME_OUT_SECOND;
+    this->_cgi_timeout_second = DEFAULT_CGI_TIME_OUT_SECOND;
     this->initServers();
 }
 
@@ -97,6 +99,13 @@ ServerManager::getLinkedFdFromFdTable(int fd) const
 {
     return (this->_fd_table[fd].second);
 }
+
+const std::map<std::string, std::string>&
+ServerManager::getPlugins() const
+{
+    return (this->_plugins);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -139,6 +148,39 @@ void
 ServerManager::setClosedFdOnFdTable(int fd)
 {
     this->_fd_table[fd].first = FdType::CLOSED;
+}
+
+void
+ServerManager::setPlugins(std::map<std::string, std::string>& http_config)
+{
+    std::map<std::string, std::string>::iterator ite = http_config.end();
+    std::map<std::string, std::string>::iterator it = http_config.find("plugins");
+    if (it == ite)
+        return ;
+    std::vector<std::string> plugins = ft::split((*it).second, " ");
+    
+    for (auto& plugin : plugins)
+    {
+        if (plugin == "log_at")
+        {
+            if (http_config.find("log_at") != http_config.end())
+                this->_plugins[plugin] = http_config["log_at"];
+            else
+                this->_plugins[plugin] = "STDOUT";
+        }
+        else if (plugin == "check_timeout")
+        {
+            this->_plugins[plugin] = "on";
+            if (http_config.find("client_timeout_second") != http_config.end())
+                this->_client_timeout_second = std::stoi(http_config["client_timeout_second"]);
+            if (http_config.find("cgi_timeout_second") != http_config.end())
+                this->_cgi_timeout_second = std::stoi(http_config["cgi_timeout_second"]);
+        }
+        else
+            this->_plugins[plugin] = "on";
+    }
+    std::cout<<"\033[41;1;97m"<<"client ts:" <<this->_client_timeout_second<<"\033[0m"<<std::endl;
+    std::cout<<"\033[41;1;97m"<<"cgi ts:" <<this->_cgi_timeout_second<<"\033[0m"<<std::endl;
 }
 
 /*============================================================================*/
@@ -361,11 +403,11 @@ ServerManager::isFdTimeOut(int fd)
     switch (this->getFdType(fd))
     {
     case FdType::CLIENT_SOCKET:
-        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > CLIENT_TIME_OUT_SECOND)
+        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > DEFAULT_CLIENT_TIME_OUT_SECOND)
             return (true);
     
     case FdType::PIPE:
-        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > CGI_TIME_OUT_SECOND)
+        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > DEFAULT_CGI_TIME_OUT_SECOND)
             return (true);
 
     default:
