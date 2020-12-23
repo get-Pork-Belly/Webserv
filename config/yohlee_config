@@ -37,9 +37,6 @@ http {
             cgi .bla;
             cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
             root /Users/yohan/Webserv/YoupiBanane/;
-            cgi .bla .php;
-            cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
-            root /Users/yohan/Webserv/YoupiBanane;
         }
         location /bonus {
             limit_except POST GET HEAD;
