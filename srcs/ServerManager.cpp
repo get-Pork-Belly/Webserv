@@ -31,6 +31,7 @@ ServerManager::ServerManager(const char* config_path)
     this->_fd_max = 2;
     this->_client_timeout_second = DEFAULT_CLIENT_TIME_OUT_SECOND;
     this->_cgi_timeout_second = DEFAULT_CGI_TIME_OUT_SECOND;
+    this->_fd_table_width = DEFAULT_FD_TABLE_WIDTH;
     this->initServers();
 }
 
@@ -117,6 +118,13 @@ ServerManager::getCgiTimeoutSecond() const
 {
     return (this->_cgi_timeout_second);
 }
+
+int
+ServerManager::getFdTableWidth() const
+{
+    return (this->_fd_table_width);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -186,12 +194,18 @@ ServerManager::setPlugins(std::map<std::string, std::string>& http_config)
                 this->_client_timeout_second = std::stoi(http_config["client_timeout_second"]);
             if (http_config.find("cgi_timeout_second") != http_config.end())
                 this->_cgi_timeout_second = std::stoi(http_config["cgi_timeout_second"]);
+            if (http_config.find("fd_table_width") != http_config.end())
+                this->_fd_table_width = std::stoi(http_config["fd_table_width"]);
         }
         else
             this->_plugins[plugin] = "on";
     }
-    std::cout<<"\033[41;1;97m"<<"client ts:" <<this->_client_timeout_second<<"\033[0m"<<std::endl;
-    std::cout<<"\033[41;1;97m"<<"cgi ts:" <<this->_cgi_timeout_second<<"\033[0m"<<std::endl;
+}
+
+void
+ServerManager::setFdTableWidth(int fd_table_width)
+{
+    this->_fd_table_width = fd_table_width;
 }
 
 /*============================================================================*/
@@ -663,8 +677,9 @@ ServerManager::showFdTables(const int sequence)
         std::cout<<"\033[1;44;37m"<<"Before select!"<<"\033[0m"<<std::endl;
     else if (sequence == AFTER_SELECT)
         std::cout<<"\033[1;44;37m"<<"After select!"<<"\033[0m"<<std::endl;
-    Log::printFdCopySets(*this, 10);
-    Log::printFdSets(*this, 10);
+
+    Log::printFdCopySets(*this, this->getFdTableWidth());
+    Log::printFdSets(*this, this->getFdTableWidth());
 }
 
 bool
