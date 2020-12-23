@@ -643,6 +643,20 @@ Server::processIfHeadersNotFound(int client_fd, const std::string& peeked_messag
 }
 
 void
+Server::findAndExecuteEchoPlugin(int client_fd)
+{
+    Response& response = this->_responses[client_fd];
+    const location_info& locations = response.getLocationInfo();
+
+    if (locations.find("echo") != locations.end() &&
+            this->_server_manager->isPluginOn("echo_in_location"))
+    {
+        std::string echo_string = "echo " + locations.at("echo");
+        system(echo_string.c_str());
+    }
+}
+
+void
 Server::receiveRequestLine(int client_fd)
 {
     Log::trace("> receiveRequestLine", 1);
@@ -660,6 +674,7 @@ Server::receiveRequestLine(int client_fd)
         {
             this->readBufferUntilRequestLine(client_fd);
             this->parseUriAndSetResponse(client_fd);
+            this->findAndExecuteEchoPlugin(client_fd);
         }
         else
             this->findCrlfAndSetIndexOfCrlf(client_fd, buf, RecvRequest::REQUEST_LINE);
