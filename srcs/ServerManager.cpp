@@ -674,10 +674,10 @@ ServerManager::setLogFd() const
         if (plugins.find("log_at") != plugins.end())
         {
             if (plugins["log_at"] == "STDOUT")
-                Log::access_fd= 1;
+                Log::log_fd= 1;
             else
             {
-                Log::access_fd= open(plugins["log_at"].c_str(),
+                Log::log_fd= open(plugins["log_at"].c_str(),
                         O_CREAT | O_TRUNC | O_WRONLY, 0644);
             }
         }
