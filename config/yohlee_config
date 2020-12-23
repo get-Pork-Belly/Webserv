@@ -1,6 +1,10 @@
 http { 
     include mime.types;
-    root /Users/yohlee/Webserv/;
+    root /Users/yohan/Webserv/;
+    plugins accept_language echo_in_location show_fd_table check_timeout log_at;
+    client_timeout_second 10;
+    cgi_timeout_second 180;
+    log_at log.txt;
     server {
         server_name first_server;
         listen       8080;
@@ -8,28 +12,28 @@ http {
         location / {
             limit_except GET;
             cgi .bin .cgi .bla;
-            cgi_path /Users/yohlee/Webserv/cgi_tester;
+            cgi_path /Users/yohan/Webserv/cgi_tester;
             autoindex on;
-            root /Users/yohlee/Webserv/;
+            root /Users/yohan/Webserv/;
         }
         location /put_test {
             limit_except PUT;
-            root /Users/yohlee/Webserv/tests/put_test;
+            root /Users/yohan/Webserv/tests/put_test;
             cgi .bla;
-            cgi_path /Users/yohlee/Webserv/cgi_tester;
+            cgi_path /Users/yohan/Webserv/cgi_tester;
         }
         location /post_body {
             limit_client_body_size 100;
             limit_except POST;
             index index.html;
-            root /Users/yohlee/Webserv/tests/folder;
+            root /Users/yohan/Webserv/tests/folder;
         }
         location /directory { 
             limit_except GET POST;
             index youpi.bad_extension;
             cgi .bla;
-            cgi_path /Users/yohlee/Webserv/cgi_tester;
-            root /Users/yohlee/Webserv/YoupiBanane;
+            cgi_path /Users/yohan/Webserv/cgi_tester;
+            root /Users/yohan/Webserv/YoupiBanane;
         }
     }
     server {
@@ -39,9 +43,9 @@ http {
             index  index.html index.htm;
         }
         location /second {
-            root /Users/yohlee/Webserv/tests/;
+            root /Users/yohan/Webserv/tests/;
             index  html;
-            limit_except PUT POST GET
+            limit_except PUT POST GET;
             index index.html index.htm index.abc;
         }
     }
