@@ -1,6 +1,10 @@
 http { 
     include mime.types;
     root /Users/humblego/Documents/dev/team_webserv/www/;
+    plugins accept_language echo_in_location show_fd_table check_timeout log_at;
+    client_timeout_second 10;
+    cgi_timeout_second 180;
+    log_at log.txt;
     server {
         server_name first_server;
         listen       8080;
@@ -9,6 +13,7 @@ http {
             limit_except GET;
             cgi .bin .cgi .bla;
             cgi_path /Users/humblego/Documents/dev/team_webserv/php-mac/bin/php-cgi;
+            echo "Hello world!";
             autoindex on;
             root /Users/humblego/Documents/dev/team_webserv/www/;
         }
@@ -41,7 +46,7 @@ http {
         location /second {
             root /Users/humblego/Documents/dev/team_webserv/tests/;
             index  html;
-            limit_except PUT POST GET;
+            limit_except PUT POST GET DELETE;
             index index.html index.htm index.abc;
         }
     }

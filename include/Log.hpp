@@ -17,8 +17,7 @@ private:
     Log& operator=(const Log& rhs);
 
 public:
-    static int access_fd;
-    static int error_fd;
+    static int log_fd;
     
     // access
     static void serverIsCreated(Server& server);
@@ -48,6 +47,7 @@ public:
     static void printFdCopySets(ServerManager& server_manager, int width);
     static void printFdSets(ServerManager& server_manager, int width);
     static void printTimeSec(timeval& tv);
+    static bool isLogPluginOn();
 };
 
 #endif

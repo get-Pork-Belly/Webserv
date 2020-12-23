@@ -10,12 +10,7 @@
 /*============================================================================*/
 
 int
-Log::access_fd = open("./log/access_log",
-        O_CREAT | O_TRUNC | O_WRONLY, 0644);
-
-int
-Log::error_fd = open("./log/error_log",
-        O_CREAT | O_TRUNC | O_WRONLY, 0644);
+Log::log_fd = -1;
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -36,6 +31,14 @@ Log::error_fd = open("./log/error_log",
 /*============================================================================*/
 /*********************************  Util  *************************************/
 /*============================================================================*/
+
+bool
+Log::isLogPluginOn()
+{
+    if (Log::log_fd == -1)
+        return (false);
+    return (true);
+}
 
 void
 Log::timeLog(int fd)
@@ -66,80 +69,74 @@ Log::printTimeSec(timeval& tv)
 void
 Log::serverIsCreated(Server& server)
 {
-    if (DEBUG == 0)
+    if (Log::isLogPluginOn() == false)
         return ;
 
     std::string line;
     int server_fd = server.getServerSocket();
-    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     line = ("SERVER(" + std::to_string(server_fd) + ")" + "[" +
             server.getHost() + "] HAS CREATED\n");
-    Log::timeLog(fd);
-    write(fd, line.c_str(), line.length());
+    Log::timeLog(Log::log_fd);
+    write(Log::log_fd, line.c_str(), line.length());
 }
 
 void
 Log::newClient(Server& server, int client_fd)
 {
-    if (DEBUG == 0)
+    if (Log::isLogPluginOn() == false)
         return ;
 
     std::string line;
     int server_fd = server.getServerSocket();
-    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     line = ("SERVER(" + std::to_string(server_fd) +  ")[" +
             server.getHost() + "] HAS NEW CLIENT: " +
             std::to_string(client_fd) + "\n");
-    Log::timeLog(fd);
-    write(fd, line.c_str(), line.length());
+    Log::timeLog(Log::log_fd);
+    write(Log::log_fd, line.c_str(), line.length());
 }
 
 void
 Log::closeClient(Server& server, int client_fd)
 {
-    if (DEBUG == 0)
+    if (Log::isLogPluginOn() == false)
         return ;
 
     std::string line;
     int server_fd = server.getServerSocket();
-    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     line = ("SERVER(" + std::to_string(server_fd) +
             ") BYBY CLIENT(" + std::to_string(client_fd)
            + ")\n");
-    Log::timeLog(fd);
-    write(fd, line.c_str(), line.length());
+    Log::timeLog(Log::log_fd);
+    write(Log::log_fd, line.c_str(), line.length());
 }
 
 void
 Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
 {
-    if (DEBUG == 0)
+    if (Log::isLogPluginOn() == false)
         return ;
 
     int server_fd = server.getServerSocket();
-    int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
-
     std::string line;
     line = "SERVER(" + std::to_string(server_fd) + ") OPEN " 
                     + fdTypeToString(type) + "(" + std::to_string(fd) 
                     + ") which requested by CLIENT(" 
                     + std::to_string(client_socket) + ")\n";
 
-    Log::timeLog(log_print_fd);
-    write(log_print_fd, line.c_str(), line.length());
+    Log::timeLog(Log::log_fd);
+    write(Log::log_fd, line.c_str(), line.length());
 }
 
 void
 Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
 {
-    if (DEBUG == 0)
+    if (Log::isLogPluginOn() == false)
         return ;
 
     int server_fd = server.getServerSocket();
-    int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     std::string line;
     line = "SERVER(" + std::to_string(server_fd) + ") CLOSE " 
@@ -147,36 +144,33 @@ Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
                     + ") which requested by CLIENT(" 
                     + std::to_string(client_socket) + ")\n";
 
-    Log::timeLog(log_print_fd);
-    write(log_print_fd, line.c_str(), line.length());
+    Log::timeLog(Log::log_fd);
+    write(Log::log_fd, line.c_str(), line.length());
 }
 
 void
 Log::closeFd(const FdType& type, int fd)
 {
-    if (DEBUG == 0)
+    if (Log::isLogPluginOn() == false)
         return ;
-
-    int log_print_fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     std::string line;
     line = "SEVER CLOSES " 
                     + fdTypeToString(type) + "(" + std::to_string(fd) 
                     + ") which requested by CLIENT\n";
 
-    Log::timeLog(log_print_fd);
-    write(log_print_fd, line.c_str(), line.length());
+    Log::timeLog(Log::log_fd);
+    write(Log::log_fd, line.c_str(), line.length());
 }
 
 void
 Log::getRequest(Server& server, int client_fd)
 {
-    if (DEBUG == 0)
+    if (Log::isLogPluginOn() == false)
         return ;
 
     std::string line;
     int server_fd = server.getServerSocket();
-    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
     std::string method = server.getRequest(client_fd).getMethod();
     std::string uri = server.getRequest(client_fd).getUri();
     std::string version = server.getRequest(client_fd).getVersion();
@@ -193,34 +187,31 @@ Log::getRequest(Server& server, int client_fd)
         line = ("SERVER(" + std::to_string(server_fd) + ") READ CLIENT(" +
         std::to_string(client_fd) + ") BUFFER BUT EMPTY NOW\n"); 
     }
-    Log::timeLog(fd);
-    write(fd, line.c_str(), line.length());
+    Log::timeLog(Log::log_fd);
+    write(Log::log_fd, line.c_str(), line.length());
 }
 
 void
 Log::error(const std::string& error)
 {
-    if (DEBUG == 0)
+    if (Log::isLogPluginOn() == false)
         return ;
 
-    int fd = (STDOUT == 1) ? 1 : Log::error_fd;
-    Log::timeLog(fd);
-    write(fd, error.c_str(), error.length());
+    Log::timeLog(Log::log_fd);
+    write(Log::log_fd, error.c_str(), error.length());
 }
-
 
 void
 Log::printTimeDiff(timeval from, int log_level)
 {
+    if (DEBUG < log_level)
+        return ;
     timeval t;
     gettimeofday(&t, NULL);
     std::string diff = std::to_string((t.tv_sec - from.tv_sec) * 1000000 + (t.tv_usec - from.tv_usec));
     diff.push_back(' ');
 
-    if (DEBUG < log_level)
-        return ;
-    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
-    write(fd, diff.c_str(), diff.length());
+    write(1, diff.c_str(), diff.length());
 }
 
 void
@@ -228,13 +219,9 @@ Log::trace(const std::string& trace, int log_level)
 {
     if (DEBUG < log_level)
         return ;
-
     std::string line;
-    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
-
-    // Log::timeLog(fd);
-    write(fd, trace.c_str(), trace.length());
-    write(fd, "\n", 1);
+    write(1, trace.c_str(), trace.length());
+    write(1, "\n", 1);
 }
 
 std::string

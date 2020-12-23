@@ -6,6 +6,7 @@
 # include "Request.hpp"
 # include "types.hpp"
 # include "Exception.hpp"
+# include <regex>
 
 class Server;
 
@@ -139,7 +140,7 @@ public:
     bool isCgiWritePipeNotClosed() const;
     bool isCgiReadPipeNotClosed() const;
     bool isResourceNotClosed() const;
-
+    bool isMatchedRegexRoute(Server* server, const std::vector<std::pair<std::regex, std::string> >& regex_vector, const std::string& route);
 
     /* Exception */
 public:

@@ -119,7 +119,7 @@ ServerGenerator::checkValidationOfLocationConfig(std::map<std::string, location_
     std::vector<std::string> list =
     {"autoindex", "auth_basic", "auth_basic_user_file", "cgi", "cgi_path",
      "index", "return","retry_after_sec", "route", "root", "limit_except",
-     "limit_client_body_size"};
+     "limit_client_body_size", "plugin", "timeout_second", "log_at", "location_msg"};
     for (auto& location : locations)
     {
         for (auto info : location.second)
@@ -158,7 +158,8 @@ ServerGenerator::checkValidationOfServerConfig(server_info& server)
     std::vector<std::string> list =
     {"autoindex", "auth_basic", "auth_basic_user_file", "index",
      "retry_after_sec", "route", "root", "limit_except", "listen",
-     "limit_client_body_size", "server_name"};
+     "limit_client_body_size", "server_name", "plugin", "timeout_second",
+     "log_at"};
     for (auto& directive : server)
     {
         std::vector<std::string> value;
@@ -175,39 +176,48 @@ ServerGenerator::checkValidationOfServerConfig(server_info& server)
 void 
 ServerGenerator::generateServers(std::vector<Server *>& servers)
 {
-    server_info http_config;
-    bool server_block_exists = false;
-    
-    std::vector<std::string>::iterator it = this->_configfile_lines.begin();
-    std::vector<std::string>::iterator ite = this->_configfile_lines.end();
-    http_config = this->parseHttpBlock();
 
-    while (it != ite)
+    try
     {
-        if ( *it++ == "server {")
+
+        server_info http_config;
+        bool server_block_exists = false;
+        
+        std::vector<std::string>::iterator it = this->_configfile_lines.begin();
+        std::vector<std::string>::iterator ite = this->_configfile_lines.end();
+        http_config = this->parseHttpBlock();
+        this->_server_manager->setPlugins(http_config);
+
+        while (it != ite)
         {
-            server_info server_config;
-            this->initServerConfig(server_config, http_config);
-            std::map<std::string, location_info> locations;
-            this->parseServerBlock(it, server_config, locations);
-            this->checkValidationOfConfigs(server_config, locations);
-            this->setDefaultRouteOfServer(locations, server_config);
-            server_block_exists = true;
-            try
+            if ( *it++ == "server {")
             {
+                server_info server_config;
+                this->initServerConfig(server_config, http_config);
+                std::map<std::string, location_info> locations;
+                this->parseServerBlock(it, server_config, locations);
+                this->checkValidationOfConfigs(server_config, locations);
+                this->setDefaultRouteOfServer(locations, server_config);
+                server_block_exists = true;
+
                 Server* server = new Server(this->_server_manager, server_config, locations);
                 servers.push_back(server);
             }
-            catch (std::bad_alloc& e)
-            {
-                for (auto& s : servers)
-                    delete s;
-                throw ("new Failed");
-            }
         }
+        if (server_block_exists == false)
+            throw ("There is no server block in config_file!");
     }
-    if (server_block_exists == false)
-        throw ("There is no server block in config_file!");
+    catch (std::bad_alloc& e)
+    {
+        for (auto& s : servers)
+            delete (s);
+        throw ("new Failed while generating server");
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "ServerGenerateError: " << e.what() << std::endl;
+        throw (e);
+    }
 }
 
 bool
@@ -406,6 +416,12 @@ ServerGenerator::initServerConfig(server_info& server_config, server_info& http_
         server_config["error_page"] = http_config["error_page"];
     if (http_config.find("retry_after_sec") != ite)
         server_config["retry_after_sec"] = http_config["retry_after_sec"];
+    if (http_config.find("plugin") != ite)
+        server_config["plugin"] = http_config["plugin"];
+    if (http_config.find("timeout_second") != ite)
+        server_config["timeout_second"] = http_config["timeout_second"];
+    if (http_config.find("log_at") != ite)
+        server_config["log_at"] = http_config["log_at"];    
 }
 
 void
@@ -427,6 +443,12 @@ ServerGenerator::initLocationConfig(location_info& location_config, server_info&
         location_config["error_page"] = server_config["error_page"];
     if (server_config.find("retry_after_sec") != ite)
         location_config["retry_after_sec"] = server_config["retry_after_sec"];
+    if (server_config.find("plugin") != ite)
+        location_config["plugin"] = server_config["plugin"];
+    if (server_config.find("timeout_second") != ite)
+        location_config["timeout_second"] = server_config["timeout_second"];
+    if (server_config.find("log_at") != ite)
+        location_config["log_at"] = server_config["log_at"];    
 }
 
 /* 디버깅용 함수 */

@@ -29,6 +29,9 @@ ServerManager::ServerManager(const char* config_path)
     this->_last_update_time_of_fd.resize(1024, std::pair<MonitorStatus, timeval>(false, timeval()));
     this->_fd = DEFAULT_FD;
     this->_fd_max = 2;
+    this->_client_timeout_second = DEFAULT_CLIENT_TIME_OUT_SECOND;
+    this->_cgi_timeout_second = DEFAULT_CGI_TIME_OUT_SECOND;
+    this->_fd_table_width = DEFAULT_FD_TABLE_WIDTH;
     this->initServers();
 }
 
@@ -97,6 +100,31 @@ ServerManager::getLinkedFdFromFdTable(int fd) const
 {
     return (this->_fd_table[fd].second);
 }
+
+const std::map<std::string, std::string>&
+ServerManager::getPlugins() const
+{
+    return (this->_plugins);
+}
+
+int
+ServerManager::getClientTimeoutSecond() const
+{
+    return (this->_client_timeout_second);
+}
+
+int
+ServerManager::getCgiTimeoutSecond() const
+{
+    return (this->_cgi_timeout_second);
+}
+
+int
+ServerManager::getFdTableWidth() const
+{
+    return (this->_fd_table_width);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -139,6 +167,58 @@ void
 ServerManager::setClosedFdOnFdTable(int fd)
 {
     this->_fd_table[fd].first = FdType::CLOSED;
+}
+
+void
+ServerManager::setPlugins(std::map<std::string, std::string>& http_config)
+{
+    std::map<std::string, std::string>::iterator ite = http_config.end();
+    std::map<std::string, std::string>::iterator it = http_config.find("plugins");
+    if (it == ite)
+        return ;
+    std::vector<std::string> plugins = ft::split((*it).second, " ");
+    
+    for (auto& plugin : plugins)
+    {
+        if (plugin == "log_at")
+        {
+            if (http_config.find("log_at") != http_config.end())
+            {
+                this->_plugins[plugin] = http_config["log_at"];
+                if (this->_plugins[plugin] == ";")
+                    this->_plugins[plugin] = "STDOUT";
+            }
+            else
+                this->_plugins[plugin] = "STDOUT";
+        }
+        else if (plugin == "control_timeout")
+        {
+            if (http_config.find("control_timeout") != http_config.end() &&
+                (http_config.find("control_timeout")->second == "on" ||
+                http_config.find("control_timeout")->second == "off"))
+                    this->_plugins[plugin] = http_config.find("control_timeout")->second;
+            else
+                this->_plugins[plugin] = "on";
+            if (http_config.find("client_timeout_second") != http_config.end())
+                this->_client_timeout_second = std::stoi(http_config["client_timeout_second"]);
+            if (http_config.find("cgi_timeout_second") != http_config.end())
+                this->_cgi_timeout_second = std::stoi(http_config["cgi_timeout_second"]);
+        }
+        else if (plugin == "show_fd_table")
+        {
+            if (http_config.find("fd_table_width") != http_config.end())
+                this->_fd_table_width = std::stoi(http_config["fd_table_width"]);
+            this->_plugins[plugin] = "on";
+        }
+        else
+            this->_plugins[plugin] = "on";
+    }
+}
+
+void
+ServerManager::setFdTableWidth(int fd_table_width)
+{
+    this->_fd_table_width = fd_table_width;
 }
 
 /*============================================================================*/
@@ -273,12 +353,12 @@ ServerManager::updateFdMax(int fd)
 /************************  Manage Server functions  ***************************/
 /*============================================================================*/
 
-
 void
 ServerManager::initServers()
 {
     ServerGenerator server_generator(this);
     server_generator.generateServers(this->_servers);
+    this->setLogFd();
 }
 
 bool
@@ -290,8 +370,8 @@ ServerManager::runServers()
     signal(SIGINT, exitServers);
     signal(SIGPIPE, SIG_IGN);
 
-    timeout.tv_sec = 5;
-    timeout.tv_usec = 5;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 1;
     for (Server *server : this->_servers)
     {
         int server_socket = server->getServerSocket();
@@ -300,11 +380,11 @@ ServerManager::runServers()
     }
     while (true)
     {
-        this->closeUnresponsiveFd();
+        if (this->isPluginOn("control_timeout"))
+            this->closeUnresponsiveFd();
+        if (this->isPluginOn("show_fd_table"))
+            this->showFdTables(BEFORE_SELECT);
 
-        // std::cout<<"\033[1;44;37m"<<"BEFORE select!"<<"\033[0m"<<std::endl;
-        // Log::printFdCopySets(*this, 10);
-        // Log::printFdSets(*this, 10);
         this->_copy_readfds = this->_readfds;
         this->_copy_writefds = this->_writefds;
         this->_copy_exceptfds = this->_exceptfds;
@@ -322,9 +402,9 @@ ServerManager::runServers()
         }
         else
         {
-        // std::cout<<"\033[1;44;37m"<<"After select!"<<"\033[0m"<<std::endl;
-        // Log::printFdCopySets(*this, 10);
-        // Log::printFdSets(*this, 10);
+            if (this->isPluginOn("show_fd_table"))
+                this->showFdTables(AFTER_SELECT);
+
             for (int fd = 0; fd < this->getFdMax() + 1; fd++)
             {
                 if (this->fdIsCopySet(fd, FdSet::ALL))
@@ -354,19 +434,22 @@ ServerManager::isFdTimeOut(int fd)
 {
     timeval now;
     gettimeofday(&now, NULL);
-    
+
     if (this->_last_update_time_of_fd[fd].first == false)
         return (false);
 
     switch (this->getFdType(fd))
     {
     case FdType::CLIENT_SOCKET:
-        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > CLIENT_TIME_OUT_SECOND)
+        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > this->getClientTimeoutSecond())
             return (true);
+        break;
     
     case FdType::PIPE:
-        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > CGI_TIME_OUT_SECOND)
+        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > 
+        this->getCgiTimeoutSecond())
             return (true);
+        break;
 
     default:
         break;
@@ -378,6 +461,7 @@ void
 ServerManager::monitorTimeOutOff(int fd)
 {
     this->_last_update_time_of_fd[fd].first = false;
+    this->_last_update_time_of_fd[fd].second.tv_sec = UINT_MAX;
 }
 
 void
@@ -395,6 +479,7 @@ ServerManager::isMonitorTimeOutOn(int fd)
 
 void
 ServerManager::closeUnresponsiveClient(int client_fd)
+
 {
     if (this->isMonitorTimeOutOn(client_fd))
     {
@@ -595,5 +680,48 @@ ServerManager::exitServers(int signo)
             }
         }
         exit(EXIT_SUCCESS);
+    }
+}
+
+void
+ServerManager::showFdTables(const int sequence)
+{
+    if (sequence == BEFORE_SELECT)
+        std::cout<<"\033[1;44;37m"<<"Before select!"<<"\033[0m"<<std::endl;
+    else if (sequence == AFTER_SELECT)
+        std::cout<<"\033[1;44;37m"<<"After select!"<<"\033[0m"<<std::endl;
+
+    Log::printFdCopySets(*this, this->getFdTableWidth());
+    Log::printFdSets(*this, this->getFdTableWidth());
+}
+
+bool
+ServerManager::isPluginOn(const std::string& plugin_name) const
+{
+    if (this->_plugins.find(plugin_name) != this->_plugins.end())
+    {
+        if (plugin_name == "control_timeout" && this->_plugins.at(plugin_name) == "off")
+            return (false);
+        return (true);
+    }
+    return (false);
+}
+
+void
+ServerManager::setLogFd() const
+{
+    const std::map<std::string, std::string>& plugins = this->getPlugins();
+    if (this->isPluginOn("log_at"))
+    {
+        if (plugins.find("log_at") != plugins.end())
+        {
+            if (plugins.at("log_at") == "STDOUT")
+                Log::log_fd = 1;
+            else
+            {
+                Log::log_fd = open(plugins.at("log_at").c_str(),
+                        O_CREAT | O_TRUNC | O_WRONLY, 0644);
+            }
+        }
     }
 }

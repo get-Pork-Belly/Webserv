@@ -18,9 +18,12 @@
 # include "ServerGenerator.hpp"
 # include <signal.h>
 
-const int CLIENT_TIME_OUT_SECOND = 5;
-const int CGI_TIME_OUT_SECOND = 60;
+const int DEFAULT_CLIENT_TIME_OUT_SECOND = 5;
+const int DEFAULT_CGI_TIME_OUT_SECOND = 60;
+const int DEFAULT_FD_TABLE_WIDTH = 10;
 const int DEFAULT_PID = 0;
+const int BEFORE_SELECT = 0;
+const int AFTER_SELECT = 1;
 
 class Server;
 
@@ -47,6 +50,10 @@ private:
     int _fd;
     int _fd_max;
     std::vector<std::pair<MonitorStatus, timeval>> _last_update_time_of_fd;
+    std::map<std::string, std::string> _plugins;
+    int _client_timeout_second;
+    int _cgi_timeout_second;
+    int _fd_table_width;
 
 public:
     /* Constructor */
@@ -61,6 +68,10 @@ public:
     const std::vector<std::pair<FdType, int> >& getFdTable() const;
     FdType getFdType(int fd) const;
     int getLinkedFdFromFdTable(int fd) const;
+    const std::map<std::string, std::string>& getPlugins() const;
+    int getClientTimeoutSecond() const;
+    int getCgiTimeoutSecond() const;
+    int getFdTableWidth() const;
     /* Setter */
     void setFdMax(int fd);
     void setServerSocketOnFdTable(int fd);
@@ -69,6 +80,8 @@ public:
     void setCgiPipeOnFdTable(int fd, int client_socket);
     void setClosedFdOnFdTable(int fd);
     void setLastUpdateTimeOfFd(int client_fd, MonitorStatus check, timeval* time);
+    void setPlugins(std::map<std::string, std::string>& http_config);
+    void setFdTableWidth(int fd_table_width);
     /* Exception */
     /* Util */
     bool fdIsCopySet(int fd, FdSet type);
@@ -100,6 +113,10 @@ public:
     bool isCgiProcessTerminated(int clinet_fd) const;
     void terminateCgiProcess(int client_fd);
     Server* findLinkedServer(int client_fd);
+    void showFdTables(const int sequence);
+
+    bool isPluginOn(const std::string& plugin_name) const;
+    void setLogFd() const;
 };
 
 #endif
