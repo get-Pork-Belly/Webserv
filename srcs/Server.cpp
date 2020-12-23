@@ -1633,7 +1633,7 @@ bool
 Server::isAuthRealm(int client_fd)
 {
     const std::string& route = this->_responses[client_fd].getRoute();
-    const location_info& location_info = this->getLocationConfig().at(route);
+    const location_info& location_info = this->_responses[client_fd].getLocationInfo();
     location_info::const_iterator it = location_info.find("auth_basic");
     if (it->second == "off")
         return (false);

@@ -660,6 +660,23 @@ Response::initMimeTypeTable()
 }
 
 bool
+Response::isMatchedRegexRoute(Server* server, const std::vector<std::pair<std::regex, std::string> >& regex_vector, const std::string& route)
+{
+    const std::map<std::string, location_info>& location_config = server->getLocationConfig();
+
+    for (auto& regex_pair : regex_vector)
+    {
+        if (std::regex_match(route, regex_pair.first))
+        {
+            this->_route = route;
+            this->_location_info = location_config.at(regex_pair.second);
+            return (true);
+        }
+    }
+    return (false);
+}
+
+bool
 Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 {
     Log::trace("> setRouteAndLocationInfo", 2);
@@ -680,29 +697,34 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
         return (false);
     }
     size_t index = (uri[uri.length() - 1] == '/') ? uri.length() : uri.length() + 1;
+
+    std::vector<std::pair<std::regex, std::string> > regex_vector;
+    for (auto& kv : location_config)
+        regex_vector.push_back(std::make_pair(std::regex(kv.first), kv.first));
+
     while ((index = uri.find_last_of("/", index - 1)) != std::string::npos)
     {
         route = uri.substr(0, index);
+
         if (location_config.find(route) != location_config.end())
         {
             this->_route = route;
             this->_location_info = location_config[route];
             return (true);
         }
+
         if (index == 0)
         {
-            if (location_config.find(uri) != location_config.end())
-            {
-                this->_route = uri;
-                this->_location_info = location_config[this->_route];
-                break ;
-            }
-            else
-            {
-                this->_route = "/";
-                this->_location_info = location_config["/"];
-                break ;
-            }
+            if (this->isMatchedRegexRoute(server, regex_vector, uri) == true)
+                return (true);
+            this->_route = "/";
+            this->_location_info = location_config["/"];
+            return (true);
+        }
+        else
+        {
+            if (this->isMatchedRegexRoute(server, regex_vector, route) == true)
+                return (true);
         }
     }
 
