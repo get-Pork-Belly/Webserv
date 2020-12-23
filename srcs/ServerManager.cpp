@@ -106,6 +106,17 @@ ServerManager::getPlugins() const
     return (this->_plugins);
 }
 
+int
+ServerManager::getClientTimeoutSecond() const
+{
+    return (this->_client_timeout_second);
+}
+
+int
+ServerManager::getCgiTimeoutSecond() const
+{
+    return (this->_cgi_timeout_second);
+}
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -332,8 +343,8 @@ ServerManager::runServers()
     signal(SIGINT, exitServers);
     signal(SIGPIPE, SIG_IGN);
 
-    timeout.tv_sec = 5;
-    timeout.tv_usec = 5;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 1;
     for (Server *server : this->_servers)
     {
         int server_socket = server->getServerSocket();
@@ -342,7 +353,8 @@ ServerManager::runServers()
     }
     while (true)
     {
-        this->closeUnresponsiveFd();
+        if (this->isPluginOn("check_timeout"))
+            this->closeUnresponsiveFd();
 
         // std::cout<<"\033[1;44;37m"<<"BEFORE select!"<<"\033[0m"<<std::endl;
         // Log::printFdCopySets(*this, 10);
@@ -396,19 +408,22 @@ ServerManager::isFdTimeOut(int fd)
 {
     timeval now;
     gettimeofday(&now, NULL);
-    
+
     if (this->_last_update_time_of_fd[fd].first == false)
         return (false);
 
     switch (this->getFdType(fd))
     {
     case FdType::CLIENT_SOCKET:
-        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > DEFAULT_CLIENT_TIME_OUT_SECOND)
+        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > this->getClientTimeoutSecond())
             return (true);
+        break;
     
     case FdType::PIPE:
-        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > DEFAULT_CGI_TIME_OUT_SECOND)
+        if (now.tv_sec - this->_last_update_time_of_fd[fd].second.tv_sec > 
+        this->getCgiTimeoutSecond())
             return (true);
+        break;
 
     default:
         break;
@@ -420,6 +435,7 @@ void
 ServerManager::monitorTimeOutOff(int fd)
 {
     this->_last_update_time_of_fd[fd].first = false;
+    this->_last_update_time_of_fd[fd].second.tv_sec = UINT_MAX;
 }
 
 void
@@ -437,6 +453,7 @@ ServerManager::isMonitorTimeOutOn(int fd)
 
 void
 ServerManager::closeUnresponsiveClient(int client_fd)
+
 {
     if (this->isMonitorTimeOutOn(client_fd))
     {
@@ -638,4 +655,12 @@ ServerManager::exitServers(int signo)
         }
         exit(EXIT_SUCCESS);
     }
+}
+
+bool
+ServerManager::isPluginOn(const std::string& plugin_name) const
+{
+    if (this->_plugins.find(plugin_name) != this->_plugins.end())
+        return (true);
+    return (false);
 }

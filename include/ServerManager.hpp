@@ -65,8 +65,8 @@ public:
     FdType getFdType(int fd) const;
     int getLinkedFdFromFdTable(int fd) const;
     const std::map<std::string, std::string>& getPlugins() const;
-    int getClientTimeoutSecond(int client_timeout_second);
-    int getCgiTimeoutSecond(int cgi_timeout_second);
+    int getClientTimeoutSecond() const;
+    int getCgiTimeoutSecond() const;
     /* Setter */
     void setFdMax(int fd);
     void setServerSocketOnFdTable(int fd);
