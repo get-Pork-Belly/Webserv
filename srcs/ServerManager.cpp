@@ -326,12 +326,12 @@ ServerManager::updateFdMax(int fd)
 /************************  Manage Server functions  ***************************/
 /*============================================================================*/
 
-
 void
 ServerManager::initServers()
 {
     ServerGenerator server_generator(this);
     server_generator.generateServers(this->_servers);
+    this->setLogFd();
 }
 
 bool
@@ -663,4 +663,23 @@ ServerManager::isPluginOn(const std::string& plugin_name) const
     if (this->_plugins.find(plugin_name) != this->_plugins.end())
         return (true);
     return (false);
+}
+
+void
+ServerManager::setLogFd() const
+{
+    std::map<std::string, std::string> plugins = this->getPlugins();
+    if (this->isPluginOn("log_at"))
+    {
+        if (plugins.find("log_at") != plugins.end())
+        {
+            if (plugins["log_at"] == "STDOUT")
+                Log::access_fd= 1;
+            else
+            {
+                Log::access_fd= open(plugins["log_at"].c_str(),
+                        O_CREAT | O_TRUNC | O_WRONLY, 0644);
+            }
+        }
+    }
 }

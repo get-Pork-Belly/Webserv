@@ -109,6 +109,7 @@ public:
     Server* findLinkedServer(int client_fd);
 
     bool isPluginOn(const std::string& plugin_name) const;
+    void setLogFd() const;
 };
 
 #endif
