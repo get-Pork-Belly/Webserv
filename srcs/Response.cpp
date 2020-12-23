@@ -715,7 +715,7 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
 
         if (index == 0)
         {
-            if (this->isMatchedRegexRoute(server, regex_vector, uri) == true)
+            if (this->isMatchedRegexRoute(server, regex_vector, uri))
                 return (true);
             this->_route = "/";
             this->_location_info = location_config["/"];
@@ -723,7 +723,7 @@ Response::setRouteAndLocationInfo(const std::string& uri, Server* server)
         }
         else
         {
-            if (this->isMatchedRegexRoute(server, regex_vector, route) == true)
+            if (this->isMatchedRegexRoute(server, regex_vector, route))
                 return (true);
         }
     }
