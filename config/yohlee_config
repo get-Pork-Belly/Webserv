@@ -10,30 +10,31 @@ http {
     server {
         server_name first_server;
         listen       8080;
-        location ^~/ {
+        location / {
             limit_except GET;
             cgi .bin .cgi .bla;
             cgi_path /Users/yohan/Webserv/php-mac/bin/php-cgi;
             autoindex on;
             root /Users/yohan/Webserv/www/;
         }
-        location ^~/put_test {
+        location /put_test {
             limit_except PUT;
             root /Users/yohan/Webserv/tests/put_test;
-            location_msg "This is put_test directory";
+            location_msg "This is put_test location";
             cgi .bla;
             cgi_path /Users/yohan/Webserv/php-mac/bin/php-cgi;
         }
-        location ^~/post_body {
+        location /post_body {
             limit_client_body_size 100;
             limit_except POST;
-            location_msg "This is post_body directory";
+            location_msg "This is post_body location";
             index index.html;
             root /Users/yohan/Webserv/www/folder/;
         }
-        location ^~/directory { 
+        location ^/dir[a-z]* { 
             limit_except GET POST;
             index youpi.bad_extension;
+            location_msg "This is regular expression location!";
             cgi .bla;
             cgi_path /Users/yohan/Webserv/YoupiBanane/youpi.bad_extension;
             root /Users/yohan/Webserv/YoupiBanane/;
