@@ -48,6 +48,7 @@ public:
     static void printFdCopySets(ServerManager& server_manager, int width);
     static void printFdSets(ServerManager& server_manager, int width);
     static void printTimeSec(timeval& tv);
+    static bool isLogPluginOn();
 };
 
 #endif
