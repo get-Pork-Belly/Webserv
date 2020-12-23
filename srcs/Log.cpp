@@ -12,7 +12,6 @@
 int
 Log::log_fd = -1;
 
-
 /*============================================================================*/
 /******************************  Destructor  **********************************/
 /*============================================================================*/
@@ -202,7 +201,6 @@ Log::error(const std::string& error)
     write(Log::log_fd, error.c_str(), error.length());
 }
 
-
 void
 Log::printTimeDiff(timeval from, int log_level)
 {
@@ -222,7 +220,6 @@ Log::trace(const std::string& trace, int log_level)
     if (DEBUG < log_level)
         return ;
     std::string line;
-    Log::timeLog(1);
     write(1, trace.c_str(), trace.length());
     write(1, "\n", 1);
 }
