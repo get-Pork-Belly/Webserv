@@ -187,13 +187,21 @@ ServerManager::setPlugins(std::map<std::string, std::string>& http_config)
             else
                 this->_plugins[plugin] = "STDOUT";
         }
-        else if (plugin == "check_timeout")
+        else if (plugin == "control_timeout")
         {
-            this->_plugins[plugin] = "on";
+            if (http_config.find("control_timeout") != http_config.end() &&
+                (http_config.find("control_timeout")->second == "on" ||
+                http_config.find("control_timeout")->second == "off"))
+                    this->_plugins[plugin] = http_config.find("control_timeout")->second;
+            else
+                this->_plugins[plugin] = "on";
             if (http_config.find("client_timeout_second") != http_config.end())
                 this->_client_timeout_second = std::stoi(http_config["client_timeout_second"]);
             if (http_config.find("cgi_timeout_second") != http_config.end())
                 this->_cgi_timeout_second = std::stoi(http_config["cgi_timeout_second"]);
+        }
+        else if (plugin == "show_fd_table")
+        {
             if (http_config.find("fd_table_width") != http_config.end())
                 this->_fd_table_width = std::stoi(http_config["fd_table_width"]);
         }
@@ -367,7 +375,7 @@ ServerManager::runServers()
     }
     while (true)
     {
-        if (this->isPluginOn("check_timeout"))
+        if (this->isPluginOn("control_timeout"))
             this->closeUnresponsiveFd();
         if (this->isPluginOn("show_fd_table"))
             this->showFdTables(BEFORE_SELECT);
@@ -686,6 +694,10 @@ bool
 ServerManager::isPluginOn(const std::string& plugin_name) const
 {
     if (this->_plugins.find(plugin_name) != this->_plugins.end())
+    {
+        if (plugin_name == "control_timeout" && this->_plugins.at(plugin_name) == "off")
+            return (false);
         return (true);
+    }
     return (false);
 }

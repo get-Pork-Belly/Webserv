@@ -200,8 +200,6 @@ ServerGenerator::generateServers(std::vector<Server *>& servers)
                 this->setDefaultRouteOfServer(locations, server_config);
                 server_block_exists = true;
 
-                testServerConfig(server_config);
-                testLocationConfig(locations);
                 Server* server = new Server(this->_server_manager, server_config, locations);
                 servers.push_back(server);
             }
