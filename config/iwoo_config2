@@ -1,7 +1,7 @@
 http { 
     include mime.types;
     root /Users/humblego/Documents/dev/team_webserv/www/;
-    plugins accept_language echo_in_location show_fd_table check_timeout log_at;
+    plugins plugin_names;
     client_timeout_second 10;
     cgi_timeout_second 180;
     log_at log.txt;
@@ -13,7 +13,7 @@ http {
             limit_except GET;
             cgi .bin .cgi .bla;
             cgi_path /Users/humblego/Documents/dev/team_webserv/php-mac/bin/php-cgi;
-            echo "Hello world!";
+            location_msg "Hello world!";
             autoindex on;
             root /Users/humblego/Documents/dev/team_webserv/www/;
         }
