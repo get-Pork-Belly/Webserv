@@ -1,0 +1,61 @@
+http { 
+    include mime.types;
+    root /Users/yohan/Webserv/bonus/www/;
+    plugins accept_language show_fd_table show_location_msg control_timeout log_at;
+    control_timeout on;
+    client_timeout_second 5;
+    cgi_timeout_second 180;
+    log_at log.txt;
+    fd_table_width 5;
+    server {
+        server_name first_server;
+        listen       8080;
+        location / {
+            limit_except GET;
+            cgi .bin .cgi .bla;
+            cgi_path /Users/yohan/Webserv/bonus/YoupiBanane/youpi.bad_extension;
+            autoindex on;
+            root /Users/yohan/Webserv/bonus/;
+        }
+        location /put_test {
+            limit_except PUT;
+            root /Users/yohan/Webserv/bonus/tests/put_test;
+            cgi .bla;
+            cgi_path /Users/yohan/Webserv/bonus/YoupiBanane/youpi.bad_extension;
+        }
+        location /post_body {
+            limit_client_body_size 100;
+            limit_except POST;
+            location_msg "This is post_body location";
+            index index.html;
+            root /Users/yohan/Webserv/bonus/www/folder;
+        }
+        location ^/dir[a-z]* { 
+            limit_except GET POST;
+            index youpi.bad_extension;
+            location_msg "This is regular expression location!";
+            cgi .bla;
+            cgi_path /Users/yohan/Webserv/bonus/YoupiBanane/youpi.bad_extension;
+            root /Users/yohan/Webserv/bonus/YoupiBanane/;
+        }
+        location /bonus {
+            limit_except POST GET HEAD;
+            cgi .py;
+            cgi_path /Users/yohan/Webserv/bonus/python_scripts/python_script_bad_extension.py;
+            root /Users/yohan/Webserv/bonus/python_scripts;
+        }
+    }
+    server {
+        server_name second_server;
+        listen       8081;
+        location /first {
+            index  index.html index.htm;
+        }
+        location /second {
+            root /Users/yohan/Webserv/bonus/tests/;
+            index  html;
+            limit_except PUT POST GET;
+            index index.html index.htm index.abc;
+        }
+    }
+}

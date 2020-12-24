@@ -1,0 +1,30 @@
+http { 
+    include mime.types;
+    root /Users/iwoo/Documents/Webserv/;
+    server {
+        server_name first_server;
+        listen       8080;
+
+        location /folder {
+            cgi .bin .cgi .bla;
+            autoindex on;
+            root /Users/iwoo/Documents/Webserv/www/;
+        }
+        location /old-folder {
+            return 301 /folder;
+        }
+    }
+    server {
+        server_name second_server;
+        listen       8081;
+        location /first {
+            index  index.html index.htm;
+        }
+        location /second {
+            root /Users/humblego/Documents/dev/team_webserv/tests/;
+            index  html;
+            limit_except PUT POST GET;
+            index index.html index.htm index.abc;
+        }
+    }
+}
