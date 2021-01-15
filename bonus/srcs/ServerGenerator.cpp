@@ -116,7 +116,7 @@ ServerGenerator::checkValidationOfLocationConfig(std::map<std::string, location_
 {
     std::vector<std::string> list =
     {"autoindex", "auth_basic", "auth_basic_user_file", "cgi", "cgi_path",
-     "index", "return","retry_after_sec", "route", "root", "limit_except",
+     "index", "return","retry_after_sec", "route", "root", "limit_except", "default_error_page",
      "limit_client_body_size", "plugin", "timeout_second", "log_at", "location_msg"};
     for (auto& location : locations)
     {
@@ -155,7 +155,7 @@ ServerGenerator::checkValidationOfServerConfig(server_info& server)
 {
     std::vector<std::string> list =
     {"autoindex", "auth_basic", "auth_basic_user_file", "index",
-     "retry_after_sec", "route", "root", "limit_except", "listen",
+     "retry_after_sec", "route", "root", "limit_except", "listen", "default_error_page",
      "limit_client_body_size", "server_name", "plugin", "timeout_second",
      "log_at"};
     for (auto& directive : server)
@@ -420,6 +420,8 @@ ServerGenerator::initServerConfig(server_info& server_config, server_info& http_
         server_config["timeout_second"] = http_config["timeout_second"];
     if (http_config.find("log_at") != ite)
         server_config["log_at"] = http_config["log_at"];    
+    if (http_config.find("default_error_page") != ite)
+        server_config["default_error_page"] = http_config["default_error_page"];
 }
 
 void
