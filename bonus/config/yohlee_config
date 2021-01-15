@@ -1,39 +1,36 @@
 http { 
     include mime.types;
     root /Users/yohan/Webserv/bonus/www/;
-    plugins accept_language show_fd_table show_location_msg control_timeout log_at;
-    control_timeout on;
-    client_timeout_second 5;
+    plugins plugin_names;
+    client_timeout_second 10;
     cgi_timeout_second 180;
     log_at log.txt;
-    fd_table_width 5;
     server {
         server_name first_server;
         listen       8080;
+
         location / {
             limit_except GET;
             cgi .bin .cgi .bla;
-            cgi_path /Users/yohan/Webserv/bonus/YoupiBanane/youpi.bad_extension;
+            cgi_path /Users/yohan/Webserv/bonus/php-mac/bin/php-cgi;
+            location_msg "Hello world!";
             autoindex on;
-            root /Users/yohan/Webserv/bonus/;
+            root /Users/yohan/Webserv/bonus/www/;
         }
         location /put_test {
             limit_except PUT;
-            root /Users/yohan/Webserv/bonus/tests/put_test;
-            cgi .bla;
-            cgi_path /Users/yohan/Webserv/bonus/YoupiBanane/youpi.bad_extension;
+            root /Users/yohan/Webserv/bonus/tests/put_test; cgi .bla;
+            cgi_path /Users/yohan/Webserv/bonus/php-mac/bin/php-cgi;
         }
         location /post_body {
             limit_client_body_size 100;
             limit_except POST;
-            location_msg "This is post_body location";
             index index.html;
-            root /Users/yohan/Webserv/bonus/www/folder;
+            root /Users/yohan/Webserv/bonus/www/folder/;
         }
-        location ^/dir[a-z]* { 
+        location /directory { 
             limit_except GET POST;
             index youpi.bad_extension;
-            location_msg "This is regular expression location!";
             cgi .bla;
             cgi_path /Users/yohan/Webserv/bonus/YoupiBanane/youpi.bad_extension;
             root /Users/yohan/Webserv/bonus/YoupiBanane/;
@@ -54,8 +51,22 @@ http {
         location /second {
             root /Users/yohan/Webserv/bonus/tests/;
             index  html;
-            limit_except PUT POST GET;
+            limit_except PUT POST GET DELETE;
             index index.html index.htm index.abc;
+        }
+        location ^/dir[a-z]* { 
+            location_msg "this is regex location";
+            limit_except GET POST;
+            index youpi.bad_extension;
+            cgi .bla;
+            cgi_path /Users/yohan/Webserv/bonus/YoupiBanane/youpi.bad_extension;
+            root /Users/yohan/Webserv/bonus/YoupiBanane/;
+        }
+        location /bonus {
+            limit_except POST GET HEAD;
+            cgi .py;
+            cgi_path /Users/yohan/Webserv/bonus/python_scripts/python_script_bad_extension.py;
+            root /Users/yohan/Webserv/bonus/python_scripts;
         }
     }
 }

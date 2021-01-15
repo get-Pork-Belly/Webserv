@@ -30,13 +30,6 @@ exitWithError(const std::string& message, int exit_number)
     exit(exit_number);
 }
 
-int
-ft_putstr(std::string msg)
-{
-    int bytes = write(1, msg.c_str(), msg.length());
-    return (bytes);
-}
-
 Options
 static selectStartingOption()
 {
@@ -170,7 +163,10 @@ addNewIdPassword(int fd)
     std::string encoded;
     Base64::encode(id_password, encoded);
     encoded += "\n";
-    write(fd, encoded.c_str(), encoded.length());
+    int res;
+    res = write(fd, encoded.c_str(), encoded.length());
+    if (res <= 0)
+        std::cout << "write failed in addNewIdPassword" << std::endl;
 }
 
 static Options

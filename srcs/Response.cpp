@@ -25,12 +25,14 @@ _query(""), _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resource_fd(DEFAULT_FD),
 _sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY),
 _temp_buffer(""), _path_info(""), _script_name(""), _path_translated(""),
-_request_uri_for_cgi("")
+_request_uri_for_cgi(""), _error_page("")
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
     this->initMimeTypeTable();
 }
+
+
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -246,6 +248,12 @@ Response::getContentLanguage() const
     return (this->_content_language);
 }
 
+const std::string&
+Response::getErrorPage() const
+{
+    return (this->_error_page);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -453,6 +461,12 @@ Response::setCgiEnvpValues()
             this->setRequestUriForCgi(script_name);
         }
     }
+}
+
+void
+Response::setErrorPage(const std::string& error_page)
+{
+    this->_error_page = error_page;
 }
 
 /*============================================================================*/
@@ -1001,14 +1015,15 @@ void
 Response::appendResponseHeaders(std::string& headers, Request& request)
 {
     const std::string& status_code = this->getStatusCode();
+    std::cout << "status code: " << status_code << std::endl;
     if (status_code == "200" && this->getResourceType() == ResType::STATIC_RESOURCE)
         this->appendLastModifiedHeader(headers);
     else if (status_code == "401")
         this->appendAuthenticateHeader(headers);
-    else if (status_code == "201" || this->isRedirection(status_code))
-        this->appendLocationHeader(headers, request);
     else if (status_code == "503" || status_code == "429" || status_code == "301")
         this->appendRetryAfterHeader(headers, status_code);
+    if (status_code == "201" || this->isRedirection(status_code))
+        this->appendLocationHeader(headers, request);
 }
 
 std::string

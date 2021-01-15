@@ -52,6 +52,7 @@ private:
     std::string _script_name;
     std::string _path_translated;
     std::string _request_uri_for_cgi;
+    std::string _error_page;
 
 private:
     Response(const Response& other);
@@ -100,6 +101,7 @@ public:
     const std::string& getRequestUriForCgi() const;
     const std::string& getQuery() const;
     const std::string& getContentLanguage() const;
+    const std::string& getErrorPage() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -135,11 +137,7 @@ public:
     void setRequestUriForCgi(const std::string& request_uri_for_cgi);
 
     void setCgiEnvpValues();
-
-    bool isCgiWritePipeNotClosed() const;
-    bool isCgiReadPipeNotClosed() const;
-    bool isResourceNotClosed() const;
-
+    void setErrorPage(const std::string& error_page);
 
     /* Exception */
 public:
@@ -195,6 +193,10 @@ public:
     bool isDuplicatedHeader(std::string& key);
     bool isFileInDirEntry(std::string& index);
     bool isContentTypeTextHtml() const;
+
+    bool isCgiWritePipeNotClosed() const;
+    bool isCgiReadPipeNotClosed() const;
+    bool isResourceNotClosed() const;
 
     void setTransmittingBody(const std::string& chunked_body);
     void encodeChunkedBody();

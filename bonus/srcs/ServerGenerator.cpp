@@ -71,12 +71,10 @@ ServerGenerator::convertFileToStringVector(const char *config_file_path)
     if (fd < 0)
         throw (strerror(errno));
     ft::memset(reinterpret_cast<void *>(buf), 0, BUF_SIZE);
-    while ((readed = read(fd, reinterpret_cast<void *>(buf), BUF_SIZE)))
-    {
-        if (readed < 0)
-            throw(strerror(errno));
+    while ((readed = read(fd, reinterpret_cast<void *>(buf), BUF_SIZE)) > 0)
         readed_string += std::string(buf);
-    }
+    if (readed < 0)
+        throw(strerror(errno));
     lines = ft::split(readed_string, "\n");
     for (std::string line : lines)
     {
