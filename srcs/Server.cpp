@@ -890,11 +890,16 @@ Server::receiveLastChunkData(int client_fd)
         {
             if ((is_buffer_left = recv(client_fd, buf, 1, MSG_PEEK)) > 0)
                 throw (Request::RequestFormatException(request, "400"));
-            request.appendTempBuffer(buf, bytes);
-            if (request.getTempBuffer().compare("\r\n") == 0)
-                this->finishChunkSequence(client_fd);
+            else if (is_buffer_left == 0)
+                this->closeClientSocket(client_fd);
             else
-                throw (Request::RequestFormatException(request, "400"));
+            {
+                request.appendTempBuffer(buf, bytes);
+                if (request.getTempBuffer().compare("\r\n") == 0)
+                    this->finishChunkSequence(client_fd);
+                else
+                    throw (Request::RequestFormatException(request, "400"));
+            }
         }
     }
     else if (bytes == 0)
