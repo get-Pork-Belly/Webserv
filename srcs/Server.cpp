@@ -466,7 +466,6 @@ Server::readDefaultErrorPage(std::string error_page)
         default_error_page += "</h1>\n\t\t</center>";
         default_error_page += "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
     }
-
     return default_error_page;
 }
 
@@ -485,9 +484,6 @@ Server::init()
         else if (conf.first == "default_error_page")
             default_error_page = this->readDefaultErrorPage(conf.second);
     }
-    std::cout << "==========================" << std::endl;
-    std::cout << "default error page: " << default_error_page << std::endl;
-    std::cout << "==========================" << std::endl;
     this->_requests = std::vector<Request>(1024);
     // 생성 전에 파일을 먼저 읽 
     this->_responses = std::vector<Response>(1024);
