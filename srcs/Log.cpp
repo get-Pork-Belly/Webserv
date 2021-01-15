@@ -49,7 +49,13 @@ Log::timeLog(int fd)
     ft::memset(buf, 0, sizeof(buf));
     strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
     strftime(buf, sizeof(buf), "[%d/%b/%Y/%X %Z] ", &time);
-    write(fd, static_cast<void *>(buf), ft::strlen(buf));
+
+    int res;
+    res = write(fd, static_cast<void *>(buf), ft::strlen(buf));
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -60,7 +66,12 @@ Log::printTimeSec(timeval& tv)
     ft::memset(buf, 0, sizeof(buf));
     strptime(std::to_string(tv.tv_sec).c_str(), "%s", &time);
     strftime(buf, sizeof(buf), "[%d/%b/%Y/%X %Z] ", &time);
-    write(1, static_cast<void *>(buf), ft::strlen(buf));
+    int res;
+    res = write(1, static_cast<void *>(buf), ft::strlen(buf));
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -76,7 +87,12 @@ Log::serverIsCreated(Server& server)
     line = ("SERVER(" + std::to_string(server_fd) + ")" + "[" +
             server.getHost() + "] HAS CREATED\n");
     Log::timeLog(fd);
-    write(fd, line.c_str(), line.length());
+    int res;
+    res = write(fd, line.c_str(), line.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -93,7 +109,12 @@ Log::newClient(Server& server, int client_fd)
             server.getHost() + "] HAS NEW CLIENT: " +
             std::to_string(client_fd) + "\n");
     Log::timeLog(fd);
-    write(fd, line.c_str(), line.length());
+    int res;
+    res = write(fd, line.c_str(), line.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -110,7 +131,12 @@ Log::closeClient(Server& server, int client_fd)
             ") BYBY CLIENT(" + std::to_string(client_fd)
            + ")\n");
     Log::timeLog(fd);
-    write(fd, line.c_str(), line.length());
+    int res;
+    res = write(fd, line.c_str(), line.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -129,7 +155,12 @@ Log::openFd(Server& server, int client_socket, const FdType& type, int fd)
                     + std::to_string(client_socket) + ")\n";
 
     Log::timeLog(log_print_fd);
-    write(log_print_fd, line.c_str(), line.length());
+    int res;
+    res = write(log_print_fd, line.c_str(), line.length());    
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -148,7 +179,12 @@ Log::closeFd(Server& server, int client_socket, const FdType& type, int fd)
                     + std::to_string(client_socket) + ")\n";
 
     Log::timeLog(log_print_fd);
-    write(log_print_fd, line.c_str(), line.length());
+    int res;
+    res = write(log_print_fd, line.c_str(), line.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -165,7 +201,12 @@ Log::closeFd(const FdType& type, int fd)
                     + ") which requested by CLIENT\n";
 
     Log::timeLog(log_print_fd);
-    write(log_print_fd, line.c_str(), line.length());
+    int res;
+    res = write(log_print_fd, line.c_str(), line.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -194,7 +235,12 @@ Log::getRequest(Server& server, int client_fd)
         std::to_string(client_fd) + ") BUFFER BUT EMPTY NOW\n"); 
     }
     Log::timeLog(fd);
-    write(fd, line.c_str(), line.length());
+    int res;
+    res = write(fd, line.c_str(), line.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -205,7 +251,12 @@ Log::error(const std::string& error)
 
     int fd = (STDOUT == 1) ? 1 : Log::error_fd;
     Log::timeLog(fd);
-    write(fd, error.c_str(), error.length());
+    int res;
+    res = write(fd, error.c_str(), error.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 
@@ -217,10 +268,16 @@ Log::printTimeDiff(timeval from, int log_level)
     std::string diff = std::to_string((t.tv_sec - from.tv_sec) * 1000000 + (t.tv_usec - from.tv_usec));
     diff.push_back(' ');
 
+    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
     if (DEBUG < log_level)
         return ;
-    int fd = (STDOUT == 1) ? 1 : Log::access_fd;
-    write(fd, diff.c_str(), diff.length());
+
+    int res;    
+    res = write(fd, diff.c_str(), diff.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 void
@@ -233,8 +290,18 @@ Log::trace(const std::string& trace, int log_level)
     int fd = (STDOUT == 1) ? 1 : Log::access_fd;
 
     // Log::timeLog(fd);
-    write(fd, trace.c_str(), trace.length());
-    write(fd, "\n", 1);
+    int res;
+    res = write(fd, trace.c_str(), trace.length());
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+
+    res = write(fd, "\n", 1);
+    if (res == 0)
+        std::cout << "log failed! but keep server going" << std::endl;
+    else if (res < 0)
+        std::cout << "log failed! but keep server going" << std::endl;
 }
 
 std::string
@@ -330,8 +397,6 @@ Log::parseProgressToString(const ParseProgress& progress)
         break;
     }
 }
-
-
 
 void
 Log::printLocationConfig(const std::map<std::string, location_info>& loc_config)
