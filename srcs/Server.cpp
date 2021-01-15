@@ -448,10 +448,10 @@ Server::readDefaultErrorPage(std::string error_page)
         if (readed == -1)
         {
             default_error_page += "<html>\n\t<head>\n\t\t<title>";
-            default_error_page += "status_code error_message";
+            default_error_page += "<- status_code -> <- error_message ->";
             default_error_page += "</title>\n\t</head>";
             default_error_page += "\n\t<body>\n\t\t<center>\n\t\t\t<h1>";
-            default_error_page += "status_code error_message";
+            default_error_page += "<- status_code -> <- error_message ->";
             default_error_page += "</h1>\n\t\t</center>";
             default_error_page += "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
        }
@@ -459,10 +459,10 @@ Server::readDefaultErrorPage(std::string error_page)
     else
     {
         default_error_page += "<html>\n\t<head>\n\t\t<title>";
-        default_error_page += "status_code error_message";
+        default_error_page += "<- status_code -> <- error_message- >";
         default_error_page += "</title>\n\t</head>";
         default_error_page += "\n\t<body>\n\t\t<center>\n\t\t\t<h1>";
-        default_error_page += "status_code error_message";
+        default_error_page += "<- status_code -> <- error_message ->";
         default_error_page += "</h1>\n\t\t</center>";
         default_error_page += "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
     }
