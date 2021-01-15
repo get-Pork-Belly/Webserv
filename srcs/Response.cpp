@@ -1015,14 +1015,15 @@ void
 Response::appendResponseHeaders(std::string& headers, Request& request)
 {
     const std::string& status_code = this->getStatusCode();
+    std::cout << "status code: " << status_code << std::endl;
     if (status_code == "200" && this->getResourceType() == ResType::STATIC_RESOURCE)
         this->appendLastModifiedHeader(headers);
     else if (status_code == "401")
         this->appendAuthenticateHeader(headers);
-    else if (status_code == "201" || this->isRedirection(status_code))
-        this->appendLocationHeader(headers, request);
     else if (status_code == "503" || status_code == "429" || status_code == "301")
         this->appendRetryAfterHeader(headers, status_code);
+    if (status_code == "201" || this->isRedirection(status_code))
+        this->appendLocationHeader(headers, request);
 }
 
 std::string
