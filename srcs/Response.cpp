@@ -547,7 +547,6 @@ Response::init()
     this->_path_translated = "";
     this->_request_uri_for_cgi = "";
     //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
-    this->_error_page = "";
 }
 
 void
