@@ -3,7 +3,7 @@ http {
     root /Users/humblego/Documents/dev/team_webserv/www/;
     server {
         server_name first_server;
-        listen       9090;
+        listen       8080;
         default_error_page ./www/errors/default_error1.html;
 
         location / {
@@ -35,8 +35,8 @@ http {
     }
     server {
         server_name second_server;
-        listen       9091;
-        default_error_page ../www/errors/default_error2.html;
+        listen       8081;
+        default_error_page ./www/errors/default_error2.html;
 
         location /first {
             index  index.html index.htm;
