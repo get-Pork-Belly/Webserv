@@ -127,6 +127,7 @@ public:
     void processIfHeadersNotFound(int fd, const std::string& readed);
     void putFileOnServer(int fd);
     void deleteResourceOfUri(int fd,const std::string& path);
+    std::string readDefaultErrorPage(std::string error_page);
 
     /* Server run function */
     void acceptClient();
