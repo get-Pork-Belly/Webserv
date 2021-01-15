@@ -54,5 +54,19 @@ http {
             limit_except PUT POST GET DELETE;
             index index.html index.htm index.abc;
         }
+        location ^/dir[a-z]* { 
+            location_msg "this is regex location";
+            limit_except GET POST;
+            index youpi.bad_extension;
+            cgi .bla;
+            cgi_path /Users/humblego/Documents/dev/team_webserv/bonus/YoupiBanane/youpi.bad_extension;
+            root /Users/humblego/Documents/dev/team_webserv/bonus/YoupiBanane/;
+        }
+        location /bonus {
+            limit_except POST GET HEAD;
+            cgi .py;
+            cgi_path /Users/humblego/Documents/dev/team_webserv/bonus/python_scripts/python_script_bad_extension.py;
+            root /Users/humblego/Documents/dev/team_webserv/bonus/python_scripts;
+        }
     }
 }
