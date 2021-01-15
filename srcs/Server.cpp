@@ -436,13 +436,14 @@ Server::readDefaultErrorPage(std::string error_page)
     char buf[BUFFER_SIZE + 1];
     std::string default_error_page = "";
 
-    if (int fd = open(error_page.c_str(), O_RDONLY) > 0)
+    int fd = open(error_page.c_str(), O_RDONLY);
+    if (fd > 0)
     {
         int readed;
         while ((readed = read(fd, buf, BUFFER_SIZE)) > 0)
         {
             buf[readed] = 0;
-            default_error_page += buf;
+            default_error_page += std::string(buf, readed);
         }
         if (readed == -1)
         {
