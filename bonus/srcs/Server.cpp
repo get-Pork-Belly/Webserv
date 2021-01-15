@@ -430,6 +430,43 @@ Server::PutFileOnServerErrorException::what() const throw()
 /*********************************  Util  *************************************/ 
 /*============================================================================*/
 
+std::string
+Server::makeDefaultErrorPage()
+{
+    char buf[BUFFER_SIZE + 1];
+    std::string default_error_template = "<html>\n\t<head>\n\t\t<title>";
+    default_error_template += "<- status_code -> <- error_message ->";
+    default_error_template += "</title>\n\t</head>";
+    default_error_template += "\n\t<body>\n\t\t<center>\n\t\t\t<h1>";
+    default_error_template += "<- status_code -> <- error_message ->";
+    default_error_template += "</h1>\n\t\t</center>";
+    default_error_template += "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
+
+    std::string default_error_page = "";
+    std::string error_page_path;
+    if (this->_server_config.find("default_error_page") != this->_server_config.end())
+    {
+        error_page_path = this->_server_config["default_error_page"];
+
+        int fd = open(error_page_path.c_str(), O_RDONLY);
+        if (fd > 0)
+        {
+            default_error_page = "";
+            int readed;
+            while ((readed = read(fd, buf, BUFFER_SIZE)) > 0)
+            {
+                buf[readed] = 0;
+                default_error_page += std::string(buf, readed);
+            }
+            if (readed == -1)
+                default_error_page = default_error_template;
+        }
+    }
+    else
+        default_error_page = default_error_template;
+    return default_error_page;
+}
+
 //TODO: take care init errors
 void
 Server::init()
@@ -443,6 +480,10 @@ Server::init()
     }
     this->_requests = std::vector<Request>(1024);
     this->_responses = std::vector<Response>(1024);
+
+    std::string default_error_page = this->makeDefaultErrorPage();
+    for(auto& response : this->_responses)
+        response.setErrorPage(default_error_page);
     this->setAuthenticateRealms();
 
     if ((this->_server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
