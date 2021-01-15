@@ -431,41 +431,39 @@ Server::PutFileOnServerErrorException::what() const throw()
 /*============================================================================*/
 
 std::string
-Server::readDefaultErrorPage(std::string error_page)
+Server::makeDefaultErrorPage()
 {
     char buf[BUFFER_SIZE + 1];
-    std::string default_error_page = "";
+    std::string default_error_template = "<html>\n\t<head>\n\t\t<title>";
+    default_error_template += "<- status_code -> <- error_message ->";
+    default_error_template += "</title>\n\t</head>";
+    default_error_template += "\n\t<body>\n\t\t<center>\n\t\t\t<h1>";
+    default_error_template += "<- status_code -> <- error_message ->";
+    default_error_template += "</h1>\n\t\t</center>";
+    default_error_template += "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
 
-    int fd = open(error_page.c_str(), O_RDONLY);
-    if (fd > 0)
+    std::string default_error_page = "";
+    std::string error_page_path;
+    if (this->_server_config.find("default_error_page") != this->_server_config.end())
     {
-        int readed;
-        while ((readed = read(fd, buf, BUFFER_SIZE)) > 0)
+        error_page_path = this->_server_config["default_error_page"];
+
+        int fd = open(error_page_path.c_str(), O_RDONLY);
+        if (fd > 0)
         {
-            buf[readed] = 0;
-            default_error_page += std::string(buf, readed);
+            default_error_page = "";
+            int readed;
+            while ((readed = read(fd, buf, BUFFER_SIZE)) > 0)
+            {
+                buf[readed] = 0;
+                default_error_page += std::string(buf, readed);
+            }
+            if (readed == -1)
+                default_error_page = default_error_template;
         }
-        if (readed == -1)
-        {
-            default_error_page += "<html>\n\t<head>\n\t\t<title>";
-            default_error_page += "<- status_code -> <- error_message ->";
-            default_error_page += "</title>\n\t</head>";
-            default_error_page += "\n\t<body>\n\t\t<center>\n\t\t\t<h1>";
-            default_error_page += "<- status_code -> <- error_message ->";
-            default_error_page += "</h1>\n\t\t</center>";
-            default_error_page += "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
-       }
     }
     else
-    {
-        default_error_page += "<html>\n\t<head>\n\t\t<title>";
-        default_error_page += "<- status_code -> <- error_message- >";
-        default_error_page += "</title>\n\t</head>";
-        default_error_page += "\n\t<body>\n\t\t<center>\n\t\t\t<h1>";
-        default_error_page += "<- status_code -> <- error_message ->";
-        default_error_page += "</h1>\n\t\t</center>";
-        default_error_page += "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
-    }
+        default_error_page = default_error_template;
     return default_error_page;
 }
 
@@ -473,20 +471,17 @@ Server::readDefaultErrorPage(std::string error_page)
 void
 Server::init()
 {
-    std::string default_error_page = "";
-
     for (auto& conf: this->_server_config)
     {
         if (conf.first == "server_name")
             this->_host = conf.second;
         else if (conf.first == "listen")
             this->_port = conf.second;
-        else if (conf.first == "default_error_page")
-            default_error_page = this->readDefaultErrorPage(conf.second);
     }
     this->_requests = std::vector<Request>(1024);
-    // 생성 전에 파일을 먼저 읽 
     this->_responses = std::vector<Response>(1024);
+
+    std::string default_error_page = this->makeDefaultErrorPage();
     for(auto& response : this->_responses)
         response.setErrorPage(default_error_page);
     this->setAuthenticateRealms();
