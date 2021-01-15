@@ -25,12 +25,14 @@ _query(""), _already_encoded_size(0), _parse_progress(ParseProgress::DEFAULT),
 _receive_progress(ReceiveProgress::DEFAULT), _resource_fd(DEFAULT_FD),
 _sended_response_size(0), _response_message(""), _send_progress(SendProgress::READY),
 _temp_buffer(""), _path_info(""), _script_name(""), _path_translated(""),
-_request_uri_for_cgi("")
+_request_uri_for_cgi(""), _error_page("")
 {
     ft::memset(&this->_file_info, 0, sizeof(this->_file_info));
     this->initStatusCodeTable();
     this->initMimeTypeTable();
 }
+
+
 
 /*============================================================================*/
 /******************************  Destructor  **********************************/
@@ -246,6 +248,12 @@ Response::getContentLanguage() const
     return (this->_content_language);
 }
 
+const std::string&
+Response::getErrorPage() const
+{
+    return (this->_error_page);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -455,6 +463,12 @@ Response::setCgiEnvpValues()
     }
 }
 
+void
+Response::setErrorPage(const std::string& error_page)
+{
+    this->_error_page = error_page;
+}
+
 /*============================================================================*/
 /******************************  Exception  ***********************************/
 /*============================================================================*/
@@ -533,6 +547,7 @@ Response::init()
     this->_path_translated = "";
     this->_request_uri_for_cgi = "";
     //NOTE: _status_code_table, _mime_type_table은 초기화 대상 아님. 값이 바뀌지 않으며 초기화시 성능저하 우려되기 때문.
+    this->_error_page = "";
 }
 
 void
