@@ -6,13 +6,28 @@ PageGenerator::makeErrorPage(Response& res)
 {
     std::string body;
     const std::string& code = res.getStatusCode();
-    const std::string& message = res.getStatusMessage(code);
+    const std::string& error_message = res.getStatusMessage(code);
 
-    body.reserve(200);
-    body += "<html>\n\t<head>\n\t\t<title>" + code + " " + message +
-       "</title>\n\t</head>" + "\n\t<body>\n\t\t<center>\n\t\t\t<h1>" +
-       code + " " + message + "</h1>\n\t\t</center>" +
-        "\n\t\t<hr>\n\t<center> ft_nginx </center>\n\t</body>\n</html>";
+    const std::string target_code = "<- status_code ->";
+    const std::string target_message = "<- error_message ->";
+    
+    body = res.getErrorPage();
+
+    size_t pos = 0;
+    size_t offset = 0;
+    while ((pos = body.find(target_code, offset)) != std::string::npos)
+    {
+        body.replace(body.begin() + pos, body.begin() + pos + target_code.length(), code);
+        offset = pos + code.length();
+    }
+    pos = 0;
+    offset = 0;
+    while ((pos = body.find(target_message, offset)) != std::string::npos)
+    {
+        body.replace(body.begin() + pos, body.begin() + pos + target_message.length(), error_message);
+        offset = pos + error_message.length();
+    }
+
     res.setTransmittingBody(body);
 }
 

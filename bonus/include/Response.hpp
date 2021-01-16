@@ -53,6 +53,7 @@ private:
     std::string _script_name;
     std::string _path_translated;
     std::string _request_uri_for_cgi;
+    std::string _error_page;
 
 private:
     Response(const Response& other);
@@ -101,6 +102,7 @@ public:
     const std::string& getRequestUriForCgi() const;
     const std::string& getQuery() const;
     const std::string& getContentLanguage() const;
+    const std::string& getErrorPage() const;
 
     /* Setter */
     void setStatusCode(const std::string& status_code);
@@ -136,6 +138,7 @@ public:
     void setRequestUriForCgi(const std::string& request_uri_for_cgi);
 
     void setCgiEnvpValues();
+    void setErrorPage(const std::string& error_page);
 
     bool isCgiWritePipeNotClosed() const;
     bool isCgiReadPipeNotClosed() const;

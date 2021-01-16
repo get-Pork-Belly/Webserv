@@ -6,6 +6,7 @@ http {
     cgi_timeout_second 180;
     log_at log.txt;
     server {
+        default_error_page ./www/errors/default_error1.html;
         server_name first_server;
         listen       8080;
 
@@ -39,6 +40,7 @@ http {
         }
     }
     server {
+        default_error_page ./www/errors/default_error2.html;
         server_name second_server;
         listen       8081;
         location / {

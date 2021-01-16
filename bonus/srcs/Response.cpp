@@ -246,6 +246,12 @@ Response::getContentLanguage() const
     return (this->_content_language);
 }
 
+const std::string&
+Response::getErrorPage() const
+{
+    return (this->_error_page);
+}
+
 /*============================================================================*/
 /********************************  Setter  ************************************/
 /*============================================================================*/
@@ -453,6 +459,12 @@ Response::setCgiEnvpValues()
             this->setRequestUriForCgi(script_name);
         }
     }
+}
+
+void
+Response::setErrorPage(const std::string& error_page)
+{
+    this->_error_page = error_page;
 }
 
 /*============================================================================*/
