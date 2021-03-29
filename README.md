@@ -37,7 +37,7 @@
   <h3 align="center">Webserv</h3>
 
   <p align="center">
-    This project is here to make you write your own HTTP server. You will follow the real HTTP RFC and you will be able to test it with a real browser. HTTP is one of the most used protocol on internet. Knowing its arcane will be useful, even if you won't be working on a website.
+    이 프로젝트는 Customized 한 HTTP 서버를 만드는 과제입니다. 해당 과제를 수행하기 위해 RFC 문서 중 HTTP에 해당하는 파트(7230-7235)를 숙지하였으며 실제 브라우저에서 테스트할 수 있도록 TCP/IP 통신을 위한 소켓을 C++로 구현하였습니다.
     <br />
 
   </p>
@@ -56,9 +56,8 @@
       <a href="#getting-started">Getting Started</a>
     </li>
     <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgements">Wiki</a></li>
+    <li><a href="#contact">Contact</a></li>
   </ol>
 </details>
 
@@ -95,30 +94,10 @@
 ## Roadmap
 
 - [Project DashBoard](https://github.com/get-Pork-Belly/Webserv/projects/1)
-- [open issues](https://github.com/get-Pork-Belly/Webserv/issues)
+- [Open Issues](https://github.com/get-Pork-Belly/Webserv/issues)
 
 
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-
-<!-- CONTACT -->
-## Contact
-
-* [Iwoo](https://github.com/humblEgo)
-* [Sanam](https://github.com/simian114)
-* [Yohlee](https://github.com/l-yohai)
-
-
+<!-- Wiki -->
 ## Wiki
 
 * [CGI(Common Gateway Interface)](https://github.com/get-Pork-Belly/Webserv/wiki/CGI(Common-Gateway-Interface))
@@ -136,6 +115,13 @@ Contributions are what make the open source community such an amazing place to b
 * [협업규칙](https://github.com/get-Pork-Belly/Webserv/wiki/%ED%98%91%EC%97%85%EA%B7%9C%EC%B9%99)
 * [Class 명세서](https://docs.google.com/spreadsheets/d/1GNUoCfloWzp0r27ZsayIxHRwFWTl2l4ZfWlXcVARf98/edit#gid=0)
 
+
+<!-- CONTACT -->
+## Contact
+
+* [Iwoo](https://github.com/humblEgo)
+* [Sanam](https://github.com/simian114)
+* [Yohlee](https://github.com/l-yohai)
 
 
 
