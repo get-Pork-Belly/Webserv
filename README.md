@@ -24,8 +24,6 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
 
 
 
@@ -53,23 +51,14 @@
   <ol>
     <li>
       <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
     </li>
     <li>
       <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgements">Acknowledgements</a></li>
+    <li><a href="#acknowledgements">Wiki</a></li>
   </ol>
 </details>
 
@@ -122,14 +111,6 @@ Contributions are what make the open source community such an amazing place to b
 5. Open a Pull Request
 
 
-
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-
-
 <!-- CONTACT -->
 ## Contact
 
@@ -168,5 +149,3 @@ Distributed under the MIT License. See `LICENSE` for more information.
 [stars-url]: https://github.com/get-Pork-Belly/Webserv/stargazers
 [issues-shield]: https://img.shields.io/github/issues/get-Pork-Belly/Webserv?style=for-the-badge
 [issues-url]: https://github.com/get-Pork-Belly/Webserv/issues
-[license-shield]: https://img.shields.io/github/license/get-Pork-Belly/Webserv?style=for-the-badge
-[license-url]: https://github.com/get-Pork-Belly/Webserv/blob/master/LICENSE.txt
